@@ -61,3 +61,195 @@ def helpMessage() {
     """.stripIndent()
 }
 
+// Parse the NCBI Genome Browser CSV 
+process parse_genome_csv {
+    container "${container__pandas}"
+    label "io_limited"
+
+    input:
+        path "input.csv"
+    
+    output:
+        path "url_list.txt"
+    
+"""
+#!/usr/bin/env python3
+
+import pandas as pd
+import re
+
+df = pd.read_csv("input.csv")
+
+# Make a list of URLs to download
+url_list = []
+
+# Function to format the path to the genome FASTA
+def format_ftp(ftp_prefix):
+
+    assert isinstance(ftp_prefix, str)
+    assert ftp_prefix.startswith("ftp://")
+    assert "/" in ftp_prefix
+    assert not ftp_prefix.endswith("/")
+
+    # The ID of the assembly is the final directory name
+    id_str = ftp_prefix.rsplit("/", 1)[-1]
+
+    # Return the path to the genome FASTA
+    return f"{ftp_prefix}/{id_str}_genomic.fna.gz"
+
+# Iterate over each row in the table
+for _, r in df.iterrows():
+    
+    # If there is no value in the 'GenBank FTP' column
+    if pd.isnull(r['GenBank FTP']):
+    
+        # Skip it
+        continue
+    
+    # If the 'GenBank FTP' column doesn't start with 'ftp://'
+    elif not r['GenBank FTP'].startswith('ftp://'):
+    
+        # Skip it
+        continue
+
+    # Otherwise
+    else:
+
+        # Format the path to the genome in that folder
+        url_list.append(
+            format_ftp(r['GenBank FTP'])
+        )
+
+# Write the list to a file
+with open("url_list.txt", "w") as handle:
+
+    # Each URL on its own line
+    handle.write("\\n".join(url_list))
+
+"""
+}
+
+
+// Fetch a file via FTP
+process fetchFTP {
+    container "${container__wget}"
+    label 'io_limited'
+
+    maxForks params.ftp_threads
+
+    input:
+        val ftp_url
+    
+    output:
+        file "*"
+    
+"""
+#!/bin/bash
+set -e
+
+echo "Downloading from ${ftp_url}"
+
+wget --quiet ${ftp_url}
+
+# For any gzip-compressed files
+for fp in *.gz; do
+
+    # If any such file exists
+    if [ -s \$fp ]; then
+        # Make sure that it is appropriately compressed
+        echo "Checking that \$fp is gzip-compressed"
+        gzip -t \$fp
+    fi
+
+done
+
+"""
+}
+
+// process align_genes {
+//     container "${}"
+// }
+
+
+workflow {
+
+    // Show help message if the user specifies the --help flag at runtime
+    if (params.help){
+        // Invoke the function above which prints the help message
+        helpMessage()
+        // Exit out and do not run anything else
+        exit 0
+    }
+
+    // The user must specify each of the required arguments
+    if (!params.genes || !params.output_folder || !params.output_prefix){
+        log.info"""
+
+        -----------------------
+        MISSING REQUIRED INPUTS
+        -----------------------
+
+        """.stripIndent()
+        helpMessage()
+
+        // Exit out and do not run anything else
+        exit 0
+    }
+
+    // The user must specify genomes either by files or from NCBI
+    if (!params.genomes && !params.genome_tables){
+        log.info"""
+
+        ---------------------
+        MISSING INPUT GENOMES
+        ---------------------
+
+        """.stripIndent()
+        helpMessage()
+
+        // Exit out and do not run anything else
+        exit 0
+    }
+
+    // Parse the set of genomes specified by the user
+
+    // Local files
+    Channel
+        .fromPath(
+            params.genomes.split(',').toList()
+        ).set {
+            local_genomes
+        }
+
+    // NCBI genomes
+    Channel
+        .fromPath(
+            params.genome_tables.split(",").toList()
+        )
+        .set {
+            genome_manifests
+        }
+
+    // Read the contents of each manifest file
+    parse_genome_csv(
+        genome_manifests
+    )
+
+    // Download each of the files
+    fetchFTP(
+        parse_genome_csv
+            .out
+            .splitText()
+    )
+
+    // Join together the genomes from both sources
+    fetchFTP
+        .out
+        .mix(local_genomes)
+        .set {
+            all_genomes
+        }
+
+    all_genomes.view()
+
+}
