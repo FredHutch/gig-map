@@ -11,13 +11,33 @@ params.genomes = false
 params.genes = false
 params.min_coverage = 50
 params.min_identity = 50
+params.aligner = 'diamond'
 params.ftp_threads = 25
+params.query_gencode = 11
+params.max_evalue = 0.001
+params.culling_limit = 5
+params.max_target_seqs = 100000
 
-// Docker containers reused across processes
-container__wget = "quay.io/fhcrc-microbiome/wget:latest"
-container__pandas = "quay.io/fhcrc-microbiome/python-pandas:v1.0.3"
-container__mmseqs = "quay.io/fhcrc-microbiome/mmseqs2:version-12"
-container__mashtree = "quay.io/hdc-workflows/mashtree:1.2.0"
+// Import the processes to run in this workflow
+include {
+    parse_genome_csv;
+    fetchFTP;
+    mashtree;
+    makedb_blast;
+    align_blast;
+    align_diamond;
+    makedb_diamond;
+} from './modules' params(
+    output_folder: params.output_folder,
+    output_prefix: params.output_prefix,
+    min_identity: params.min_identity,
+    min_coverage: params.min_coverage,
+    ftp_threads: params.ftp_threads,
+    query_gencode: params.query_gencode,
+    max_evalue: params.max_evalue,
+    culling_limit: params.culling_limit,
+    max_target_seqs: params.max_target_seqs,
+)
 
 // Function which prints help message text
 def helpMessage() {
@@ -34,9 +54,15 @@ def helpMessage() {
       --output_prefix       Prefix to use for output file names
 
     Optional Arguments:
+      --aligner             Alignment algorithm to use (options: diamond, blast; default: diamond)
       --min_identity        Percent identity threshold used for alignment (default: 50)
       --min_coverage        Percent coverage threshold used for alignment (default: 50)
       --ftp_threads         Number of FTP downloads to execute concurrently (default: 25)
+      --query_gencode       Genetic code to use for conceptual translation (default: 11)
+      --max_evalue          Maximum E-value for any alignment (default: 0.001)
+      --culling_limit       If the query range of a hit is enveloped by that of at least
+                            this many higher-scoring hits, delete the hit (default: 5, for BLAST)
+      --max_target_seqs     Maximum number of alignments to keep, per genome (default: 100000, for BLAST)
 
     
     Specifing Genomes for Alignment:
@@ -58,117 +84,10 @@ def helpMessage() {
     of the genomes for alignment. That CSV file may also be specified with the --genome_tables
     flag. More than one table of genomes may be specified using the comma delimiter as above.
 
+    NOTE: All genomes must have a unique filename
+
     """.stripIndent()
 }
-
-// Parse the NCBI Genome Browser CSV 
-process parse_genome_csv {
-    container "${container__pandas}"
-    label "io_limited"
-
-    input:
-        path "input.csv"
-    
-    output:
-        path "url_list.txt"
-    
-"""
-#!/usr/bin/env python3
-
-import pandas as pd
-import re
-
-df = pd.read_csv("input.csv")
-
-# Make a list of URLs to download
-url_list = []
-
-# Function to format the path to the genome FASTA
-def format_ftp(ftp_prefix):
-
-    assert isinstance(ftp_prefix, str)
-    assert ftp_prefix.startswith("ftp://")
-    assert "/" in ftp_prefix
-    assert not ftp_prefix.endswith("/")
-
-    # The ID of the assembly is the final directory name
-    id_str = ftp_prefix.rsplit("/", 1)[-1]
-
-    # Return the path to the genome FASTA
-    return f"{ftp_prefix}/{id_str}_genomic.fna.gz"
-
-# Iterate over each row in the table
-for _, r in df.iterrows():
-    
-    # If there is no value in the 'GenBank FTP' column
-    if pd.isnull(r['GenBank FTP']):
-    
-        # Skip it
-        continue
-    
-    # If the 'GenBank FTP' column doesn't start with 'ftp://'
-    elif not r['GenBank FTP'].startswith('ftp://'):
-    
-        # Skip it
-        continue
-
-    # Otherwise
-    else:
-
-        # Format the path to the genome in that folder
-        url_list.append(
-            format_ftp(r['GenBank FTP'])
-        )
-
-# Write the list to a file
-with open("url_list.txt", "w") as handle:
-
-    # Each URL on its own line
-    handle.write("\\n".join(url_list))
-
-"""
-}
-
-
-// Fetch a file via FTP
-process fetchFTP {
-    container "${container__wget}"
-    label 'io_limited'
-
-    maxForks params.ftp_threads
-
-    input:
-        val ftp_url
-    
-    output:
-        file "*"
-    
-"""
-#!/bin/bash
-set -e
-
-echo "Downloading from ${ftp_url}"
-
-wget --quiet ${ftp_url}
-
-# For any gzip-compressed files
-for fp in *.gz; do
-
-    # If any such file exists
-    if [ -s \$fp ]; then
-        # Make sure that it is appropriately compressed
-        echo "Checking that \$fp is gzip-compressed"
-        gzip -t \$fp
-    fi
-
-done
-
-"""
-}
-
-// process align_genes {
-//     container "${}"
-// }
 
 
 workflow {
@@ -250,6 +169,53 @@ workflow {
             all_genomes
         }
 
-    all_genomes.view()
+    // Compute whole-genome similarity with mashtree
+    mashtree(
+        all_genomes.toSortedList()
+    )
+
+    // If the user has selected DIAMOND for alignment
+    if (params.aligner == "diamond"){
+
+        // Make a DIAMOND database for the input genes
+        makedb_diamond(
+            Channel
+                .fromPath(
+                    params.genes.split(",").toList()
+                )
+                .toSortedList()
+        )
+
+        // Align the query genes against the genomes
+        align_diamond(
+            makedb_diamond.out,
+            all_genomes
+        )
+
+        // Channel with all alignment results
+        alignments_output = align_diamond.out
+    }
+
+    // If the user has selected BLAST for alignment
+    if (params.aligner == "blast"){
+
+        // Make a BLAST database for the input genes
+        makedb_blast(
+            Channel
+                .fromPath(
+                    params.genes.split(",").toList()
+                )
+                .toSortedList()
+        )
+
+        // Align the query genes against the genomes
+        align_blast(
+            makedb_blast.out,
+            all_genomes
+        )
+
+        // Channel with all alignment results
+        alignments_output = align_blast.out
+    }
 
 }
