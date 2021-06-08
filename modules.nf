@@ -15,6 +15,7 @@ params.query_gencode = 11
 params.max_evalue = 0.001
 params.culling_limit = 5
 params.max_target_seqs = 100000
+params.aln_fmt = "qseqid sseqid pident length qstart qend qlen sstart send slen"
 
 
 // Parse the NCBI Genome Browser CSV 
@@ -126,14 +127,14 @@ done
 process mashtree {
     container "${container__mashtree}"
     label 'mem_medium'
-    publishDir "${params.output_folder}/tree/", mode: 'copy', overwrite: true
+    publishDir "${params.output_folder}", mode: 'copy', overwrite: true
     
     input:
         file "inputs/*"
     
     output:
-        file "mashtree.dnd"
-        file "mashtree.tsv"
+        file "${params.output_prefix}.dnd"
+        file "${params.output_prefix}.dists.tsv.gz"
     
 """
 #!/bin/bash
@@ -148,10 +149,13 @@ done
 
 # Run mashtree
 mashtree \
-    --outmatrix mashtree.tsv \
+    --outmatrix ${params.output_prefix}.dists.tsv \
     --numcpus ${task.cpus} \
     inputs/* \
-    > mashtree.dnd
+    > ${params.output_prefix}.dnd
+
+# Compress the distance matrix
+gzip ${params.output_prefix}.dists.tsv
 
 """
 }
@@ -204,7 +208,7 @@ process align_blast {
         file query_fasta
 
     output:
-        file "alignments.gz"
+        tuple val("${query_fasta.name}"), file("alignments.gz")
 
 """#!/bin/bash
 
@@ -218,7 +222,7 @@ blastx \
     -db database.fasta \
     -query_gencode ${params.query_gencode} \
     -evalue ${params.max_evalue} \
-    -outfmt 6 qseqid sseqid pident length qstart qend qlen sstart send slen \
+    -outfmt 6 ${params.aln_fmt} \
     -culling_limit ${params.culling_limit} \
     -max_target_seqs ${params.max_target_seqs} \
     -num_threads ${task.cpus} \
@@ -238,7 +242,7 @@ process align_diamond {
     file query_fasta
     
     output:
-    file "alignments.gz"
+    tuple val("${query_fasta.name}"), file("alignments.gz")
 
 """#!/bin/bash
 
@@ -249,7 +253,7 @@ diamond \
     --threads ${task.cpus} \
     --db ${refdb} \
     --out alignments.gz \
-    --outfmt 6 qseqid sseqid pident length qstart qend qlen sstart send slen \
+    --outfmt 6 ${params.aln_fmt} \
     --query ${query_fasta} \
     --unal 0 \
     --max-target-seqs ${params.max_target_seqs} \
@@ -286,5 +290,84 @@ process makedb_diamond {
       --db database.dmnd \
       --threads ${task.cpus}
     """
+
+}
+
+// Add the query genome file name as the last column to the alignments
+process add_genome_name {
+    container "${container__pandas}"
+    label 'io_limited'
+    
+    input:
+    tuple val(genome_name), file(alignments_gz)
+
+    output:
+    file "alignments.named.gz"
+
+"""#!/usr/bin/env python3
+import pandas as pd
+
+# Read the table
+df = pd.read_csv(
+    "${alignments_gz}",
+    header=None,
+    sep="\\t"
+)
+
+# Add the name of the genome FASTA
+df = df.assign(genome_name="${genome_name}")
+
+# Write out the table
+df.to_csv(
+    "alignments.named.gz",
+    header=None,
+    index=None,
+    sep="\\t"
+)
+
+"""
+
+}
+
+// Combine all of the outputs into a single file
+process concatenate_results {
+    container "${container__pandas}"
+    label 'io_limited'
+    publishDir "${params.output_folder}", mode: 'copy', overwrite: true
+   
+    input:
+    file "inputs/*.tsv.gz"
+
+    output:
+    file "${params.output_prefix}.csv.gz"
+
+"""#!/usr/bin/env python3
+import pandas as pd
+import os
+
+# Define the names for the columns
+header = "${params.aln_fmt}".split(" ")
+# Add the column for the genome name
+header.append("genome")
+
+# Read in all of the inputs
+df = pd.concat([
+    pd.read_csv(
+        os.path.join('inputs', fp),
+        sep='\\t',
+        header=None,
+        names=header
+    )
+    for fp in os.listdir('inputs')
+    if fp.endswith('.tsv.gz')
+])
+
+# Write out the table
+df.to_csv(
+    "${params.output_prefix}.csv.gz",
+    index=None
+)
+
+"""
 
 }

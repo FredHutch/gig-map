@@ -27,6 +27,8 @@ include {
     align_blast;
     align_diamond;
     makedb_diamond;
+    add_genome_name;
+    concatenate_results
 } from './modules' params(
     output_folder: params.output_folder,
     output_prefix: params.output_prefix,
@@ -62,7 +64,7 @@ def helpMessage() {
       --max_evalue          Maximum E-value for any alignment (default: 0.001)
       --culling_limit       If the query range of a hit is enveloped by that of at least
                             this many higher-scoring hits, delete the hit (default: 5, for BLAST)
-      --max_target_seqs     Maximum number of alignments to keep, per genome (default: 100000, for BLAST)
+      --max_target_seqs     Maximum number of alignments to keep, per genome (default: 100000)
 
     
     Specifing Genomes for Alignment:
@@ -217,5 +219,15 @@ workflow {
         // Channel with all alignment results
         alignments_output = align_blast.out
     }
+
+    // Add the name of the query genome to the alignments file
+    add_genome_name(
+        alignments_output
+    )
+
+    // Concatenate the results
+    concatenate_results(
+        add_genome_name.out.toSortedList()
+    )
 
 }
