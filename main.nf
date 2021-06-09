@@ -9,6 +9,7 @@ params.output_folder = false
 params.output_prefix = false
 params.genomes = false
 params.genes = false
+params.genome_tables = false
 params.min_coverage = 50
 params.min_identity = 50
 params.aligner = 'diamond'
@@ -143,33 +144,37 @@ workflow {
         }
 
     // NCBI genomes
-    Channel
-        .fromPath(
-            params.genome_tables.split(",").toList()
-        )
-        .set {
+    if(params.genome_tables){
+        Channel
+            .fromPath(
+                params.genome_tables.split(",").toList()
+            )
+            .set {
+                genome_manifests
+            }
+
+        // Read the contents of each manifest file
+        parse_genome_csv(
             genome_manifests
-        }
+        )
 
-    // Read the contents of each manifest file
-    parse_genome_csv(
-        genome_manifests
-    )
+        // Download each of the files
+        fetchFTP(
+            parse_genome_csv
+                .out
+                .splitText()
+        )
 
-    // Download each of the files
-    fetchFTP(
-        parse_genome_csv
+        // Join together the genomes from both sources
+        fetchFTP
             .out
-            .splitText()
-    )
-
-    // Join together the genomes from both sources
-    fetchFTP
-        .out
-        .mix(local_genomes)
-        .set {
-            all_genomes
-        }
+            .mix(local_genomes)
+            .set {
+                all_genomes
+            }
+    }else{
+        local_genomes.set{all_genomes}
+    }
 
     // Compute whole-genome similarity with mashtree
     mashtree(
