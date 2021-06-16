@@ -135,13 +135,23 @@ workflow {
 
     // Parse the set of genomes specified by the user
 
-    // Local files
-    Channel
-        .fromPath(
-            params.genomes.split(',').toList()
-        ).set {
-            local_genomes
-        }
+    // If one or more local files have been provided
+    if(params.genomes){
+
+        // Populate a channel with those local genomes
+        Channel
+            .fromPath(
+                params.genomes.split(',').toList()
+            ).set {
+                local_genomes
+            }
+    // If no --genomes flag was used
+    }else{
+
+        // Set up an empty channel
+        Channel.empty().set{local_genomes}
+
+    }
 
     // NCBI genomes
     if(params.genome_tables){

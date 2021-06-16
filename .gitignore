@@ -2,6 +2,9 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.nextflow/
+.nextflow.log*
+work/
 
 # C extensions
 *.so
