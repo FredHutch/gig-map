@@ -28,6 +28,7 @@ process parse_genome_csv {
     
     output:
         path "url_list.txt"
+        path "genome_annotations.csv.gz"
     
 """
 #!/usr/bin/env python3
@@ -54,6 +55,39 @@ def format_ftp(ftp_prefix):
     # Return the path to the genome FASTA
     return f"{ftp_prefix}/{id_str}_genomic.fna.gz"
 
+# Populate a list with formatted annotations for each file
+# which will be downloaded from NCBI
+annotation_list = []
+
+# Function to format the annotation for each row
+def format_annotation(r):
+
+    # Get the name of the file which will be downloaded
+    annots = dict(
+        genome_id=r["GenBank FTP"].rsplit("/", 1)[-1] + "_genomic"
+    )
+
+    # Rename fields
+    for k, n in [
+        ("#Organism Name", "Organism"),
+        ("Strain", "Strain"),
+        ("BioSample", "BioSample"),
+        ("BioProject", "BioProject"),
+        ("Assembly", "Assembly"),
+        ("Size(Mb)", "Size_Mb"),
+        ("GC%", "GC_percent"),
+        ("CDS", "CDS")
+    ]:
+        annots[n] = r[k]
+
+    # Format a combined name
+    combined_name = r["Organism"]
+    if r["Strain"] is not None:
+        combined_name = combined_name + "(" + r["Strain"] + ")"
+    annots["Formatted Name"] = combined_name + "[" + r["Assembly"] + "]"
+
+    return annots
+
 # Iterate over each row in the table
 for _, r in df.iterrows():
     
@@ -77,11 +111,21 @@ for _, r in df.iterrows():
             format_ftp(r['GenBank FTP'])
         )
 
+        # Format the annotations
+        annotation_list.append(
+            format_annotation(r)
+        )
+
 # Write the list to a file
 with open("url_list.txt", "w") as handle:
 
     # Each URL on its own line
     handle.write("\\n".join(url_list))
+
+# Write the annotations to a CSV
+pd.DataFrame(anotation_list).set_index("genome_id").to_csv(
+    "genome_annotations.csv.gz"
+)
 
 """
 }
@@ -389,6 +433,41 @@ df = pd.concat([
 # Write out the table
 df.to_csv(
     "${params.output_prefix}.csv.gz",
+    index=None
+)
+
+"""
+
+}
+
+// Combine all of the genome annotations into a single file
+process concatenate_annotations {
+    container "${container__pandas}"
+    label 'io_limited'
+    publishDir "${params.output_folder}", mode: 'copy', overwrite: true
+   
+    input:
+    file "annotations/*.csv.gz"
+
+    output:
+    file "${params.output_prefix}.genome.annotations.csv.gz"
+
+"""#!/usr/bin/env python3
+import pandas as pd
+import os
+
+# Read in all of the inputs
+df = pd.concat([
+    pd.read_csv(
+        os.path.join('annotations', fp)
+    )
+    for fp in os.listdir('annotations')
+    if fp.endswith('.csv.gz')
+])
+
+# Write out the table
+df.to_csv(
+    "${params.output_prefix}.genome.annotations.csv.gz",
     index=None
 )
 

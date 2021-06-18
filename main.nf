@@ -205,8 +205,15 @@ workflow {
         // Download each of the files
         fetchFTP(
             parse_genome_csv
-                .out
+                .out[0]
                 .splitText()
+        )
+
+        // Join the genome annotations from the NCBI table
+        concatenate_annotations(
+            parse_genome_csv
+                .out[1]
+                .toSortedList()
         )
 
         // Join together the genomes from both sources
