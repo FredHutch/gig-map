@@ -81,10 +81,10 @@ def format_annotation(r):
         annots[n] = r[k]
 
     # Format a combined name
-    combined_name = r["Organism"]
-    if r["Strain"] is not None:
-        combined_name = combined_name + "(" + r["Strain"] + ")"
-    annots["Formatted Name"] = combined_name + "[" + r["Assembly"] + "]"
+    combined_name = annots["Organism"]
+    if annots["Strain"] is not None:
+        combined_name = combined_name + "(" + annots["Strain"] + ")"
+    annots["Formatted Name"] = combined_name + "[" + annots["Assembly"] + "]"
 
     return annots
 
