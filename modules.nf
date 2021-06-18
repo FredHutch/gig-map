@@ -372,26 +372,14 @@ process add_genome_name {
     output:
     file "alignments.named.gz"
 
-"""#!/usr/bin/env python3
-import pandas as pd
+"""#!/bin/bash
 
-# Read the table
-df = pd.read_csv(
-    "${alignments_gz}",
-    header=None,
-    sep="\\t"
-)
+set -Eeuo pipefail
 
-# Add the name of the genome FASTA
-df = df.assign(genome_name="${genome_name}")
-
-# Write out the table
-df.to_csv(
-    "alignments.named.gz",
-    header=None,
-    index=None,
-    sep="\\t"
-)
+gunzip -c "${alignments_gz}" \
+    | while read line; do echo -e "\$line\\t${genome_name}"; done \
+    | gzip -c \
+    > alignments.named.gz
 
 """
 
@@ -409,32 +397,17 @@ process concatenate_results {
     output:
     file "${params.output_prefix}.csv.gz"
 
-"""#!/usr/bin/env python3
-import pandas as pd
-import os
+"""#!/bin/bash
 
-# Define the names for the columns
-header = "${params.aln_fmt}".split(" ")
-# Add the column for the genome name
-header.append("genome")
+set -Eeuo pipefail
 
-# Read in all of the inputs
-df = pd.concat([
-    pd.read_csv(
-        os.path.join('inputs', fp),
-        sep='\\t',
-        header=None,
-        names=header
-    )
-    for fp in os.listdir('inputs')
-    if fp.endswith('.tsv.gz')
-])
+echo "${params.aln_fmt} genome" | tr ' ' ',' > "${params.output_prefix}.csv"
 
-# Write out the table
-df.to_csv(
-    "${params.output_prefix}.csv.gz",
-    index=None
-)
+gunzip -c inputs/*.tsv.gz \
+    | tr '\t' ',' \
+    >> "${params.output_prefix}.csv"
+
+gzip "${params.output_prefix}.csv"
 
 """
 
