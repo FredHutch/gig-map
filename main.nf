@@ -33,6 +33,7 @@ include {
     add_genome_name;
     concatenate_results;
     concatenate_annotations;
+    order_genes;
 } from './modules' params(
     output_folder: params.output_folder,
     output_prefix: params.output_prefix,
@@ -330,6 +331,11 @@ workflow {
     // Concatenate the results
     concatenate_results(
         add_genome_name.out.toSortedList()
+    )
+
+    // Order the genes based on the genomes they align to
+    order_genes(
+        concatenate_results.out
     )
 
 }

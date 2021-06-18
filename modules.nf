@@ -474,3 +474,56 @@ df.to_csv(
 """
 
 }
+
+// Order genes based on their alignment to genomes
+process order_genes {
+    container "${container__pandas}"
+    label 'mem_medium'
+    publishDir "${params.output_folder}", mode: 'copy', overwrite: true
+   
+    input:
+    file alignments_csv_gz
+
+    output:
+    file "${params.output_prefix}.gene_order.txt.gz"
+
+"""#!/usr/bin/env python3
+import pandas as pd
+import gzip
+
+# Read in all of the alignment information
+df = pd.read_csv(
+    "${alignments_csv_gz}"
+# Pivot to wide format
+).pivot_table(
+    columns="genome",
+    index="sseqid",
+    values="pident"
+).fillna(
+    0
+)
+
+# Group together genes which align to similar sets of genomes
+tsne_coords = TSNE(
+    n_components=1
+).fit_transform(
+    df.values
+)
+
+# Get the gene order
+gene_order = pd.Series(
+    tsne_coords[:,0],
+    index=df.index.values
+).sort_values(
+).index.values
+
+# Write out to a file
+with gzip.open(
+    "${params.output_prefix}.gene_order.txt.gz",
+    "wt"
+) as handle:
+    handle.write("\\n".join(list(gene_order)))
+
+"""
+
+}
