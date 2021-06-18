@@ -32,7 +32,3 @@ jobs:
       - name:  BLAST alignment from FASTA
         run: |
           NXF_VER=21.04.1 nextflow run main.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --genome_tables test_data/NCBI_Escherichia_coli_genomes.test_subset.csv --genes_fasta test_data/GCA_000005845.2_ASM584v2_protein.faa.gz --output_folder output_blast_fasta --output_prefix output --aligner blast -resume
-
-      - name:  BLAST alignment from DMND
-        run: |
-          NXF_VER=21.04.1 nextflow run main.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --genome_tables test_data/NCBI_Escherichia_coli_genomes.test_subset.csv --genes_dmnd test_data/GCA_000005845.2_ASM584v2_protein.dmnd --output_folder output_blast_dmnd --output_prefix output --aligner blast -resume
