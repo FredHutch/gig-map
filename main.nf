@@ -19,6 +19,7 @@ params.query_gencode = 11
 params.max_evalue = 0.001
 params.culling_limit = 5
 params.max_target_seqs = 100000
+params.annotate_geneshot = false
 
 // Import the processes to run in this workflow
 include {
@@ -34,6 +35,7 @@ include {
     concatenate_results;
     concatenate_annotations;
     order_genes;
+    annotate_genes;
 } from './modules' params(
     output_folder: params.output_folder,
     output_prefix: params.output_prefix,
@@ -72,6 +74,9 @@ def helpMessage() {
       --culling_limit       If the query range of a hit is enveloped by that of at least
                             this many higher-scoring hits, delete the hit (default: 5, for BLAST)
       --max_target_seqs     Maximum number of alignments to keep, per genome (default: 100000)
+      --annotate_geneshot   Optionally format annotations from the geneshot pipeline in a format
+                            which can be easily loaded into the gig-map visualization app.
+                            The expected file is the output of geneshot named *.results.hdf5.
 
     
     Specifing Genomes for Alignment:
@@ -337,5 +342,17 @@ workflow {
     order_genes(
         concatenate_results.out
     )
+
+    // If a set of geneshot results were provided
+    if (params.annotate_geneshot){
+
+        // Format those annotations as a CSV
+        annotate_genes(
+            Channel
+                .fromPath(
+                    params.annotate_geneshot
+                )
+        )
+    }
 
 }
