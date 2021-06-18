@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
 
-  test_fasta:
+  test:
     runs-on: ubuntu-latest
     env:
       NXF_ANSI_LOG: 0
@@ -21,27 +21,18 @@ jobs:
           sudo apt clean
           docker rmi $(docker image ls -aq)
           df -h
-      - name:  Test gig-map
+      - name:  DIAMOND alignment from FASTA
         run: |
-          NXF_VER=21.04.1 nextflow run main.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --genome_tables test_data/NCBI_Escherichia_coli_genomes.test_subset.csv --genes_fasta test_data/GCA_000005845.2_ASM584v2_protein.faa.gz --output_folder output --output_prefix output
+          NXF_VER=21.04.1 nextflow run main.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --genome_tables test_data/NCBI_Escherichia_coli_genomes.test_subset.csv --genes_fasta test_data/GCA_000005845.2_ASM584v2_protein.faa.gz --output_folder output_diamond_fasta --output_prefix output
 
-  test_dmnd:
-    runs-on: ubuntu-latest
-    env:
-      NXF_ANSI_LOG: 0
-    steps:
-      - uses: actions/checkout@v1
-      - name: Install Nextflow
+      - name:  DIAMOND alignment from DMND
         run: |
-          wget -qO- get.nextflow.io | bash
-          sudo mv nextflow /usr/local/bin/
-      - name: Free disk space
+          NXF_VER=21.04.1 nextflow run main.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --genome_tables test_data/NCBI_Escherichia_coli_genomes.test_subset.csv --genes_dmnd test_data/GCA_000005845.2_ASM584v2_protein.dmnd --output_folder output_diamond_dmnd --output_prefix output
+
+      - name:  BLAST alignment from FASTA
         run: |
-          sudo swapoff -a
-          sudo rm -f /swapfile
-          sudo apt clean
-          docker rmi $(docker image ls -aq)
-          df -h
-      - name:  Test gig-map
+          NXF_VER=21.04.1 nextflow run main.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --genome_tables test_data/NCBI_Escherichia_coli_genomes.test_subset.csv --genes_fasta test_data/GCA_000005845.2_ASM584v2_protein.faa.gz --output_folder output_blast_fasta --output_prefix output --aligner blast
+
+      - name:  BLAST alignment from DMND
         run: |
-          NXF_VER=21.04.1 nextflow run main.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --genome_tables test_data/NCBI_Escherichia_coli_genomes.test_subset.csv --genes_dmnd test_data/GCA_000005845.2_ASM584v2_protein.dmnd --output_folder output --output_prefix output
+          NXF_VER=21.04.1 nextflow run main.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --genome_tables test_data/NCBI_Escherichia_coli_genomes.test_subset.csv --genes_dmnd test_data/GCA_000005845.2_ASM584v2_protein.dmnd --output_folder output_blast_dmnd --output_prefix output --aligner blast
