@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
+from copy import copy
+from numpy import select
 import pandas as pd
+import plotly.graph_objects as go
 from skbio import DistanceMatrix
 from skbio.tree import nj
 
@@ -10,11 +13,11 @@ def remove_genome_file_ext(fp):
             fp = fp[:-len(ext)]
     return fp
 
-def read_data(alignments_csv, dists_tsv, gene_annotations):
+def read_data(args):
     """Read in the data needed to render the heatmap."""
 
     # Read in the alignments
-    alignments = pd.read_csv(alignments_csv)
+    alignments = pd.read_csv(args['alignments'])
 
     # Calculate the alignment coverage of each gene
     alignments = alignments.assign(
@@ -42,21 +45,24 @@ def read_data(alignments_csv, dists_tsv, gene_annotations):
         )
     ]
 
+    # By default, there are no additional labels to apply to the genes
+    available_gene_labels = []
+
     # Read in the pairwise genome distances
     dists = pd.read_csv(
-        dists_tsv,
+        args['distances'],
         sep="\t",
         index_col=0
     )
 
     # Read in the gene annotations, if any
-    if gene_annotations is None:
+    if args['gene_annotations'] is None:
         gene_annotations = None
 
     # If a table was provided
     else:
         # Read in the table
-        gene_annotations = pd.read_csv(gene_annotations)
+        gene_annotations = pd.read_csv(args['gene_annotations'])
 
         # Make sure that there is a column named "gene_id"
         msg = "Gene annotation CSV must contain a column named 'gene_id'"
@@ -75,12 +81,54 @@ def read_data(alignments_csv, dists_tsv, gene_annotations):
                 )
             )
 
+            # Also add those columns to the options available for labeling genes
+            available_gene_labels.append(
+                dict(
+                    label=col_name,
+                    value=col_name,
+                )
+            )
+
+    # By default, there are no additional labels to apply to the genomes
+    available_genome_labels = []
+
+    # Read in the genome annotations, if any
+    if args['genome_annotations'] is None:
+        genome_annotations = None
+
+    # If a table was provided
+    else:
+        # Read in the table
+        genome_annotations = pd.read_csv(args['genome_annotations'])
+
+        # Make sure that there is a column named "genome_id"
+        msg = "Genome annotation CSV must contain a column named 'genome_id'"
+        msg = f"{msg} - found {'; '.join(genome_annotations.columns.values)}"
+        assert "genome_id" in genome_annotations.columns.values, msg
+
+        # Set the index of the table as 'genome_id'
+        genome_annotations.set_index('genome_id', inplace=True)
+
+        # Add the other columns to the available genome annotations
+        for col_name in genome_annotations.columns.values:
+
+            # Add those columns to the options available for labeling genomes
+            available_genome_labels.append(
+                dict(
+                    label=col_name,
+                    value=col_name,
+                )
+            )
+
     # Return data formatted as a dict
     return dict(
         alignments=alignments,
         dists=dists,
         gene_annotations=gene_annotations,
         available_gene_annotations=available_gene_annotations,
+        available_gene_labels=available_gene_labels,
+        genome_annotations=genome_annotations,
+        available_genome_labels=available_genome_labels,
     )
 
 
@@ -108,71 +156,206 @@ def make_nj_tree(genome_list, dists_df):
     # Root at midpoint
     tree = tree.root_at_midpoint()
 
-    # Return the tree
-    return tree
-
-
-def plot_tree(tree):
-    """Return a Plotly trace rendered from a skbio tree."""
-    
-    # The first challenge is to assign an X-Y coordinate for each node in the tree
-
-    # The total height of the tree is going to be the number of tips
-    min_y = 0
-    max_y = len(list(tree.tips()))
-
     # Assign x/y to create a DataFrame
-    node_pos_df = CartesianTree(
+    node_positions = CartesianTree(
         tree,
-        max_y=max_y,
-        min_y=min_y,
-    ).df()
+        y_offset=-0.5,
+    )
 
-    print(node_pos_df)
+    # Return the layout of the tree
+    return node_positions
+
+def plot_heatmap(plot_df, node_positions, selections, data, xaxis='x', yaxis='y'):
+    """Return a heatmap rendered from the gene DataFrame and the genome positions."""
+
+    plot_df = plot_df.rename(
+        index=lambda s: s.replace("_", " ")
+    ).reindex(
+        index=node_positions.genome_order
+    )
+
+    # If the user elected to label the genes by something other than their ID
+    if selections["label-genes-by"] != "":
+
+        # Rename the columns of the DataFrame
+        plot_df = plot_df.rename(
+            columns=data["gene_annotations"][selections["label-genes-by"]].get
+        )
+
+    return go.Heatmap(
+        x=list(plot_df.columns.values),
+        z=plot_df.values,
+        xaxis=xaxis,
+        yaxis=yaxis,
+        colorscale=selections["heatmap-colorscale"],
+        showscale=selections["show-on-right"] == "colorscale",
+        # Title of the colorbar
+        colorbar=dict(
+            title=dict(
+                pident="Alignment Identity",
+                coverage="Alignment Coverage",
+            ).get(
+                selections["color-genes-by"],
+                selections["color-genes-by"]
+            ),
+        ),
+    )
+
+
+def plot_tree(node_positions, selections, data, xaxis='x', yaxis='y'):
+    """Return a Plotly trace rendered from a skbio tree."""
+
+    # If the user decided to label the genomes
+    if selections["label-genomes-by"] != "":
+
+        # Replace the values in the 'name' column of the DataFrame used for plotting
+        node_positions.df = node_positions.df.replace(
+            to_replace=dict(
+                name=data[
+                    "genome_annotations"
+                ][
+                    selections["label-genomes-by"]
+                ].to_dict()
+            )
+        )
+
+    # Return a ScatterGL
+    return go.Scattergl(
+        name="Neighbor Joining Tree",
+        showlegend=False,
+        mode="lines",
+        x=node_positions.x_coords(),
+        y=node_positions.y_coords(),
+        text=node_positions.text(),
+        hoverinfo="text",
+        xaxis=xaxis,
+        yaxis=yaxis,
+    )
 
 class CartesianTree:
 
-    def __init__(self, tree, max_y=1, min_y=0, x=0):
+    def __init__(self, tree, y_offset=0, x=0):
 
         # Set up each position as a dict in a list
         # keys will be name, x, y, and parent
         self.positions = []
 
         # Assign the root, and then recurse down to the tips
-        self.add_clade(tree, max_y=max_y, min_y=min_y, x=0)
+        self.add_clade(tree, y_offset=y_offset, x=x)
 
-    def df(self):
+        # Set up a DataFrame with the coordinates
+        self.df = pd.DataFrame(self.positions)
 
-        # Return a DataFrame
-        return pd.DataFrame(self.positions)
+        # Save the list of genome positions from the tree layout
+        self.genome_order = self.df.query("is_leaf").set_index(
+            "name"
+        )[
+            "y"
+        ].sort_values().index.values
 
-    def add_clade(self, clade, max_y=1, min_y=0, x=0, parent=-1):
+    def x_coords(self):
+        """Return a list of x-coordinates to use for plotting the tree."""
+
+        # Format is a list with each node and its parent, separated by NaN values
+        return self._list_link_to_parents(col_name="x")
+
+    def y_coords(self):
+        """Return a list of y-coordinates to use for plotting the tree."""
+
+        # Format is a list with each node and its parent, separated by NaN values
+        return self._list_link_to_parents(col_name="y")
+
+    def text(self):
+        """Return a list of leaf labels to use for plotting the tree."""
+
+        # Format is a list with each node and its parent, separated by NaN values
+        return self._list_link_to_parents(col_name="name")
+
+    def _list_link_to_parents(self, col_name="x"):
+        """Internal method for generating a list of values from self.df"""
+
+        # col_name may only be x, y, or name
+        assert col_name in ['x', 'y', 'name'], f"Not recognized: {col_name}"
+
+        # Populate a list which will be output
+        output_list = []
+
+        # Iterate over each row
+        for _, r in self.df.iterrows():
+
+            # If there is no parent for this row
+            if pd.isnull(r['parent']) or r['parent'] < 0:
+
+                # Skip it
+                continue
+
+            # If there is a parent for this row
+            else:
+
+                # Add the item to the list
+                output_list.append(r[col_name])
+
+                # The value placed in between the node and its parent
+                # depends on whether it is X or Y (or name)
+
+                # Get the value for the parent
+                parent_val = self.df.loc[r['parent'], col_name]
+
+                # Moving along the x axis
+                if col_name == "x":
+
+                    # The intermediate node has the X coordinate of the parent
+                    output_list.append(parent_val)
+
+                # Moving along the y axis
+                elif col_name == "y":
+
+                    # The intermediate node has the Y coordinate of the child
+                    output_list.append(r[col_name])
+
+                # For the 'name' values
+                elif col_name == "name":
+
+                    # The intermediate node has no name
+                    output_list.append(None)
+
+                # Add its parent
+                output_list.append(parent_val)
+
+                # Add a NaN to separate it
+                output_list.append(None)
+
+        # Return the list
+        return output_list
+
+    def add_clade(self, clade, y_offset=0, x=0, parent=-1):
         """Add the node at the base of a clade, then add its children (if any)."""
 
         # Set up a numeric ID for this clade
         clade_id = len(self.positions)
+
+        # Calculate the number of tips for this clade
+        clade_n_tips = len(list(clade.tips(include_self=True)))
+
+        # The Y position is based on the total number of tips, and the offset
+        clade_y = y_offset + (clade_n_tips / 2.)
 
         # The position of this clade is in the middle of max_y and min_y
         self.positions.append(
             dict(
                 name=clade.name,
                 x=x,
-                y=(max_y - min_y) / 2.,
-                parent=parent
+                y=clade_y,
+                parent=parent,
+                is_leaf=clade_n_tips==1
             )
         )
-
-        # Calculate the total y span
-        total_y_span = max_y - min_y
-
-        # Calculate the range provided for each tip
-        tip_y_span = total_y_span / len(list(clade.tips(include_self=True)))
 
         # For each child
         for child in clade.children:
 
-            # Set the minimum y value for the clade based on the number of tips
-            child_min_y = max_y - (tip_y_span * len(list(child.tips(include_self=True))))
+            # Calculate the number of tips for this child
+            child_n_tips = len(list(child.tips(include_self=True)))
 
             # Calculate the x position of the clade by adding
             # the distance to its parent
@@ -181,12 +364,10 @@ class CartesianTree:
             # Add the child
             self.add_clade(
                 child,
-                max_y = max_y,
-                min_y = child_min_y,
+                y_offset=y_offset,
                 x=child_x,
                 parent=clade_id,
             )
 
-            # The next child will be positioned below
-            max_y = child_min_y
-
+            # The next child will be positioned above, based on the number of tips
+            y_offset = y_offset + child_n_tips
