@@ -271,6 +271,30 @@ diamond \
 
 }
 
+process extract_dmnd {
+    container "${container__diamond}"
+    label 'io_limited'
+    
+    input:
+        file dmnd
+    
+    output:
+        file "${dmnd}.fasta.gz"
+
+"""#!/bin/bash
+
+set -e
+
+diamond \
+    getseq \
+    --db ${dmnd} \
+    --out "${dmnd}.fasta.gz" \
+    --compress 1
+
+    """
+
+}
+
 // Align each sample against the reference database of genes using DIAMOND
 process makedb_diamond {
     container "${container__diamond}"

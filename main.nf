@@ -8,7 +8,8 @@ params.help = false
 params.output_folder = false
 params.output_prefix = false
 params.genomes = false
-params.genes = false
+params.genes_fasta = false
+params.genes_dmnd = false
 params.genome_tables = false
 params.min_coverage = 50
 params.min_identity = 50
@@ -23,6 +24,7 @@ params.max_target_seqs = 100000
 include {
     parse_genome_csv;
     fetchFTP;
+    extract_dmnd;
     mashtree;
     makedb_blast;
     align_blast;
@@ -52,7 +54,9 @@ def helpMessage() {
     Required Arguments:
       --genomes             Genome sequences in FASTA format (see note below)
       --genome_tables       Tables of NCBI genomes to analyze (see note below)
-      --genes               Amino acid sequences to search for (multi-FASTA format)
+      --genes_fasta         Amino acid sequences to search for (multi-FASTA format)
+      --genes_dmnd          Amino acid sequences to search for (DIAMOND database format *.dmnd)
+                            (either --genes_fasta or --genes_dmnd is required)
       --output_folder       Folder to write output files to
       --output_prefix       Prefix to use for output file names
 
@@ -89,6 +93,21 @@ def helpMessage() {
 
     NOTE: All genomes must have a unique filename
 
+
+    Specifying Genes for Alignment:
+
+    Genes may be provided for alignment either in FASTA format or as a pre-formatted DIAMOND
+    database. There is no computational benefit derived from providing a pre-formatted database,
+    and so that option is provided merely for convenience. Note that DIAMOND database formats
+    depend on the version of the software being used, and so there may be compatibility issues
+    when using databases compiled with versions of DIAMOND which are significantly different
+    from the version used for alignment in this workflow (v2.0.6 at time of writing).
+
+    To provide genes in FASTA format (gzip-optional), use the --genes_fasta flag.
+    To provide genes in DIAMOND database format (v2.0.6 recommended), use the --genes_dmnd flag.
+
+    Multiple files may be specified with either flag, which will be concatenated for alignment.
+
     """.stripIndent()
 }
 
@@ -104,12 +123,27 @@ workflow {
     }
 
     // The user must specify each of the required arguments
-    if (!params.genes || !params.output_folder || !params.output_prefix){
+    if (!params.output_folder || !params.output_prefix){
         log.info"""
 
         -----------------------
         MISSING REQUIRED INPUTS
         -----------------------
+
+        """.stripIndent()
+        helpMessage()
+
+        // Exit out and do not run anything else
+        exit 0
+    }
+
+    // The user must specify genes as either FASTA or DMND
+    if (!params.genes_dmnd && !params.genes_fasta){
+        log.info"""
+
+        -------------------
+        MISSING INPUT GENES
+        -------------------
 
         """.stripIndent()
         helpMessage()
@@ -191,16 +225,65 @@ workflow {
         all_genomes.toSortedList()
     )
 
+    // If the --genes_fasta flag was specified
+    if (params.genes_fasta){
+
+        // Make a channel containing the files from a comma-delimited list
+        Channel
+            .fromPath(
+                params.genes_fasta.split(",").toList()
+            )
+            .set {
+                genes_fasta_ch
+            }
+
+    } else {
+
+        // Set up an empty channel
+        Channel.empty().set{genes_fasta_ch}
+
+    }
+
+    // If the --genes_dmnd flag was specified
+    if (params.genes_dmnd){
+
+        // Make a channel containing the files from a comma-delimited list
+        Channel
+            .fromPath(
+                params.genes_dmnd.split(",").toList()
+            )
+            .set {
+                genes_dmnd_ch
+            }
+
+        // Reformat those DMND database files as FASTA
+        extract_dmnd(
+            genes_dmnd_ch
+        )
+
+        // Set up a channel containing the extracted FASTA files
+        genes_dmnd_extracted = extract_dmnd.out
+
+    } else {
+
+        // Set up an empty channel
+        Channel.empty().set{genes_dmnd_extracted}
+
+    }
+
+    // Combine the genes from FASTA and DMND input files
+    genes_fasta_ch
+        .mix(genes_dmnd_extracted)
+        .set {
+            combined_genes_ch
+        }
+
     // If the user has selected DIAMOND for alignment
     if (params.aligner == "diamond"){
 
         // Make a DIAMOND database for the input genes
         makedb_diamond(
-            Channel
-                .fromPath(
-                    params.genes.split(",").toList()
-                )
-                .toSortedList()
+            combined_genes_ch.toSortedList()
         )
 
         // Align the query genes against the genomes
@@ -218,11 +301,7 @@ workflow {
 
         // Make a BLAST database for the input genes
         makedb_blast(
-            Channel
-                .fromPath(
-                    params.genes.split(",").toList()
-                )
-                .toSortedList()
+            combined_genes_ch.toSortedList()
         )
 
         // Align the query genes against the genomes
