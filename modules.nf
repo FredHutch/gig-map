@@ -123,7 +123,7 @@ with open("url_list.txt", "w") as handle:
     handle.write("\\n".join(url_list))
 
 # Write the annotations to a CSV
-pd.DataFrame(anotation_list).set_index("genome_id").to_csv(
+pd.DataFrame(annotation_list).set_index("genome_id").to_csv(
     "genome_annotations.csv.gz"
 )
 
