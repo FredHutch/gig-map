@@ -490,6 +490,8 @@ process order_genes {
 """#!/usr/bin/env python3
 import pandas as pd
 import gzip
+from sklearn.manifold import TSNE
+
 
 # Read in all of the alignment information
 df = pd.read_csv(
