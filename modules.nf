@@ -1,6 +1,6 @@
 // Docker containers reused across processes
 container__wget = "quay.io/fhcrc-microbiome/wget:latest"
-container__pandas = "quay.io/fhcrc-microbiome/python-pandas:v1.0.3"
+container__pandas = "quay.io/fhcrc-microbiome/python-pandas:7e911f9"
 container__mashtree = "quay.io/hdc-workflows/mashtree:1.2.0"
 container__blast = "quay.io/biocontainers/blast:2.11.0--pl526he19e7b1_0"
 container__diamond = "quay.io/fhcrc-microbiome/docker-diamond:v2.0.6-biopython"
