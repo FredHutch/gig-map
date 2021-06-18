@@ -31,7 +31,8 @@ include {
     align_diamond;
     makedb_diamond;
     add_genome_name;
-    concatenate_results
+    concatenate_results;
+    concatenate_annotations;
 } from './modules' params(
     output_folder: params.output_folder,
     output_prefix: params.output_prefix,
