@@ -266,10 +266,11 @@ blastx \
     -db database.fasta \
     -query_gencode ${params.query_gencode} \
     -evalue ${params.max_evalue} \
-    -outfmt 6 ${params.aln_fmt} \
+    -outfmt '6 delim=, ${params.aln_fmt}' \
     -culling_limit ${params.culling_limit} \
     -max_target_seqs ${params.max_target_seqs} \
     -num_threads ${task.cpus} \
+    | tr ',' '\\t' \
     | gzip -c \
     > alignments.gz
 
