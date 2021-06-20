@@ -82,7 +82,7 @@ def format_annotation(r):
 
     # Format a combined name
     combined_name = annots["Organism"]
-    if annots["Strain"] is not None:
+    if isinstance(annots["Strain"], str):
         combined_name = combined_name + "(" + annots["Strain"] + ")"
     annots["Formatted Name"] = combined_name + "[" + annots["Assembly"] + "]"
 
