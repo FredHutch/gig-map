@@ -16,7 +16,8 @@ params.max_evalue = 0.001
 params.culling_limit = 5
 params.max_target_seqs = 100000
 params.aln_fmt = "qseqid sseqid pident length qstart qend qlen sstart send slen"
-
+params.max_n_genes_train_pca = 10000
+params.max_pcs_tsne = 50
 
 // Parse the NCBI Genome Browser CSV 
 process parse_genome_csv {
@@ -461,44 +462,16 @@ process order_genes {
     output:
     file "${params.output_prefix}.gene_order.txt.gz"
 
-"""#!/usr/bin/env python3
-import pandas as pd
-import gzip
-from sklearn.manifold import TSNE
+"""#!/bin/bash
 
+set -Eeuo pipefail
 
-# Read in all of the alignment information
-df = pd.read_csv(
-    "${alignments_csv_gz}"
-# Pivot to wide format
-).pivot_table(
-    columns="genome",
-    index="sseqid",
-    values="pident"
-).fillna(
-    0
-)
-
-# Group together genes which align to similar sets of genomes
-tsne_coords = TSNE(
-    n_components=1
-).fit_transform(
-    df.values
-)
-
-# Get the gene order
-gene_order = pd.Series(
-    tsne_coords[:,0],
-    index=df.index.values
-).sort_values(
-).index.values
-
-# Write out to a file
-with gzip.open(
-    "${params.output_prefix}.gene_order.txt.gz",
-    "wt"
-) as handle:
-    handle.write("\\n".join(list(gene_order)))
+order_genes.py \
+    "${alignments_csv_gz}" \
+    ${params.max_n_genes_train_pca} \
+    ${params.max_pcs_tsne} \
+    "${params.output_prefix}.gene_order.txt.gz" \
+    ${task.cpus}
 
 """
 

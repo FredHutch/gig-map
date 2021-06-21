@@ -20,6 +20,8 @@ params.max_evalue = 0.001
 params.culling_limit = 5
 params.max_target_seqs = 100000
 params.annotate_geneshot = false
+params.max_n_genes_train_pca = 10000
+params.max_pcs_tsne = 50
 
 // Import the processes to run in this workflow
 include {
@@ -46,6 +48,8 @@ include {
     max_evalue: params.max_evalue,
     culling_limit: params.culling_limit,
     max_target_seqs: params.max_target_seqs,
+    max_n_genes_train_pca: params.max_n_genes_train_pca,
+    max_pcs_tsne: params.max_pcs_tsne,
 )
 
 // Function which prints help message text
@@ -77,6 +81,12 @@ def helpMessage() {
       --annotate_geneshot   Optionally format annotations from the geneshot pipeline in a format
                             which can be easily loaded into the gig-map visualization app.
                             The expected file is the output of geneshot named *.results.hdf5.
+      --max_n_genes_train_pca
+                            The maximum number of genes used to train the PCA model used
+                            for ordering genes based on the similarity of the genomes
+                            which they align to (default: 10000)
+      --max_pcs_tsne        The maximum number of dimensions from the PCA output to use
+                            for ordering genes by 1-dimensional t-SNE (default: 50)
 
     
     Specifing Genomes for Alignment:
