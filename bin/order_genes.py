@@ -13,7 +13,7 @@ output_fp = sys.argv[4]
 n_cpus = int(sys.argv[5])
 
 # Read in all of the alignment information
-df = pd.read_csv(
+df = pd.read_feather(
     input_fp
 # Pivot to wide format
 ).pivot_table(

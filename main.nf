@@ -38,6 +38,7 @@ include {
     concatenate_annotations;
     order_genes;
     annotate_genes;
+    csv_to_feather;
 } from './modules' params(
     output_folder: params.output_folder,
     output_prefix: params.output_prefix,
@@ -348,9 +349,14 @@ workflow {
         add_genome_name.out.toSortedList()
     )
 
+    // Convert the CSV to feather format
+    csv_to_feather(
+        concatenate_results.out
+    )
+
     // Order the genes based on the genomes they align to
     order_genes(
-        concatenate_results.out
+        csv_to_feather.out
     )
 
     // If a set of geneshot results were provided

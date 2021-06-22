@@ -457,7 +457,7 @@ process order_genes {
     publishDir "${params.output_folder}", mode: 'copy', overwrite: true
    
     input:
-    file alignments_csv_gz
+    file alignments_feather
 
     output:
     file "${params.output_prefix}.gene_order.txt.gz"
@@ -467,11 +467,40 @@ process order_genes {
 set -Eeuo pipefail
 
 order_genes.py \
-    "${alignments_csv_gz}" \
+    "${alignments_feather}" \
     ${params.max_n_genes_train_pca} \
     ${params.max_pcs_tsne} \
     "${params.output_prefix}.gene_order.txt.gz" \
     ${task.cpus}
+
+"""
+
+}
+
+
+// Convert a CSV file to feather format
+process csv_to_feather {
+    container "${container__pandas}"
+    label 'mem_medium'
+    publishDir "${params.output_folder}", mode: 'copy', overwrite: true
+   
+    input:
+    file input_csv
+
+    output:
+    file "${input_csv.name.replaceAll(/.csv.gz/, '.feather')}"
+
+"""#!/usr/bin/env python3
+
+import pandas as pd
+
+output_fp = "${input_csv.name.replaceAll(/.csv.gz/, '.feather')}"
+
+pd.read_csv(
+    "${input_csv}"
+).to_feather(
+    output_fp
+)
 
 """
 
