@@ -457,7 +457,7 @@ process order_genes {
     publishDir "${params.output_folder}", mode: 'copy', overwrite: true
    
     input:
-    file alignments_feather
+    file alignments_csv_gz
 
     output:
     file "${params.output_prefix}.gene_order.txt.gz"
@@ -467,7 +467,7 @@ process order_genes {
 set -Eeuo pipefail
 
 order_genes.py \
-    "${alignments_feather}" \
+    "${alignments_csv_gz}" \
     ${params.max_n_genes_train_pca} \
     ${params.max_pcs_tsne} \
     "${params.output_prefix}.gene_order.txt.gz" \
@@ -478,33 +478,33 @@ order_genes.py \
 }
 
 
-// Convert a CSV file to feather format
-process csv_to_feather {
+// Generate 2-dimensional t-SNE coordinates for genes based on their alignment to genomes
+process generate_gene_map {
     container "${container__pandas}"
     label 'mem_medium'
     publishDir "${params.output_folder}", mode: 'copy', overwrite: true
    
     input:
-    file input_csv
+    file alignments_feather
 
     output:
-    file "${input_csv.name.replaceAll(/.csv.gz/, '.feather')}"
+    file "${params.output_prefix}.tsne.coords.csv.gz"
 
-"""#!/usr/bin/env python3
+"""#!/bin/bash
 
-import pandas as pd
+set -Eeuo pipefail
 
-output_fp = "${input_csv.name.replaceAll(/.csv.gz/, '.feather')}"
-
-pd.read_csv(
-    "${input_csv}"
-).to_feather(
-    output_fp
-)
+generate_gene_map.py \
+    "${alignments_feather}" \
+    ${params.max_n_genes_train_pca} \
+    ${params.max_pcs_tsne} \
+    "${params.output_prefix}.tsne.coords.csv.gz" \
+    ${task.cpus}
 
 """
 
 }
+
 
 // Format a set of gene annotations from the geneshot pipeline as a flat CSV
 process annotate_genes {
@@ -525,6 +525,37 @@ set -Eeuo pipefail
 format_geneshot_annotations.py \
     --input "${geneshot_results_hdf}" \
     --output "${params.output_prefix}.gene_annotations.csv.gz"
+
+"""
+
+}
+
+
+// Group together all results into a single HDF5 file object
+process aggregate_results {
+    container "${container__pandas}"
+    label 'mem_medium'
+    publishDir "${params.output_folder}", mode: 'copy', overwrite: true
+   
+    input:
+    file alignments_csv_gz
+    file gene_order_txt_gz
+    file dists_tsv_gz
+    file tsne_coords_csv_gz
+
+    output:
+    file "${params.output_prefix}.hdf5"
+
+"""#!/bin/bash
+
+set -Eeuo pipefail
+
+aggregate_results.py \
+    --alignments "${alignments_csv_gz}" \
+    --gene-order "${gene_order_txt_gz}" \
+    --dists "${dists_tsv_gz}" \
+    --tnse-coords "${tsne_coords_csv_gz}" \
+    --output "${params.output_prefix}.hdf5"
 
 """
 

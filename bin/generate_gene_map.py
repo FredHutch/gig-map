@@ -51,7 +51,7 @@ pca_coords = pca.transform(
 
 # Initialize the TSNE object
 tsne = TSNE(
-    n_components=1,
+    n_components=2,
     n_jobs=n_cpus
 )
 
@@ -60,16 +60,18 @@ tsne_coords = tsne.fit_transform(
     pca_coords
 )
 
-# Get the gene order
-gene_order = pd.Series(
-    tsne_coords[:,0],
-    index=df.index.values
-).sort_values(
-).index.values
+# Format a DataFrame with the results
+gene_map_df = pd.DataFrame(
+    tsne_coords,
+    index=df.index.values,
+    columns=[
+        "t-SNE 1",
+        "t-SNE 2",
+    ]
+)
 
 # Write out to a file
-with gzip.open(
+gene_map_df.to_csv(
     output_fp,
-    "wt"
-) as handle:
-    handle.write("\n".join(list(gene_order)))
+    compression="gzip"
+)

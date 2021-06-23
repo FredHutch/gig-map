@@ -37,8 +37,9 @@ include {
     concatenate_results;
     concatenate_annotations;
     order_genes;
+    generate_gene_map;
     annotate_genes;
-    csv_to_feather;
+    aggregate_results;
 } from './modules' params(
     output_folder: params.output_folder,
     output_prefix: params.output_prefix,
@@ -197,6 +198,7 @@ workflow {
             ).set {
                 local_genomes
             }
+
     // If no --genomes flag was used
     }else{
 
@@ -242,7 +244,11 @@ workflow {
                 all_genomes
             }
     }else{
+
+        // The only genomes to process will come from the
+        // set of local genome
         local_genomes.set{all_genomes}
+
     }
 
     // Compute whole-genome similarity with mashtree
@@ -349,14 +355,14 @@ workflow {
         add_genome_name.out.toSortedList()
     )
 
-    // Convert the CSV to feather format
-    csv_to_feather(
+    // Order the genes based on the genomes they align to
+    order_genes(
         concatenate_results.out
     )
 
-    // Order the genes based on the genomes they align to
-    order_genes(
-        csv_to_feather.out
+    // Generate 2-dimensional t-SNE coordinates for genes based on their alignment to genomes
+    generate_gene_map(
+        concatenate_results.out
     )
 
     // If a set of geneshot results were provided
@@ -370,5 +376,13 @@ workflow {
                 )
         )
     }
+
+    // Group together all results into a single HDF5 file object
+    aggregate_results(
+        concatenate_results.out,
+        order_genes.out,
+        mashtree.out[1],
+        generate_gene_map.out,
+    )
 
 }
