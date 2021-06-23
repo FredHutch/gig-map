@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from copy import copy
+import logging
 from numpy import select
 import pandas as pd
 import plotly.graph_objects as go
@@ -16,7 +17,11 @@ def remove_genome_file_ext(fp):
 def read_data(args):
     """Read in the data needed to render the heatmap."""
 
+    # Get the logger
+    logger = logging.getLogger('gig-map')
+
     # Read in the alignments
+    logger.info(f"Reading from {args['alignments']}")
     alignments = pd.read_csv(args['alignments'])
 
     # Calculate the alignment coverage of each gene
@@ -49,6 +54,7 @@ def read_data(args):
     available_gene_labels = []
 
     # Read in the pairwise genome distances
+    logger.info(f"Reading from {args['distances']}")
     dists = pd.read_csv(
         args['distances'],
         sep="\t",
@@ -62,6 +68,7 @@ def read_data(args):
     # If a table was provided
     else:
         # Read in the table
+        logger.info(f"Reading from {args['gene_annotations']}")
         gene_annotations = pd.read_csv(args['gene_annotations'])
 
         # Make sure that there is a column named "gene_id"
@@ -99,6 +106,7 @@ def read_data(args):
     # If a table was provided
     else:
         # Read in the table
+        logger.info(f"Reading from {args['genome_annotations']}")
         genome_annotations = pd.read_csv(args['genome_annotations'])
 
         # Make sure that there is a column named "genome_id"
@@ -119,6 +127,8 @@ def read_data(args):
                     value=col_name,
                 )
             )
+
+    logger.info("Done reading all data")
 
     # Return data formatted as a dict
     return dict(
