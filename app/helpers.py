@@ -20,26 +20,20 @@ def read_data(args):
     # Get the logger
     logger = logging.getLogger('gig-map')
 
-    # Read in the alignments
-    logger.info(f"Reading from {args['alignments']}")
-    alignments = pd.read_csv(args['alignments'])
+    # Return data formatted as a dict
+    output = dict()
 
-    # Calculate the alignment coverage of each gene
-    alignments = alignments.assign(
-        coverage = alignments.apply(
-            lambda r: 100 * (r['send'] - r['sstart'] + 1) / r['slen'],
-            axis=1
+    # Read in the alignment information in wide format
+    # This will consist of three tables -- percent identity, coverage, and a description
+    for colname in ['pident', 'coverage', 'description']:
+        output[f"alignments_{colname}"] = pd.read_hdf(
+            args['alignments'],
+            f"/alignments/{colname}"
         )
-    )
-
-    # Remove the file endings from the genome names
-    alignments = alignments.apply(
-        lambda c: c.apply(remove_genome_file_ext) if c.name == "genome" else c
-    )
 
     # The default annotations available for each gene are the
     # alignment identity and coverage
-    available_gene_annotations = [
+    output["available_gene_annotations"] = [
         dict(
             label="Alignment Identity",
             value="pident"
@@ -51,37 +45,33 @@ def read_data(args):
     ]
 
     # By default, there are no additional labels to apply to the genes
-    available_gene_labels = []
+    output["available_gene_labels"] = []
 
     # Read in the pairwise genome distances
-    logger.info(f"Reading from {args['distances']}")
-    dists = pd.read_csv(
-        args['distances'],
-        sep="\t",
-        index_col=0
-    )
+    logger.info(f"Reading from {args['alignments']}")
+    output["distances"] = pd.read_hdf(args['alignments'], "/distances")
 
     # Read in the gene annotations, if any
     if args['gene_annotations'] is None:
-        gene_annotations = None
+        output["gene_annotations"] = None
 
     # If a table was provided
     else:
         # Read in the table
         logger.info(f"Reading from {args['gene_annotations']}")
-        gene_annotations = pd.read_csv(args['gene_annotations'])
+        output["gene_annotations"] = pd.read_csv(args['gene_annotations'])
 
         # Make sure that there is a column named "gene_id"
         msg = "Gene annotation CSV must contain a column named 'gene_id'"
-        msg = f"{msg} - found {'; '.join(gene_annotations.columns.values)}"
-        assert "gene_id" in gene_annotations.columns.values, msg
+        msg = f"{msg} - found {'; '.join(output['gene_annotations'].columns.values)}"
+        assert "gene_id" in output["gene_annotations"].columns.values, msg
 
         # Set the index of the table as 'gene_id'
-        gene_annotations.set_index('gene_id', inplace=True)
+        output["gene_annotations"].set_index('gene_id', inplace=True)
 
         # Add the other columns to the available gene annotations
-        for col_name in gene_annotations.columns.values:
-            available_gene_annotations.append(
+        for col_name in output["gene_annotations"].columns.values:
+            output["available_gene_annotations"].append(
                 dict(
                     label=col_name,
                     value=col_name,
@@ -89,7 +79,7 @@ def read_data(args):
             )
 
             # Also add those columns to the options available for labeling genes
-            available_gene_labels.append(
+            output["available_gene_labels"].append(
                 dict(
                     label=col_name,
                     value=col_name,
@@ -97,31 +87,31 @@ def read_data(args):
             )
 
     # By default, there are no additional labels to apply to the genomes
-    available_genome_labels = []
+    output["available_genome_labels"] = []
 
     # Read in the genome annotations, if any
     if args['genome_annotations'] is None:
-        genome_annotations = None
+        output['genome_annotations'] = None
 
     # If a table was provided
     else:
         # Read in the table
         logger.info(f"Reading from {args['genome_annotations']}")
-        genome_annotations = pd.read_csv(args['genome_annotations'])
+        output['genome_annotations'] = pd.read_csv(args['genome_annotations'])
 
         # Make sure that there is a column named "genome_id"
         msg = "Genome annotation CSV must contain a column named 'genome_id'"
-        msg = f"{msg} - found {'; '.join(genome_annotations.columns.values)}"
-        assert "genome_id" in genome_annotations.columns.values, msg
+        msg = f"{msg} - found {'; '.join(output['genome_annotations'] .columns.values)}"
+        assert "genome_id" in output['genome_annotations'] .columns.values, msg
 
         # Set the index of the table as 'genome_id'
-        genome_annotations.set_index('genome_id', inplace=True)
+        output['genome_annotations'] .set_index('genome_id', inplace=True)
 
         # Add the other columns to the available genome annotations
-        for col_name in genome_annotations.columns.values:
+        for col_name in output['genome_annotations'] .columns.values:
 
             # Add those columns to the options available for labeling genomes
-            available_genome_labels.append(
+            output["available_genome_labels"].append(
                 dict(
                     label=col_name,
                     value=col_name,
@@ -131,15 +121,7 @@ def read_data(args):
     logger.info("Done reading all data")
 
     # Return data formatted as a dict
-    return dict(
-        alignments=alignments,
-        dists=dists,
-        gene_annotations=gene_annotations,
-        available_gene_annotations=available_gene_annotations,
-        available_gene_labels=available_gene_labels,
-        genome_annotations=genome_annotations,
-        available_genome_labels=available_genome_labels,
-    )
+    return output
 
 
 # Generate a neighbor-joining tree from a subset of genomes
@@ -187,9 +169,31 @@ def plot_heatmap(plot_df, node_positions, selections, data, xaxis='x', yaxis='y'
     # If the user elected to label the genes by something other than their ID
     if selections["label-genes-by"] != "":
 
+        # Function to rename genes
+        def format_gene_id(gene_id):
+
+            # Get the value
+            gene_label = data[
+                "gene_annotations"
+            ][
+                selections["label-genes-by"]
+            ].get(gene_id)
+
+            # If there is no value
+            if gene_label is None:
+
+                # Just show the gene ID
+                return gene_id
+
+            # If there is a value
+            else:
+
+                # Join together the gene ID and the annotated label
+                return f"{gene_label} ({gene_id})"
+
         # Rename the columns of the DataFrame
         plot_df = plot_df.rename(
-            columns=data["gene_annotations"][selections["label-genes-by"]].get
+            columns=format_gene_id
         )
 
     return go.Heatmap(

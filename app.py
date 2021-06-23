@@ -2,6 +2,8 @@
 
 # Import the helper functions
 from os import read
+
+from numpy import disp
 from app.helpers import read_data, make_nj_tree, plot_tree, plot_heatmap
 
 # Import the menu-driven-figure library
@@ -47,13 +49,7 @@ parser.add_argument(
     '--alignments',
     type=str,
     required=True,
-    help='Table of gene alignments (suffix: .csv.gz)'
-)
-parser.add_argument(
-    '--distances',
-    type=str,
-    required=True,
-    help='Pairwise genome ANI values (suffix: .dists.tsv.gz)'
+    help='Dataset of gene alignments (suffix: .hdf5)'
 )
 parser.add_argument(
     '--gene-annotations',
@@ -218,47 +214,47 @@ menus = [
     ),
 ]
 
-# Filter alignments based on minimum thresholds
-@lru_cache(maxsize=128)
-def filter_alignments(min_pctid, min_cov):
 
-    return data['alignments'].query(
-        f"pident >= {min_pctid}"
-    ).query(
-        f"coverage >= {min_cov}"
-    )
+@lru_cache(maxsize=1)
+def get_mask(min_pctid, min_cov):
+
+    # Compute the mask for which genes/genomes pass the filter
+    return (data["alignments_pident"] >= min_pctid) & \
+           (data["alignments_coverage"] >= min_cov)
 
 
 # Generate a wide table of alignments based on minimum thresholds
-@lru_cache(maxsize=128)
 def format_alignments_wide(min_pctid, min_cov, display_value):
 
-    # Format the data in wide format
-    df = filter_alignments(
-        min_pctid,
-        min_cov
-    ).pivot_table(
-        index="genome",
-        columns="sseqid",
-        values=display_value
-    )
+    # The options for `display_value` are:
+    #   pident
+    #   coverage
+    #   description
+    #   mask (returns a bool for each cell reflecting the filter)
+    assert display_value in ['pident', 'coverage', 'description', 'mask']
 
-    # Group together genes with similar values
-    gene_tsne_coords = TSNE(
-        n_components=1
-    ).fit_transform(
-        df.T.fillna(0).values
-    )
+    # Compute the mask for which genes/genomes pass the filter
+    # Using a subfunction allows us to cache the value to help with
+    # multiple calls to the format_alignments_wide() function
+    mask = get_mask(min_pctid, min_cov)
 
-    # Get the gene order
-    gene_order = pd.Series(
-        gene_tsne_coords[:,0],
-        index=df.columns.values
-    ).sort_values(
-    ).index.values
+    # If that is all we need to return
+    if display_value == "mask":
 
-    # Return the DataFrame, with that order
-    return df.reindex(columns=gene_order)
+        # Return the DataFrame of bools
+        return mask
+
+    # Otherwise:
+    else:
+
+        # Format the key for the source data
+        data_key = f"alignments_{display_value}"
+
+        # Make sure that the key is valid
+        assert data_key in list(data.keys())
+
+        # Return the alignments which pass the filter
+        return data[data_key].where(mask)
 
 
 def plot_gig_map(_, selections):
@@ -295,21 +291,32 @@ def plot_gig_map(_, selections):
         msg = f"Column {selections['color-genes-by']} contains no numeric values"
         assert len(value_dict) > 0, msg
 
-        # Start with a table filtered by alignment characteristics, and filled in with pident
+        # Start with a table filtered by alignment characteristics, and filled in with True/False
         plot_df = format_alignments_wide(
             selections["minimum-pctid"],
             selections["minimum-coverage"],
-            "pident"
+            "mask"
         # Now replace any non-null value (for which an alignment is present) with the annotation
-        ).apply(
-            lambda c: c.apply(lambda v: None if pd.isnull(v) else value_dict.get(c.name))
+        ).replace(
+            to_replace={
+                gene_name: {
+                    True: gene_value,
+                    False: None
+                }
+                for gene_name, gene_value in value_dict.items()
+            }
         )
 
-    # Make sure that >1 genome contains alignments which pass the threshold
-    assert plot_df.shape[0] > 1, "Not enough genomes have alignments passing the filter"
+    # Drop any genomes which don't have any alignments which pass the threshold
+    plot_df = plot_df.loc[
+        plot_df.notnull().any(axis=1)
+    ]
+
+    # Make sure that there are at least two genomes with alignments
+    assert plot_df.shape[0] > 1, "<=1 genome with alignments passing filter"
 
     # Create a tree using the set of genomes which contain alignments
-    node_positions = make_nj_tree(plot_df.index.values, data['dists'])
+    node_positions = make_nj_tree(plot_df.index.values, data['distances'])
 
     # The figure will render with a dendrogram on the left and a heatmap on the right
 
