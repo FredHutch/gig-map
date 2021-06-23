@@ -71,6 +71,10 @@ args = parser.parse_args()
 # Make sure that the output path has the expected extension
 assert args.output.endswith(".hdf5"), "--output must end with .hdf5"
 
+##############
+# ALIGNMENTS #
+##############
+
 # Read in the alignments
 logger.info(f"Reading from {args.alignments}")
 alignments = pd.read_csv(args.alignments)
@@ -94,14 +98,10 @@ alignments = alignments.apply(
     lambda c: c.apply(remove_genome_file_ext) if c.name == "genome" else c
 )
 
-# Get a list of all genomes which have alignments
-genome_list = alignments['genome'].unique()
 
-# Read the list of all genes, ordered by similarity of alignment
-gene_list = [
-    line.decode().rstrip("\n")
-    for line in gzip.open(args.gene_order, 'r')
-]
+#######################
+# REFORMAT ALIGNMENTS #
+#######################
 
 # Set up a function to format a text string describing >=1 alignments
 def format_description(d):
@@ -123,6 +123,55 @@ alignments = alignments.groupby(
         )
     )
 ).reset_index()
+
+
+#############
+# DISTANCES #
+#############
+
+# Read in the pairwise genome distances
+logger.info(f"Reading from {args.dists}")
+dists = pd.read_csv(
+    args.dists,
+    sep="\t",
+    index_col=0
+)
+
+
+#####################
+# t-SNE COORDINATES #
+#####################
+
+# Read in the t-SNE coordinates per-gene
+logger.info(f"Reading from {args.tnse_coords}")
+tsne_coords = pd.read_csv(
+    args.tnse_coords,
+    index_col=0
+)
+
+
+###############
+# GENOME LIST #
+###############
+
+# Get a list of all genomes which have alignments
+genome_list = alignments['genome'].unique()
+
+
+#############
+# GENE LIST #
+#############
+
+# Read the list of all genes, ordered by similarity of alignment
+gene_list = [
+    line.decode().rstrip("\n")
+    for line in gzip.open(args.gene_order, 'r')
+]
+
+
+################
+# WRITE OUTPUT #
+################
 
 # Open a connection to the output HDF store
 with pd.HDFStore(args.output, 'w') as store:
@@ -153,3 +202,19 @@ with pd.HDFStore(args.output, 'w') as store:
             complevel=9,
             format="fixed",
         )
+
+    # Save the table of distances
+    dists.to_hdf(
+        store,
+        "/distances",
+        complevel=9,
+        format="fixed"
+    )
+    
+    # Save the table of t-SNE coordinates
+    tsne_coords.to_hdf(
+        store,
+        "/tsne",
+        complevel=9,
+        format="fixed"
+    )
