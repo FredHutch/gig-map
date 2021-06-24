@@ -245,6 +245,8 @@ mash \
 process aggregate_distances {
     container "${container__pandas}"
     label 'io_limited'
+    publishDir "${params.output_folder}", mode: 'copy', overwrite: true
+
     
     input:
         file "inputs/*"
