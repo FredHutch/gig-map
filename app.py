@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 
 # Import the helper functions
-from os import read
 
-from numpy import disp
 from app.helpers import read_data, make_nj_tree, plot_tree, plot_heatmap
 
 # Import the menu-driven-figure library
@@ -15,8 +13,6 @@ import logging
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import plotly.io as pio
-from sklearn.manifold import TSNE
 
 ##################
 # SET UP LOGGING #
@@ -109,19 +105,36 @@ menus = [
         # Label to be displayed at the top of the tab
         label="Format Display",
         params=[
+            # Show a heatmap or a t-SNE map
+            dict(
+                # ID used to access the value of this menu item
+                elem_id="display-type",
+                # Label displayed along this menu item
+                label="Display Type",
+                # Dropdown
+                type="dropdown",
+                # Available options
+                options=[
+                    dict(
+                        label="Heatmap + Tree",
+                        value="heatmap"
+                    ),
+                    dict(
+                        label="t-SNE Map",
+                        value="tsne"
+                    ),
+                ],
+                # Default value
+                value="heatmap"
+            ),
             # Allow the user to color the genes by the
             # coverage or identity of the alignment, as well
             # as any additional user-provided metadata
             dict(
-                # ID used to access the value of this menu item
                 elem_id="color-genes-by",
-                # Label displayed along this menu item
                 label="Color Genes By",
-                # Dropdown
                 type="dropdown",
-                # Available options
                 options=data['available_gene_labels'],
-                # Default value
                 value="pident",
             ),
             # Set up the labels for each gene
@@ -139,6 +152,12 @@ menus = [
                 type="dropdown",
                 options=data['available_genome_labels'],
                 value="",
+                # Only show this menu item if the 'heatmap' option
+                # is selected above
+                show_if=dict(
+                    target='display-type',
+                    value='heatmap'
+                )
             ),
             # Set the colorscale used for the heatmap
             dict(
@@ -149,7 +168,11 @@ menus = [
                     dict(label=v, value=v)
                     for v in px.colors.named_colorscales()
                 ],
-                value="blues"
+                value="blues",
+                show_if=dict(
+                    target='display-type',
+                    value='heatmap'
+                )
             ),
             # Show either the genome names or the colorbar
             dict(
@@ -166,7 +189,11 @@ menus = [
                         value="colorscale",
                     ),
                 ],
-                value="colorscale"
+                value="colorscale",
+                show_if=dict(
+                    target='display-type',
+                    value='heatmap'
+                )
             ),
             # Allow the user to set a title to the plot
             dict(
@@ -190,6 +217,10 @@ menus = [
                 max_val=0.9,
                 value=0.4,
                 step=0.01,
+                show_if=dict(
+                    target='display-type',
+                    value='heatmap'
+                )
             ),
             # Set the width of the figure
             dict(
@@ -260,6 +291,117 @@ def format_alignments_wide(min_pctid, min_cov, display_value):
 def plot_gig_map(_, selections):
     """Render the gig-map display based on the data and the user's menu selections."""
 
+    # The two options for display are 'heatmap' and 'tnse'
+    assert selections["display-type"] in ['heatmap', 'tsne']
+
+    # If the user selected the option to display a heatmap + tree
+    if selections["display-type"] == "heatmap":
+
+        # Render that figure
+        return plot_gig_map_heatmap(selections)
+
+    # Otherwise
+    else:
+
+        assert selections["display-type"] == 'tsne'
+
+        # Render that figure
+        return plot_gig_map_tsne(selections)
+
+def get_gene_annot_values(selections):
+    """Return a dict with the specified annotation for 'color-genes-by'."""
+
+    # Make sure that the specified value is in the annotation table
+    assert selections["color-genes-by"] in data["gene_annotations"].columns.values
+
+    # Make a dict with numeric values
+    value_dict = data[
+        "gene_annotations"
+    ][
+        selections["color-genes-by"]
+    ].apply(
+        lambda v: pd.to_numeric(v, errors="coerce")
+    ).dropna(
+    ).to_dict()
+
+    # Make sure that there are at least some numeric values
+    msg = f"Column {selections['color-genes-by']} contains no numeric values"
+    assert len(value_dict) > 0, msg
+
+    return value_dict
+
+def plot_gig_map_tsne(selections):
+    """Render the t-SNE map display."""
+
+    # Read the t-SNE coordinates
+    tsne = data["tsne"]
+
+    print(selections["color-genes-by"])
+
+    # Genes cannot be colored by genome-specific alignment data
+    # If the user has selected another piece of metadata to color by
+    if selections["color-genes-by"] not in [None, "pident", "coverage"]:
+
+        # Get the values for each gene as a dict
+        value_dict = get_gene_annot_values(selections)
+
+        # Add it to the t-SNE table
+        tsne = tsne.assign(
+            **{
+                selections['color-genes-by']: pd.Series(value_dict)
+            }
+        )
+
+        # Set the name of the column to use for colors
+        color_by_column=selections['color-genes-by']
+
+    else:
+
+        # Set a null value for the color_by_column
+        color_by_column = None
+
+    # If a value was selected to label genes by
+    if selections["label-genes-by"] in data["gene_annotations"].columns.values:
+
+        # Just add the column to the table
+        tsne = tsne.assign(
+            **{
+                selections["label-genes-by"]: data["gene_annotations"][selections["label-genes-by"]]
+            }
+        )
+    
+    print(tsne.head())
+
+    fig = px.scatter(
+        data_frame=tsne.reset_index(),
+        x='t-SNE 1',
+        y='t-SNE 2',
+        hover_name='index',
+        color=color_by_column,
+        hover_data=tsne.columns.values
+    )
+
+    # Set up the layout
+    fig.update_layout(
+        # White background
+        paper_bgcolor='white',
+        plot_bgcolor='white',
+        # Figure title
+        title=dict(
+            text=selections['plot-title'],
+            xanchor="center"
+        ),
+        # Figure height and width
+        height=selections['figure-height'],
+        width=selections['figure-width'],
+    )
+
+    return fig
+
+
+def plot_gig_map_heatmap(selections):
+    """Render the heatmap + tree display."""
+
     # Format a wide table with gene alignments
     # If the user wants to display alignment stats
     if selections["color-genes-by"] in ["pident", "coverage"]:
@@ -274,22 +416,8 @@ def plot_gig_map(_, selections):
     # Otherwise, the user wants to color by gene annotation
     else:
 
-        # Make sure that the specified value is in the annotation table
-        assert selections["color-genes-by"] in data["gene_annotations"].columns.values
-
-        # Make a dict with numeric values
-        value_dict = data[
-            "gene_annotations"
-        ][
-            selections["color-genes-by"]
-        ].apply(
-            lambda v: pd.to_numeric(v, errors="coerce")
-        ).dropna(
-        ).to_dict()
-
-        # Make sure that there are at least some numeric values
-        msg = f"Column {selections['color-genes-by']} contains no numeric values"
-        assert len(value_dict) > 0, msg
+        # Get the values for each gene as a dict
+        value_dict = get_gene_annot_values(selections)
 
         # Start with a table filtered by alignment characteristics, and filled in with True/False
         plot_df = format_alignments_wide(
@@ -315,6 +443,15 @@ def plot_gig_map(_, selections):
     # Make sure that there are at least two genomes with alignments
     assert plot_df.shape[0] > 1, "<=1 genome with alignments passing filter"
 
+    # Make a table with the text descriptions of each alignment
+    text_df = format_alignments_wide(
+        selections["minimum-pctid"],
+        selections["minimum-coverage"],
+        "description"
+    ).reindex(
+        index=plot_df.index.values
+    )
+
     # Create a tree using the set of genomes which contain alignments
     node_positions = make_nj_tree(plot_df.index.values, data['distances'])
 
@@ -337,7 +474,10 @@ def plot_gig_map(_, selections):
     # Render the heatmap
     fig.add_trace(
         plot_heatmap(
-            plot_df,
+            dict(
+                values=plot_df,
+                text=text_df
+            ),
             node_positions,
             selections,
             data,

@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
-from copy import copy
 import logging
-from numpy import select
 import pandas as pd
 import plotly.graph_objects as go
 from skbio import DistanceMatrix
@@ -23,14 +21,6 @@ def read_data(args):
     # Return data formatted as a dict
     output = dict()
 
-    # Read in the alignment information in wide format
-    # This will consist of three tables -- percent identity, coverage, and a description
-    for colname in ['pident', 'coverage', 'description']:
-        output[f"alignments_{colname}"] = pd.read_hdf(
-            args['alignments'],
-            f"/alignments/{colname}"
-        )
-
     # The default annotations available for each gene are the
     # alignment identity and coverage
     output["available_gene_annotations"] = [
@@ -47,9 +37,29 @@ def read_data(args):
     # By default, there are no additional labels to apply to the genes
     output["available_gene_labels"] = []
 
-    # Read in the pairwise genome distances
+    # Open the HDF store for reading
     logger.info(f"Reading from {args['alignments']}")
-    output["distances"] = pd.read_hdf(args['alignments'], "/distances")
+    with pd.HDFStore(args['alignments'], 'r') as store:
+
+        # Read in the alignment information in wide format
+        # This will consist of three tables -- percent identity, coverage, and a description
+        for colname in ['pident', 'coverage', 'description']:
+            output[f"alignments_{colname}"] = pd.read_hdf(
+                store,
+                f"/alignments/{colname}"
+            )
+
+        # Read in the pairwise genome distances
+        output["distances"] = pd.read_hdf(
+            store, 
+            "/distances"
+        )
+
+        # Read in the t-SNE coordinates
+        output["tsne"] = pd.read_hdf(
+            store, 
+            "/tsne"
+        )
 
     # Read in the gene annotations, if any
     if args['gene_annotations'] is None:
@@ -157,14 +167,19 @@ def make_nj_tree(genome_list, dists_df):
     # Return the layout of the tree
     return node_positions
 
-def plot_heatmap(plot_df, node_positions, selections, data, xaxis='x', yaxis='y'):
+def plot_heatmap(tables, node_positions, selections, data, xaxis='x', yaxis='y'):
     """Return a heatmap rendered from the gene DataFrame and the genome positions."""
 
-    plot_df = plot_df.rename(
-        index=lambda s: s.replace("_", " ")
-    ).reindex(
-        index=node_positions.genome_order
-    )
+    # Manipulate both the value and text DataFrames equivalently
+    for k in ["values", "text"]:
+
+        # Remove underscores from the genome names
+        tables[k] = tables[k].rename(
+            index=lambda s: s.replace("_", " ")
+
+        ).reindex( # Reorder the rows to match the tree
+            index=node_positions.genome_order,
+        )
 
     # If the user elected to label the genes by something other than their ID
     if selections["label-genes-by"] != "":
@@ -192,17 +207,20 @@ def plot_heatmap(plot_df, node_positions, selections, data, xaxis='x', yaxis='y'
                 return f"{gene_label} ({gene_id})"
 
         # Rename the columns of the DataFrame
-        plot_df = plot_df.rename(
-            columns=format_gene_id
-        )
+        for k in ["values", "text"]:
+            tables[k] = tables[k].rename(
+                columns=format_gene_id
+            )
 
     return go.Heatmap(
-        x=list(plot_df.columns.values),
-        z=plot_df.values,
+        x=list(tables["values"].columns.values),
+        z=tables["values"].values,
+        text=tables["text"].values,
         xaxis=xaxis,
         yaxis=yaxis,
         colorscale=selections["heatmap-colorscale"],
         showscale=selections["show-on-right"] == "colorscale",
+        hovertemplate="%{text}<extra></extra>",
         # Title of the colorbar
         colorbar=dict(
             title=dict(
