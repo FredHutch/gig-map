@@ -22,13 +22,18 @@ params.max_target_seqs = 100000
 params.annotate_geneshot = false
 params.max_n_genes_train_pca = 10000
 params.max_pcs_tsne = 50
+params.sketch_size = 10000
+
 
 // Import the processes to run in this workflow
 include {
     parse_genome_csv;
     fetchFTP;
     extract_dmnd;
-    mashtree;
+    mash_sketch;
+    mash_join;
+    mash_dist;
+    aggregate_distances;
     makedb_blast;
     align_blast;
     align_diamond;
@@ -52,6 +57,7 @@ include {
     max_target_seqs: params.max_target_seqs,
     max_n_genes_train_pca: params.max_n_genes_train_pca,
     max_pcs_tsne: params.max_pcs_tsne,
+    sketch_size: params.sketch_size,
 )
 
 // Function which prints help message text
@@ -89,6 +95,7 @@ def helpMessage() {
                             which they align to (default: 10000)
       --max_pcs_tsne        The maximum number of dimensions from the PCA output to use
                             for ordering genes by 1-dimensional t-SNE (default: 50)
+      --sketch_size         Sketch size (see mash documentation) (default: 10000)
 
     
     Specifing Genomes for Alignment:
@@ -251,9 +258,24 @@ workflow {
 
     }
 
-    // Compute whole-genome similarity with mashtree
-    mashtree(
-        all_genomes.toSortedList()
+    // Compute compressed genome representations (sketches) with mash
+    mash_sketch(
+        all_genomes
+    )
+
+    // Combine all of the sketches
+    mash_join(
+        mash_sketch.out.toSortedList()
+    )
+
+    // Calculate the distance of each genome against the total
+    mash_dist(
+        mash_sketch.out.combine(mash_join.out)
+    )
+
+    // Join together those distances
+    aggregate_distances(
+        mash_dist.out.toSortedList()
     )
 
     // If the --genes_fasta flag was specified
@@ -381,7 +403,7 @@ workflow {
     aggregate_results(
         concatenate_results.out,
         order_genes.out,
-        mashtree.out[1],
+        aggregate_distances.out,
         generate_gene_map.out,
     )
 

@@ -18,6 +18,7 @@ params.max_target_seqs = 100000
 params.aln_fmt = "qseqid sseqid pident length qstart qend qlen sstart send slen"
 params.max_n_genes_train_pca = 10000
 params.max_pcs_tsne = 50
+params.sketch_size = 10000
 
 // Parse the NCBI Genome Browser CSV 
 process parse_genome_csv {
@@ -169,38 +170,114 @@ done
 }
 
 
-process mashtree {
+process mash_sketch {
     container "${container__mashtree}"
-    label 'mem_medium'
-    publishDir "${params.output_folder}", mode: 'copy', overwrite: true
+    label 'io_limited'
     
     input:
-        file "inputs/*"
+        file fasta
     
     output:
-        file "${params.output_prefix}.dnd"
-        file "${params.output_prefix}.dists.tsv.gz"
+        file "${fasta.name}.msh"
     
 """
 #!/bin/bash
 
 set -Eeuo pipefail
 
-# Decompress the genome FASTA files
-for f in inputs/*.gz; do
-    if [ ! -s \$f ]; then continue; fi
-    gunzip -c \$f > \${f%.gz}
-done
+mash \
+    sketch \
+    -p ${task.cpus} \
+    -s ${params.sketch_size} \
+    "${fasta}"
+"""
+}
 
-# Run mashtree
-mashtree \
-    --outmatrix ${params.output_prefix}.dists.tsv \
-    --numcpus ${task.cpus} \
-    inputs/* \
-    > ${params.output_prefix}.dnd
+process mash_join {
+    container "${container__mashtree}"
+    label 'io_limited'
+    
+    input:
+        file "inputs/*"
+    
+    output:
+        file "combined.msh"
+    
+"""
+#!/bin/bash
 
-# Compress the distance matrix
-gzip ${params.output_prefix}.dists.tsv
+set -Eeuo pipefail
+
+mash \
+    paste \
+    combined \
+    inputs/*
+
+"""
+}
+
+process mash_dist {
+    container "${container__mashtree}"
+    label 'io_limited'
+    
+    input:
+        tuple file(query_msh), file(combined_msh)
+    
+    output:
+        file "${query_msh.name.replaceAll(/.msh/, '.tsv.gz')}"
+    
+"""
+#!/bin/bash
+
+set -Eeuo pipefail
+
+mash \
+    dist \
+    -p ${task.cpus} \
+    ${combined_msh} \
+    ${query_msh} \
+| gzip -c \
+> "${query_msh.name.replaceAll(/.msh/, '.tsv.gz')}"
+
+"""
+}
+
+process aggregate_distances {
+    container "${container__pandas}"
+    label 'io_limited'
+    
+    input:
+        file "inputs/*"
+    
+    output:
+        file "distances.csv.gz"
+    
+"""
+#!/usr/bin/env python3
+
+import pandas as pd
+import os
+
+# Read in all of the distances
+df = pd.concat(
+    [
+        pd.read_csv(
+            os.path.join('inputs', fp),
+            sep="\\t",
+            header=None,
+            names=['query', 'ref', 'dist', 'n', 'ratio']
+        ).reindex(
+            columns=['query', 'ref', 'dist']
+        )
+        for fp in os.listdir('inputs')
+    ]
+).pivot_table(
+    index='query',
+    columns='ref',
+    values='dist'
+).to_csv(
+    "distances.csv.gz"
+)
 
 """
 }
@@ -540,7 +617,7 @@ process aggregate_results {
     input:
     file alignments_csv_gz
     file gene_order_txt_gz
-    file dists_tsv_gz
+    file dists_csv_gz
     file tsne_coords_csv_gz
 
     output:
@@ -553,7 +630,7 @@ set -Eeuo pipefail
 aggregate_results.py \
     --alignments "${alignments_csv_gz}" \
     --gene-order "${gene_order_txt_gz}" \
-    --dists "${dists_tsv_gz}" \
+    --dists "${dists_csv_gz}" \
     --tnse-coords "${tsne_coords_csv_gz}" \
     --output "${params.output_prefix}.hdf5"
 

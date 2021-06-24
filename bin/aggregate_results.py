@@ -87,17 +87,6 @@ alignments = alignments.assign(
     )
 )
 
-def remove_genome_file_ext(fp):
-    for ext in ['.gz', '.fna', '.fasta', '.fa']:
-        if fp.endswith(ext):
-            fp = fp[:-len(ext)]
-    return fp
-
-# Remove the file endings from the genome names
-alignments = alignments.apply(
-    lambda c: c.apply(remove_genome_file_ext) if c.name == "genome" else c
-)
-
 
 #######################
 # REFORMAT ALIGNMENTS #
@@ -133,7 +122,6 @@ alignments = alignments.groupby(
 logger.info(f"Reading from {args.dists}")
 dists = pd.read_csv(
     args.dists,
-    sep="\t",
     index_col=0
 )
 
