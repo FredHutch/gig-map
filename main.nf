@@ -23,6 +23,7 @@ params.annotate_geneshot = false
 params.max_n_genes_train_pca = 10000
 params.max_pcs_tsne = 50
 params.sketch_size = 10000
+params.genome_distances = false
 
 
 // Import the processes to run in this workflow
@@ -96,6 +97,10 @@ def helpMessage() {
       --max_pcs_tsne        The maximum number of dimensions from the PCA output to use
                             for ordering genes by 1-dimensional t-SNE (default: 50)
       --sketch_size         Sketch size (see mash documentation) (default: 10000)
+      --genome_distances    If the pairwise genome distances have already been computed,
+                            you can directly import them into the analysis instead of repeating
+                            that time-consuming process. This flag should be used to indicate
+                            the distances.csv.gz file produced for this exact set of genomes.
 
     
     Specifing Genomes for Alignment:
@@ -258,25 +263,41 @@ workflow {
 
     }
 
-    // Compute compressed genome representations (sketches) with mash
-    mash_sketch(
-        all_genomes
-    )
+    // If a file with all pairwise distances were provided by the user
+    if (params.genome_distances){
 
-    // Combine all of the sketches
-    mash_join(
-        mash_sketch.out.toSortedList()
-    )
+        // Point to that file
+        Channel
+            .fromPath(params.genome_distances)
+            .set { genome_distances_csv }
 
-    // Calculate the distance of each genome against the total
-    mash_dist(
-        mash_sketch.out.combine(mash_join.out)
-    )
+    // Otherwise
+    }else{
 
-    // Join together those distances
-    aggregate_distances(
-        mash_dist.out.toSortedList()
-    )
+        // Compute compressed genome representations (sketches) with mash
+        mash_sketch(
+            all_genomes
+        )
+
+        // Combine all of the sketches
+        mash_join(
+            mash_sketch.out.toSortedList()
+        )
+
+        // Calculate the distance of each genome against the total
+        mash_dist(
+            mash_sketch.out.combine(mash_join.out)
+        )
+
+        // Join together those distances
+        aggregate_distances(
+            mash_dist.out.toSortedList()
+        )
+
+        // Point to the file with all aggregated distances
+        genome_distances_csv = aggregate_distances.out
+
+    }
 
     // If the --genes_fasta flag was specified
     if (params.genes_fasta){
@@ -403,7 +424,7 @@ workflow {
     aggregate_results(
         concatenate_results.out,
         order_genes.out,
-        aggregate_distances.out,
+        genome_distances_csv,
         generate_gene_map.out,
     )
 
