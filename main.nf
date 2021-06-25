@@ -40,7 +40,7 @@ include {
     align_diamond;
     makedb_diamond;
     add_genome_name;
-    concatenate_results;
+    concatenate_alignments;
     concatenate_annotations;
     order_genes;
     generate_gene_map;
@@ -394,18 +394,18 @@ workflow {
     )
 
     // Concatenate the results
-    concatenate_results(
+    concatenate_alignments(
         add_genome_name.out.toSortedList()
     )
 
     // Order the genes based on the genomes they align to
     order_genes(
-        concatenate_results.out
+        concatenate_alignments.out
     )
 
     // Generate 2-dimensional t-SNE coordinates for genes based on their alignment to genomes
     generate_gene_map(
-        concatenate_results.out
+        concatenate_alignments.out
     )
 
     // If a set of geneshot results were provided
@@ -422,7 +422,7 @@ workflow {
 
     // Group together all results into a single HDF5 file object
     aggregate_results(
-        concatenate_results.out,
+        concatenate_alignments.out,
         order_genes.out,
         genome_distances_csv,
         generate_gene_map.out,
