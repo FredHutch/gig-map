@@ -48,6 +48,7 @@ include {
     aggregate_results;
 } from './modules' params(
     output_folder: params.output_folder,
+    ftp_output_folder: "${params.output_folder}/genomes",
     output_prefix: params.output_prefix,
     min_identity: params.min_identity,
     min_coverage: params.min_coverage,
@@ -59,7 +60,6 @@ include {
     max_n_genes_train_pca: params.max_n_genes_train_pca,
     max_pcs_tsne: params.max_pcs_tsne,
     sketch_size: params.sketch_size,
-    ftp_output_folder: "${params.output_folder}/genomes/",
     publishFTP: 'false'
 )
 
@@ -140,6 +140,12 @@ def helpMessage() {
     To provide genes in DIAMOND database format (v2.0.6 recommended), use the --genes_dmnd flag.
 
     Multiple files may be specified with either flag, which will be concatenated for alignment.
+
+
+    Subcommands:
+
+    To download a set of genomes from NCBI without performing any alignment, run the command
+        nextflow run FredHutch/gig-map -entry download --help
 
     """.stripIndent()
 }
@@ -428,6 +434,123 @@ workflow {
         order_genes.out,
         genome_distances_csv,
         generate_gene_map.out,
+    )
+
+}
+
+// Workflow dedicated to download only
+
+include {
+    fetchFTP as saveFTP;
+    concatenate_annotations as join_annotations;
+} from './modules' params(
+    output_prefix: 'downloaded',
+    output_folder: params.output_folder,
+    ftp_output_folder: "${params.output_folder}/genomes",
+    publishFTP: 'true',
+)
+
+// Function which prints help message text
+def downloadHelpMessage() {
+    log.info"""
+    Dedicated genome download utility.
+    Downloads a set of genomes from NCBI and writes the files to a local folder.
+
+    Genomes in FASTA format will be written to the genomes/ subdirectory,
+    while genome metadata will be written to downloaded.genome.annotations.csv.gz.
+
+    Usage:
+
+    nextflow run FredHutch/gig-map/download <ARGUMENTS>
+
+    Required Arguments:
+      --genome_tables       Tables of NCBI genomes to analyze (see note below)
+      --output_folder       Folder to write genome files
+
+    Optional Arguments:
+      --ftp_threads         Number of FTP downloads to execute concurrently (default: 25)
+
+
+    Specifing Genomes for Download:
+
+    Genomes are selected for download directly from the NCBI Prokaryotic Genome Browser
+    found at (https://www.ncbi.nlm.nih.gov/genome/browse#!/prokaryotes/). After selecting
+    your genomes of interest, click on the "Download" button to save a CSV listing all
+    of the genomes for alignment. That CSV file must be specified with the --genome_tables
+    flag. More than one table of genomes may be specified using a comma delimiter.
+
+    """.stripIndent()
+}
+
+
+workflow download {
+
+    // Show help message if the user specifies the --help flag at runtime
+    if (params.help){
+        // Invoke the function above which prints the help message
+        downloadHelpMessage()
+        // Exit out and do not run anything else
+        exit 0
+    }
+    
+
+    // The user must specify an output folder
+    if (!params.output_folder){
+        log.info"""
+
+        -----------------------
+        MISSING --output_folder
+        -----------------------
+
+        """.stripIndent()
+        downloadHelpMessage()
+
+        // Exit out and do not run anything else
+        exit 0
+    }
+
+    // The user must specify genomes from NCBI
+    if (!params.genome_tables){
+        log.info"""
+
+        -----------------------
+        MISSING --genome_tables
+        -----------------------
+
+        """.stripIndent()
+        downloadHelpMessage()
+
+        // Exit out and do not run anything else
+        exit 0
+    }
+
+    // Parse the set of genomes specified by the user
+
+    Channel
+        .fromPath(
+            params.genome_tables.split(",").toList()
+        )
+        .set {
+            genome_manifests
+        }
+
+    // Read the contents of each manifest file
+    parse_genome_csv(
+        genome_manifests
+    )
+
+    // Download each of the files
+    saveFTP(
+        parse_genome_csv
+            .out[0]
+            .splitText()
+    )
+
+    // Join the genome annotations from the NCBI table
+    join_annotations(
+        parse_genome_csv
+            .out[1]
+            .toSortedList()
     )
 
 }
