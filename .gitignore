@@ -6,6 +6,7 @@ __pycache__/
 .nextflow.log*
 work/
 output*
+download_genomes/
 
 # C extensions
 *.so

@@ -137,6 +137,7 @@ pd.DataFrame(annotation_list).set_index("genome_id").to_csv(
 process fetchFTP {
     container "${container__wget}"
     label 'io_limited'
+    publishDir "${params.ftp_output_folder}", mode: 'copy', overwrite: true, enabled: "${params.publishFTP}" == "true"
 
     maxForks params.ftp_threads
 

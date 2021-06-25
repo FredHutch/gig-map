@@ -1,0 +1,128 @@
+#!/usr/bin/env nextflow
+
+// Using DSL-2
+nextflow.enable.dsl=2
+
+// Set default parameters
+params.help = false
+params.output_folder = false
+params.genome_tables = false
+params.ftp_threads = 25
+
+
+// Import the processes to run in this workflow
+include {
+    parse_genome_csv;
+    fetchFTP;
+    concatenate_annotations;
+} from './modules' params(
+    output_folder: params.output_folder,
+    ftp_output_folder: "${params.output_folder}/genomes/",
+    output_prefix: 'downloaded',
+    ftp_threads: params.ftp_threads,
+    publishFTP: 'true',
+)
+
+// Function which prints help message text
+def helpMessage() {
+    log.info"""
+    Dedicated genome download utility.
+    Downloads a set of genomes from NCBI and writes the files to a local folder.
+
+    Genomes in FASTA format will be written to the genomes/ subdirectory,
+    while genome metadata will be written to downloaded.genome.annotations.csv.gz.
+
+    Usage:
+
+    nextflow run FredHutch/gig-map/download <ARGUMENTS>
+
+    Required Arguments:
+      --genome_tables       Tables of NCBI genomes to analyze (see note below)
+      --output_folder       Folder to write genome files
+
+    Optional Arguments:
+      --ftp_threads         Number of FTP downloads to execute concurrently (default: 25)
+
+
+    Specifing Genomes for Download:
+
+    Genomes are selected for download directly from the NCBI Prokaryotic Genome Browser
+    found at (https://www.ncbi.nlm.nih.gov/genome/browse#!/prokaryotes/). After selecting
+    your genomes of interest, click on the "Download" button to save a CSV listing all
+    of the genomes for alignment. That CSV file must be specified with the --genome_tables
+    flag. More than one table of genomes may be specified using a comma delimiter.
+
+    """.stripIndent()
+}
+
+
+workflow {
+
+    // Show help message if the user specifies the --help flag at runtime
+    if (params.help){
+        // Invoke the function above which prints the help message
+        helpMessage()
+        // Exit out and do not run anything else
+        exit 0
+    }
+
+    // The user must specify an output folder
+    if (!params.output_folder){
+        log.info"""
+
+        -----------------------
+        MISSING --output_folder
+        -----------------------
+
+        """.stripIndent()
+        helpMessage()
+
+        // Exit out and do not run anything else
+        exit 0
+    }
+
+    // The user must specify genomes from NCBI
+    if (!params.genome_tables){
+        log.info"""
+
+        -----------------------
+        MISSING --genome_tables
+        -----------------------
+
+        """.stripIndent()
+        helpMessage()
+
+        // Exit out and do not run anything else
+        exit 0
+    }
+
+    // Parse the set of genomes specified by the user
+
+    Channel
+        .fromPath(
+            params.genome_tables.split(",").toList()
+        )
+        .set {
+            genome_manifests
+        }
+
+    // Read the contents of each manifest file
+    parse_genome_csv(
+        genome_manifests
+    )
+
+    // Download each of the files
+    fetchFTP(
+        parse_genome_csv
+            .out[0]
+            .splitText()
+    )
+
+    // Join the genome annotations from the NCBI table
+    concatenate_annotations(
+        parse_genome_csv
+            .out[1]
+            .toSortedList()
+    )
+
+}

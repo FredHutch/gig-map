@@ -59,6 +59,8 @@ include {
     max_n_genes_train_pca: params.max_n_genes_train_pca,
     max_pcs_tsne: params.max_pcs_tsne,
     sketch_size: params.sketch_size,
+    ftp_output_folder: "${params.output_folder}/genomes/",
+    publishFTP: 'false'
 )
 
 // Function which prints help message text
