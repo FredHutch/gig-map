@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """Script to aggregate all results of the gig-map processing for rapid visualization."""
 
-import gzip
-import pandas as pd
 import argparse
+from direct_redis import DirectRedis
+import gzip
 import logging
-import pickle
-pickle.HIGHEST_PROTOCOL = 4
+import pandas as pd
 
 ##################
 # SET UP LOGGING #
@@ -59,17 +58,20 @@ parser.add_argument(
     help='t-SNE coordinates for all genes in two dimensions'
 )
 parser.add_argument(
-    '--output',
+    '--host',
     type=str,
-    required=True,
-    help='Location to write HDF5 store with aggregated data'
+    default="localhost",
+    help='Redis host used for writing output'
+)
+parser.add_argument(
+    '--port',
+    type=int,
+    default=6379,
+    help='Redis port used for writing output'
 )
 
 # Parse the arguments
 args = parser.parse_args()
-
-# Make sure that the output path has the expected extension
-assert args.output.endswith(".hdf5"), "--output must end with .hdf5"
 
 ##############
 # ALIGNMENTS #
@@ -161,8 +163,10 @@ gene_list = [
 # WRITE OUTPUT #
 ################
 
-# Open a connection to the output HDF store
-with pd.HDFStore(args.output, 'w') as store:
+# Connect to redis
+logger.info(f"Connecting to redis at {args.host}:{args.port}")
+with DirectRedis(host=args.host, port=args.port) as r:
+
     # Save the alignment information in three tables
     # All three tables will have the same index and columns
     # The index will be the list of genomes
@@ -177,32 +181,29 @@ with pd.HDFStore(args.output, 'w') as store:
     # Iterate over each column in the deduplicated table
     for colname in alignments.columns.values:
 
-        alignments.pivot(
-            index="genome",
-            columns="sseqid",
-            values=colname
-        ).reindex(
-            index=genome_list,
-            columns=gene_list
-        ).to_hdf(
-            store,
+        # Save the resulting table to redis
+        r.set(
             f"/alignments/{colname}",
-            complevel=9,
-            format="fixed",
+            # Create the table by pivoting the long table
+            alignments.pivot(
+                index="genome",
+                columns="sseqid",
+                values=colname
+            # And ordering the axes
+            ).reindex(
+                index=genome_list,
+                columns=gene_list
+            )
         )
 
     # Save the table of distances
-    dists.to_hdf(
-        store,
+    r.set(
         "/distances",
-        complevel=9,
-        format="fixed"
+        dists
     )
     
     # Save the table of t-SNE coordinates
-    tsne_coords.to_hdf(
-        store,
+    r.set(
         "/tsne",
-        complevel=9,
-        format="fixed"
+        tsne_coords
     )
