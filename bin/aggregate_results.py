@@ -145,7 +145,7 @@ tsne_coords = pd.read_csv(
 ###############
 
 # Get a list of all genomes which have alignments
-genome_list = alignments['genome'].unique()
+genome_list = list(alignments['genome'].unique())
 
 
 #############
@@ -158,6 +158,18 @@ gene_list = [
     for line in gzip.open(args.gene_order, 'r')
 ]
 
+# Add the index position of each gene and genome to the table
+alignments = alignments.assign(
+    gene_ix = alignments.sseqid.apply(
+        gene_list.index
+    ),
+    genome_ix = alignments.genome.apply(
+        genome_list.index
+    )
+).drop(
+    columns=["sseqid", "genome"]
+)
+
 
 ################
 # WRITE OUTPUT #
@@ -167,43 +179,47 @@ gene_list = [
 logger.info(f"Connecting to redis at {args.host}:{args.port}")
 with DirectRedis(host=args.host, port=args.port) as r:
 
-    # Save the alignment information in three tables
-    # All three tables will have the same index and columns
-    # The index will be the list of genomes
-    # The columns will be the genes, ordered by `--gene-order`
-    # /alignments/pident
-    #       Every value is the maximum percent identity of alignment
-    # /alignments/coverage
-    #       Every value is the maximum coverage of alignment
-    # /alignments/description
-    #       Every value is a text string summarizing the location of all alignments
+    # Save the alignment information in a single table
+    logger.info("Saving alignments to redis")
+    r.set(
+        # The key at which the values may be accessed
+        "alignments",
+        # The values which will be accessed at the key
+        alignments
+    )
 
-    # Iterate over each column in the deduplicated table
-    for colname in alignments.columns.values:
+    # Save the mapping of gene_ix to a name
+    logger.info("Saving gene_ix to redis")
+    r.set(
+        # The key at which the values may be accessed
+        "gene_ix",
+        # The values which will be accessed at the key
+        gene_list
+    )
 
-        # Save the resulting table to redis
-        r.set(
-            f"/alignments/{colname}",
-            # Create the table by pivoting the long table
-            alignments.pivot(
-                index="genome",
-                columns="sseqid",
-                values=colname
-            # And ordering the axes
-            ).reindex(
-                index=genome_list,
-                columns=gene_list
-            )
-        )
+    # Save the mapping of genome_ix to a name
+    logger.info("Saving genome_ix to redis")
+    r.set(
+        # The key at which the values may be accessed
+        "genome_ix",
+        # The values which will be accessed at the key
+        genome_list
+    )
 
     # Save the table of distances
+    logger.info("Saving distances to redis")
     r.set(
-        "/distances",
+        # The key at which the values may be accessed
+        "distances",
+        # The values which will be accessed at the key
         dists
     )
     
     # Save the table of t-SNE coordinates
+    logger.info("Saving tsne to redis")
     r.set(
-        "/tsne",
+        # The key at which the values may be accessed
+        "tsne",
+        # The values which will be accessed at the key
         tsne_coords
     )
