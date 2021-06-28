@@ -70,6 +70,12 @@ parser.add_argument(
     default=6379,
     help='Redis port used for writing output'
 )
+parser.add_argument(
+    '--dists-n-rows',
+    type=int,
+    default=1000,
+    help='Number of rows to use for each chunk of distances'
+)
 
 # Parse the arguments
 args = parser.parse_args()
@@ -158,7 +164,7 @@ dists = dists.reindex(
     columns=genome_list,
 ).applymap(
     np.float16
-).values
+)
 
 
 #############
@@ -220,13 +226,46 @@ with DirectRedis(host=args.host, port=args.port) as r:
         genome_list
     )
 
-    # Save the table of distances
+    # Save the table of distances in chunks of `dists_n_rows` each
     logger.info("Saving distances to redis")
+
+    # Keep track of the keys used to store chunks in the database
+    dists_keys = []
+
+    # Iterate until all of the distances have been written
+    while dists.shape[0] > 0:
+
+        # Write a chunk of distances
+        r.set(
+            # Key the chunk by the index
+            f"distances_{len(dists_keys)}",
+            # Write the first `dists_n_rows` rows to redis
+            dists.iloc[:min(dists.shape[0], args.dists_n_rows)]
+        )
+
+        # Keep track of the key that was used
+        dists_keys.append(f"distances_{len(dists_keys)}")
+
+        logger.info(f"Wrote {dists_keys:,} chunks of distances")
+
+        # If the complete set of distances has been written
+        if dists.shape[0] <= args.dists_n_rows:
+
+            # Stop iterating
+            break
+
+        # Otherwise
+        else:
+
+            # Remove the written chunk from the overall dists table
+            dists = dists.iloc[args.dists_n_rows:]
+
+    logger.info(f"Done writing distances")
+
+    # Store the list of keys which were used for the chunks
     r.set(
-        # The key at which the values may be accessed
-        "distances",
-        # The values which will be accessed at the key
-        dists
+        "distances_keys",
+        dists_keys
     )
     
     # Save the table of t-SNE coordinates
