@@ -246,7 +246,7 @@ with DirectRedis(host=args.host, port=args.port) as r:
         # Keep track of the key that was used
         dists_keys.append(f"distances_{len(dists_keys)}")
 
-        logger.info(f"Wrote {dists_keys:,} chunks of distances")
+        logger.info(f"Wrote {len(dists_keys):,} chunks of distances")
 
         # If the complete set of distances has been written
         if dists.shape[0] <= args.dists_n_rows:
