@@ -5,6 +5,7 @@ import argparse
 from direct_redis import DirectRedis
 import gzip
 import logging
+import numpy as np
 import pandas as pd
 
 ##################
@@ -116,18 +117,6 @@ alignments = alignments.groupby(
 ).reset_index()
 
 
-#############
-# DISTANCES #
-#############
-
-# Read in the pairwise genome distances
-logger.info(f"Reading from {args.dists}")
-dists = pd.read_csv(
-    args.dists,
-    index_col=0
-)
-
-
 #####################
 # t-SNE COORDINATES #
 #####################
@@ -138,6 +127,7 @@ tsne_coords = pd.read_csv(
     args.tnse_coords,
     index_col=0
 )
+logger.info(f"Read in {tsne_coords.shape[0]:,} rows and {tsne_coords.shape[1]:,} columns")
 
 
 ###############
@@ -146,6 +136,29 @@ tsne_coords = pd.read_csv(
 
 # Get a list of all genomes which have alignments
 genome_list = list(alignments['genome'].unique())
+logger.info(f"Read in a list of {len(genome_list):,} genomes")
+
+
+#############
+# DISTANCES #
+#############
+
+# Read in the pairwise genome distances
+logger.info(f"Reading from {args.dists}")
+dists = pd.read_csv(
+    args.dists,
+    index_col=0
+)
+logger.info(f"Read in {dists.shape[0]:,} rows and {dists.shape[1]:,} columns")
+
+# Subset and order by the list of genomes with alignments
+logger.info(f"Ordering distance matrix by the list of genomes")
+dists = dists.reindex(
+    index=genome_list,
+    columns=genome_list,
+).applymap(
+    np.float16
+).values
 
 
 #############
@@ -157,6 +170,7 @@ gene_list = [
     line.decode().rstrip("\n")
     for line in gzip.open(args.gene_order, 'r')
 ]
+logger.info(f"Read in a list of {len(gene_list):,} genes")
 
 # Add the index position of each gene and genome to the table
 alignments = alignments.assign(
@@ -223,3 +237,7 @@ with DirectRedis(host=args.host, port=args.port) as r:
         # The values which will be accessed at the key
         tsne_coords
     )
+
+    logger.info("Done writing to redis")
+
+logger.info("Closed connection to redis")
