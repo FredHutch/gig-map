@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from direct_redis import DirectRedis
 import logging
 import pandas as pd
 import plotly.graph_objects as go
@@ -37,29 +38,29 @@ def read_data(args):
     # By default, there are no additional labels to apply to the genes
     output["available_gene_labels"] = []
 
-    # Open the HDF store for reading
-    logger.info(f"Reading from {args['alignments']}")
-    with pd.HDFStore(args['alignments'], 'r') as store:
+    # Open the redis store for reading
+    logger.info(f"Connecting to redis at {args['host']}:{args['port']}")
+    with DirectRedis(host=args['host'], port=args['port']) as r:
 
-        # Read in the alignment information in wide format
-        # This will consist of three tables -- percent identity, coverage, and a description
-        for colname in ['pident', 'coverage', 'description']:
-            output[f"alignments_{colname}"] = pd.read_hdf(
-                store,
-                f"/alignments/{colname}"
-            )
+        # Read in the alignment information in long format
+        output["alignments"] = r.get("alignments")
 
-        # Read in the pairwise genome distances
-        output["distances"] = pd.read_hdf(
-            store, 
-            "/distances"
+        # Get the mapping of genome_ix to filenames
+        output["genome_ix"] = r.get("genome_ix")
+
+        # Get the mapping of gene_ix to strings
+        output["gene_ix"] = r.get("gene_ix")
+
+        # Read in the pairwise genome distances, merging multiple shards
+        output["distances"] = pd.concat(
+            [
+                r.get(redis_key)
+                for redis_key in r.get("distances_keys")
+            ]
         )
 
         # Read in the t-SNE coordinates
-        output["tsne"] = pd.read_hdf(
-            store, 
-            "/tsne"
-        )
+        output["tsne"] = r.get("tsne")
 
     # Read in the gene annotations, if any
     if args['gene_annotations'] is None:

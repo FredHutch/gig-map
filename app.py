@@ -8,6 +8,7 @@ from app.helpers import read_data, make_nj_tree, plot_tree, plot_heatmap
 from menu_driven_figure.app import MenuDrivenFigure
 
 import argparse
+from direct_redis import DirectRedis
 from functools import lru_cache
 import logging
 import pandas as pd
@@ -42,10 +43,16 @@ parser = argparse.ArgumentParser(
 
 # Add the arguments
 parser.add_argument(
-    '--alignments',
+    '--host',
     type=str,
-    required=True,
-    help='Dataset of gene alignments (suffix: .hdf5)'
+    default="localhost",
+    help='Redis host used for reading alignment data'
+)
+parser.add_argument(
+    '--port',
+    type=int,
+    default=6379,
+    help='Redis port used for reading alignment data'
 )
 parser.add_argument(
     '--gene-annotations',
