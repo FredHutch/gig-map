@@ -51,6 +51,22 @@ def read_data(args):
         # Get the mapping of gene_ix to strings
         output["gene_ix"] = r.get("gene_ix")
 
+        # Format a wide table with the alignments,
+        #  once each for pident, coverage, and description
+        for value_key in ['pident', 'coverage', 'description']:
+            output[
+                f"alignments_{value_key}"
+            ] = output[
+                "alignments"
+            ].pivot(
+                index="genome_ix",
+                columns="gene_ix",
+                values=value_key
+            ).rename(
+                index=lambda genome_ix: output["genome_ix"][genome_ix],
+                columns=lambda gene_ix: output["gene_ix"][gene_ix],
+            )
+
         # Read in the pairwise genome distances, merging multiple shards
         output["distances"] = pd.concat(
             [
