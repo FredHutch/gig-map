@@ -448,6 +448,7 @@ include {
     output_folder: params.output_folder,
     ftp_output_folder: "${params.output_folder}/genomes",
     publishFTP: 'true',
+    ftp_threads: params.ftp_threads,
 )
 
 // Function which prints help message text
