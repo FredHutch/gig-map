@@ -66,7 +66,7 @@ def format_annotation(r):
 
     # Get the name of the file which will be downloaded
     annots = dict(
-        genome_id=r["GenBank FTP"].rsplit("/", 1)[-1] + "_genomic"
+        genome_id=r["GenBank FTP"].rsplit("/", 1)[-1] + "_genomic.fna.gz"
     )
 
     # Rename fields
