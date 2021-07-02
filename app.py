@@ -81,8 +81,9 @@ menus = [
     # will add another tab to the menu display
     dict(
         # Label to be displayed at the top of the tab
-        label="Filter Alignments",
+        label="Customize Display",
         params=[
+            # Filter alignments by a minimum percent identity (similarity)
             dict(
                 # ID used to access the value of this menu item
                 elem_id="minimum-pctid",
@@ -95,6 +96,7 @@ menus = [
                 # Default value
                 value=90.,
             ),
+            # Filter alignments by a minimum coverage percentage
             dict(
                 elem_id="minimum-coverage",
                 # Define the type of menu item
@@ -105,34 +107,14 @@ menus = [
                 label="Minimum Alignment Coverage",
                 # Default value
                 value=90.,
-            )
-        ]
-    ),
-    dict(
-        # Label to be displayed at the top of the tab
-        label="Format Display",
-        params=[
-            # Show a heatmap or a t-SNE map
+            ),
+            # Filter genomes by a minimum number of genes aligned
             dict(
-                # ID used to access the value of this menu item
-                elem_id="display-type",
-                # Label displayed along this menu item
-                label="Display Type",
-                # Dropdown
-                type="dropdown",
-                # Available options
-                options=[
-                    dict(
-                        label="Heatmap + Tree",
-                        value="heatmap"
-                    ),
-                    dict(
-                        label="t-SNE Map",
-                        value="tsne"
-                    ),
-                ],
-                # Default value
-                value="heatmap"
+                elem_id="minimum-genes-per-genome",
+                type="input",
+                input_type="number",
+                label="Minimum Number of Genes to Display Genome",
+                value=1,
             ),
             # Allow the user to color the genes by the
             # coverage or identity of the alignment, as well
@@ -151,12 +133,6 @@ menus = [
                 type="dropdown",
                 options=data['available_gene_labels'],
                 value="",
-                # Only show this menu item if the 'heatmap' option
-                # is selected above
-                show_if=dict(
-                    target='display-type',
-                    value='heatmap'
-                )
             ),
             # Limit the length of each gene label
             dict(
@@ -165,6 +141,8 @@ menus = [
                 type="input",
                 input_type="numeric",
                 value=60,
+                # Make sure that this option stays in the same column as the previous
+                keep_with_previous=True
             ),
             # Set up the labels for each genome
             dict(
@@ -173,12 +151,6 @@ menus = [
                 type="dropdown",
                 options=data['available_genome_labels'],
                 value="",
-                # Only show this menu item if the 'heatmap' option
-                # is selected above
-                show_if=dict(
-                    target='display-type',
-                    value='heatmap'
-                )
             ),
             # Limit the length of each genome label
             dict(
@@ -187,6 +159,8 @@ menus = [
                 type="input",
                 input_type="numeric",
                 value=60,
+                # Make sure that this option stays in the same column as the previous
+                keep_with_previous=True
             ),
             # Set the colorscale used for the heatmap
             dict(
@@ -198,23 +172,6 @@ menus = [
                     for v in px.colors.named_colorscales()
                 ],
                 value="blues",
-                show_if=dict(
-                    target='display-type',
-                    value='heatmap'
-                )
-            ),
-            # Allow the user to set a title to the plot
-            dict(
-                # ID used to access the value of this menu item
-                elem_id="plot-title",
-                # Label displayed along this menu item
-                label="Plot Title",
-                # Free-form input box
-                type="input",
-                # Input must be a string
-                input_type="string",
-                # Default value
-                value="",
             ),
             # Set the width of the tree
             dict(
@@ -225,10 +182,6 @@ menus = [
                 max_val=0.9,
                 value=0.4,
                 step=0.01,
-                show_if=dict(
-                    target='display-type',
-                    value='heatmap'
-                )
             ),
             # Set the width of the figure
             dict(
@@ -250,6 +203,45 @@ menus = [
                 step=20,
             ),
         ]
+    ),
+]
+
+# Keep a list of params that were considered, but aren't currently being used
+deprecated_menu_items = [
+    # Show a heatmap or a t-SNE map
+    dict(
+        # ID used to access the value of this menu item
+        elem_id="display-type",
+        # Label displayed along this menu item
+        label="Display Type",
+        # Dropdown
+        type="dropdown",
+        # Available options
+        options=[
+            dict(
+                label="Heatmap + Tree",
+                value="heatmap"
+            ),
+            dict(
+                label="t-SNE Map",
+                value="tsne"
+            ),
+        ],
+        # Default value
+        value="heatmap"
+    ),
+    # Allow the user to set a title to the plot
+    dict(
+        # ID used to access the value of this menu item
+        elem_id="plot-title",
+        # Label displayed along this menu item
+        label="Plot Title",
+        # Free-form input box
+        type="input",
+        # Input must be a string
+        input_type="string",
+        # Default value
+        value="",
     ),
 ]
 
@@ -299,22 +291,26 @@ def format_alignments_wide(min_pctid, min_cov, display_value):
 def plot_gig_map(_, selections):
     """Render the gig-map display based on the data and the user's menu selections."""
 
-    # The two options for display are 'heatmap' and 'tnse'
-    assert selections["display-type"] in ['heatmap', 'tsne']
+    # Render that figure
+    return plot_gig_map_heatmap(selections)
 
-    # If the user selected the option to display a heatmap + tree
-    if selections["display-type"] == "heatmap":
+    # DEPRECATED BEHAVIOR BELOW WAS TO SUPPORT T-SNE
+    # # The two options for display are 'heatmap' and 'tnse'
+    # assert selections["display-type"] in ['heatmap', 'tsne']
 
-        # Render that figure
-        return plot_gig_map_heatmap(selections)
+    # # If the user selected the option to display a heatmap + tree
+    # if selections["display-type"] == "heatmap":
 
-    # Otherwise
-    else:
+    #     # Render that figure
+    #     return plot_gig_map_heatmap(selections)
 
-        assert selections["display-type"] == 'tsne'
+    # # Otherwise
+    # else:
 
-        # Render that figure
-        return plot_gig_map_tsne(selections)
+    #     assert selections["display-type"] == 'tsne'
+
+    #     # Render that figure
+    #     return plot_gig_map_tsne(selections)
 
 def get_gene_annot_values(selections):
     """Return a dict with the specified annotation for 'color-genes-by'."""
@@ -386,11 +382,6 @@ def plot_gig_map_tsne(selections):
         # White background
         paper_bgcolor='white',
         plot_bgcolor='white',
-        # Figure title
-        title=dict(
-            text=selections['plot-title'],
-            xanchor="center"
-        ),
         # Figure height and width
         height=selections['figure-height'],
         width=selections['figure-width'],
@@ -435,9 +426,15 @@ def plot_gig_map_heatmap(selections):
             }
         )
 
-    # Drop any genomes which don't have any alignments which pass the threshold
+    # Drop any genomes which don't have the minimum number of alignments
     plot_df = plot_df.loc[
-        plot_df.notnull().any(axis=1)
+        plot_df.notnull().sum(axis=1) >= selections["minimum-genes-per-genome"]
+    ]
+
+    # Drop any genes which don't have any alignments
+    plot_df = plot_df.loc[
+        :,
+        plot_df.notnull().sum() > 0
     ]
 
     # Make sure that there are at least two genomes with alignments
@@ -449,7 +446,8 @@ def plot_gig_map_heatmap(selections):
         selections["minimum-coverage"],
         "description"
     ).reindex(
-        index=plot_df.index.values
+        index=plot_df.index.values,
+        columns=plot_df.columns.values,
     ).fillna(
         "No alignments found"
     )
@@ -561,11 +559,6 @@ def plot_gig_map_heatmap(selections):
         ),
         paper_bgcolor='white',
         plot_bgcolor='white',
-        # Figure title
-        title=dict(
-            text=selections['plot-title'],
-            xanchor="center"
-        ),
         # Figure height and width
         height=selections['figure-height'],
         width=selections['figure-width'],
