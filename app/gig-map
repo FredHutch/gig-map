@@ -2,7 +2,7 @@
 
 # Import the helper functions
 
-from helpers import plot_colorbar, read_data, make_nj_tree, plot_tree, plot_heatmap, plot_colorbar
+from .helpers import plot_colorbar, read_data, make_nj_tree, plot_tree, plot_heatmap, plot_colorbar
 
 # Import the menu-driven-figure library
 from menu_driven_figure.app import MenuDrivenFigure
