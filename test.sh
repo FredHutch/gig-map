@@ -8,7 +8,7 @@ redis-server \
     --dir $PWD/test_data &
 
 # Start the app
-python3 app.py \
+app/gig-map \
     --port 6379 \
     --host 127.0.0.1 \
     --gene-annotations test_data/GCA_000005845.2_ASM584v2_protein.annotations.csv \
