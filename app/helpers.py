@@ -44,12 +44,15 @@ def read_data(args):
 
         # Read in the alignment information in long format
         output["alignments"] = r.get("alignments")
+        assert output["alignments"] is not None
 
         # Get the mapping of genome_ix to filenames
         output["genome_ix"] = r.get("genome_ix")
+        assert output["genome_ix"] is not None
 
         # Get the mapping of gene_ix to strings
         output["gene_ix"] = r.get("gene_ix")
+        assert output["gene_ix"] is not None
 
         # Format a wide table with the alignments,
         #  once each for pident, coverage, and description
