@@ -2,7 +2,7 @@
 
 # Import the helper functions
 
-from app.helpers import plot_colorbar, read_data, make_nj_tree, plot_tree, plot_heatmap, plot_colorbar
+from helpers import plot_colorbar, read_data, make_nj_tree, plot_tree, plot_heatmap, plot_colorbar
 
 # Import the menu-driven-figure library
 from menu_driven_figure.app import MenuDrivenFigure
@@ -10,7 +10,9 @@ from menu_driven_figure.app import MenuDrivenFigure
 import argparse
 from direct_redis import DirectRedis
 from functools import lru_cache
+import json
 import logging
+import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -65,6 +67,12 @@ parser.add_argument(
     type=str,
     default=None,
     help='(optional) Annotations for genomes to use for plotting (must contain a column named `genome_id`)'
+)
+parser.add_argument(
+    '--settings',
+    type=str,
+    default=None,
+    help='(optional) File containing initial settings for display'
 )
 
 # Parse the arguments
@@ -566,12 +574,30 @@ def plot_gig_map_heatmap(selections):
 
     return fig
 
+# If the user provided initial settings
+if args.settings is not None:
+
+    # Make sure that the string points to a file
+    assert os.path.exists(args.settings)
+
+    # Read in the file as JSON
+    with open(args.settings, 'r') as handle:
+
+        initial_settings = json.load(handle)
+
+# Otherwise
+else:
+
+    # There are no initial settings
+    initial_settings = None
+
 # Instantiate the MenuDrivenFigure object
 mdf = MenuDrivenFigure(
     data=data,
     menus=menus,
     function=plot_gig_map,
-    title="Genes in Genomes Map"
+    title="Genes in Genomes Map",
+    initial_settings=initial_settings
 )
 
 # Launch the Dash/Flask app
