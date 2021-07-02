@@ -234,8 +234,11 @@ def plot_heatmap(tables, node_positions, selections, data, xaxis='x', yaxis='y')
             # If there is a value
             else:
 
-                # Join together the gene ID and the annotated label
-                return f"{gene_label} ({gene_id})"
+                # Join together the gene ID and the annotated label,
+                #  up to a maximum length
+                return f"{gene_label} ({gene_id})"[
+                    :selections["max-gene-label-len"]
+                ]
 
         # Rename the columns of the DataFrame
         for k in ["values", "text"]:

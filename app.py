@@ -151,6 +151,20 @@ menus = [
                 type="dropdown",
                 options=data['available_gene_labels'],
                 value="",
+                # Only show this menu item if the 'heatmap' option
+                # is selected above
+                show_if=dict(
+                    target='display-type',
+                    value='heatmap'
+                )
+            ),
+            # Limit the length of each gene label
+            dict(
+                elem_id="max-gene-label-len",
+                label="Maximum Gene Label Length",
+                type="input",
+                input_type="numeric",
+                value=60,
             ),
             # Set up the labels for each genome
             dict(
@@ -165,6 +179,14 @@ menus = [
                     target='display-type',
                     value='heatmap'
                 )
+            ),
+            # Limit the length of each genome label
+            dict(
+                elem_id="max-genome-label-len",
+                label="Maximum Genome Label Length",
+                type="input",
+                input_type="numeric",
+                value=60,
             ),
             # Set the colorscale used for the heatmap
             dict(
@@ -322,21 +344,25 @@ def plot_gig_map_tsne(selections):
     # Read the t-SNE coordinates
     tsne = data["tsne"]
 
-    print(selections["color-genes-by"])
+    # If there are gene annotations
+    if "gene_annotations" in data:
+
+        # For all of the possible annotations
+        for col_name, col_values in data["gene_annotations"].items():
+
+            # Add the values as a column to the table to display
+            tsne = tsne.assign(
+                **{
+                    col_name: col_values.apply(
+                        # Limit the length of each label, if the label is a string
+                        lambda v: v[:selections["max-gene-label-len"]] if isinstance(v, str) else v
+                    )
+                }
+            )
 
     # Genes cannot be colored by genome-specific alignment data
     # If the user has selected another piece of metadata to color by
     if selections["color-genes-by"] not in [None, "pident", "coverage"]:
-
-        # Get the values for each gene as a dict
-        value_dict = get_gene_annot_values(selections)
-
-        # Add it to the t-SNE table
-        tsne = tsne.assign(
-            **{
-                selections['color-genes-by']: pd.Series(value_dict)
-            }
-        )
 
         # Set the name of the column to use for colors
         color_by_column=selections['color-genes-by']
@@ -346,16 +372,6 @@ def plot_gig_map_tsne(selections):
         # Set a null value for the color_by_column
         color_by_column = None
 
-    # If a value was selected to label genes by
-    if selections["label-genes-by"] in data["gene_annotations"].columns.values:
-
-        # Just add the column to the table
-        tsne = tsne.assign(
-            **{
-                selections["label-genes-by"]: data["gene_annotations"][selections["label-genes-by"]]
-            }
-        )
-    
     fig = px.scatter(
         data_frame=tsne.reset_index(),
         x='t-SNE 1',
@@ -517,8 +533,11 @@ def plot_gig_map_heatmap(selections):
         # Primary y-axis (with the tree)
         yaxis=dict(
             tickmode="array",
-            tickvals=list(range(node_positions.df.shape[0])),
-            ticktext=genome_labels,
+            tickvals=list(range(len(genome_labels))),
+            ticktext=[
+                l[:selections["max-genome-label-len"]]
+                for l in genome_labels
+            ],
             side="right",
             anchor="x3",
             showticklabels=True,
