@@ -377,8 +377,6 @@ def plot_gig_map_tsne(selections):
             }
         )
     
-    print(tsne.head())
-
     fig = px.scatter(
         data_frame=tsne.reset_index(),
         x='t-SNE 1',
@@ -469,16 +467,17 @@ def plot_gig_map_heatmap(selections):
     # Set up a base level figure
     fig = go.Figure()
 
-    # Render the tree
-    fig.add_trace(
-        plot_tree(
-            node_positions,
-            selections,
-            data,
-            xaxis="x",  # Primary X axis
-            yaxis="y",  # Primary Y axis
+    # Render the tree with multiple traces
+    for trace in plot_tree(
+        node_positions,
+        selections,
+        data,
+        xaxis="x",  # Primary X axis
+        yaxis="y",  # Primary Y axis
+    ):
+        fig.add_trace(
+            trace
         )
-    )
 
     # Render the heatmap
     fig.add_trace(

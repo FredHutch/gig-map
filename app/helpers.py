@@ -282,7 +282,7 @@ def plot_tree(node_positions, selections, data, xaxis='x', yaxis='y'):
         )
 
     # Return a ScatterGL
-    return go.Scattergl(
+    yield go.Scattergl(
         name="Neighbor Joining Tree",
         showlegend=False,
         mode="lines",
@@ -293,6 +293,23 @@ def plot_tree(node_positions, selections, data, xaxis='x', yaxis='y'):
         xaxis=xaxis,
         yaxis=yaxis,
     )
+
+    # Also show a set of dotted lines extending each tip
+    yield go.Scattergl(
+        showlegend=False,
+        mode="lines",
+        x=node_positions.extension_x_coords(),
+        y=node_positions.extension_y_coords(),
+        hoverinfo="skip",
+        line=dict(
+            color="black",
+            dash="dot",
+            width=1,
+        ),
+        xaxis=xaxis,
+        yaxis=yaxis,
+    )
+
 
 class CartesianTree:
 
@@ -326,6 +343,18 @@ class CartesianTree:
 
         # Format is a list with each node and its parent, separated by NaN values
         return self._list_link_to_parents(col_name="y")
+
+    def extension_x_coords(self):
+        """Return a list of x-coordinates to extend the tips of the tree."""
+
+        # Format is a list with each node and its parent, separated by NaN values
+        return self._list_link_to_tips(col_name="x")
+
+    def extension_y_coords(self):
+        """Return a list of y-coordinates to extend the tips of the tree."""
+
+        # Format is a list with each node and its parent, separated by NaN values
+        return self._list_link_to_tips(col_name="y")
 
     def text(self):
         """Return a list of leaf labels to use for plotting the tree."""
@@ -383,6 +412,48 @@ class CartesianTree:
 
                 # Add its parent
                 output_list.append(parent_val)
+
+                # Add a NaN to separate it
+                output_list.append(None)
+
+        # Return the list
+        return output_list
+
+    def _list_link_to_tips(self, col_name="x"):
+        """Internal method: make a list of coordinates to extend the tips of the tree."""
+
+        # col_name may only be x or y
+        assert col_name in ['x', 'y'], f"Not recognized: {col_name}"
+
+        # Populate a list which will be output
+        output_list = []
+
+        # Iterate over each row
+        for _, r in self.df.iterrows():
+
+            # If this is not a leaf
+            if not r['is_leaf']:
+
+                # Skip it
+                continue
+
+            # If this is a tip
+            else:
+
+                # Add the item to the list
+                output_list.append(r[col_name])
+
+                # Moving along the x axis
+                if col_name == "x":
+
+                    # Extend the tip to the maximum x for the table
+                    output_list.append(self.df[col_name].max())
+
+                # Moving along the y axis
+                elif col_name == "y":
+
+                    # Extending the tip will keep the same y coordinate
+                    output_list.append(r[col_name])
 
                 # Add a NaN to separate it
                 output_list.append(None)
