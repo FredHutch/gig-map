@@ -184,6 +184,19 @@ def make_nj_tree(genome_list, dists_df):
         y_offset=-0.5,
     )
 
+    # Lastly, make a mapping from the filenames to the same filename without any underscores
+    filename_mapping = {
+        fn.replace("_", " "): fn
+        for fn in genome_list
+    }
+
+    # Now make a new list, ordered by the node_positions, with the complete
+    # filenames (including the underscores)
+    node_positions.genome_order = list(map(
+        filename_mapping.get,
+        node_positions.genome_order
+    ))
+
     # Return the layout of the tree
     return node_positions
 
@@ -193,11 +206,8 @@ def plot_heatmap(tables, node_positions, selections, data, xaxis='x', yaxis='y')
     # Manipulate both the value and text DataFrames equivalently
     for k in ["values", "text"]:
 
-        # Remove underscores from the genome names
-        tables[k] = tables[k].rename(
-            index=lambda s: s.replace("_", " ")
-
-        ).reindex( # Reorder the rows to match the tree
+        # Reorder the rows to match the tree
+        tables[k] = tables[k].reindex( 
             index=node_positions.genome_order,
         )
 
