@@ -2,7 +2,7 @@
 
 # Import the helper functions
 
-from app.helpers import read_data, make_nj_tree, plot_tree, plot_heatmap
+from app.helpers import plot_colorbar, read_data, make_nj_tree, plot_tree, plot_heatmap, plot_colorbar
 
 # Import the menu-driven-figure library
 from menu_driven_figure.app import MenuDrivenFigure
@@ -141,7 +141,7 @@ menus = [
                 elem_id="color-genes-by",
                 label="Color Genes By",
                 type="dropdown",
-                options=data['available_gene_labels'],
+                options=data['available_gene_annotations'],
                 value="pident",
             ),
             # Set up the labels for each gene
@@ -176,27 +176,6 @@ menus = [
                     for v in px.colors.named_colorscales()
                 ],
                 value="blues",
-                show_if=dict(
-                    target='display-type',
-                    value='heatmap'
-                )
-            ),
-            # Show either the genome names or the colorbar
-            dict(
-                elem_id="show-on-right",
-                label="Right Margin Display",
-                type="dropdown",
-                options=[
-                    dict(
-                        label="Genome Labels",
-                        value="genome-labels",
-                    ),
-                    dict(
-                        label="Color Scale",
-                        value="colorscale",
-                    ),
-                ],
-                value="colorscale",
                 show_if=dict(
                     target='display-type',
                     value='heatmap'
@@ -494,6 +473,24 @@ def plot_gig_map_heatmap(selections):
         )
     )
 
+    # Render the colorbar
+    fig.add_trace(
+        plot_colorbar(
+            min_val=plot_df.fillna(100).min().min(),
+            max_val=plot_df.fillna(0).max().max(),
+            color_genes_by=selections["color-genes-by"],
+            label={
+                i['value']: i['label']
+                for i in data["available_gene_annotations"]
+            }[
+                selections["color-genes-by"]
+            ],
+            colorscale=selections["heatmap-colorscale"],
+            xaxis="x3",  # Tertiary X axis
+            yaxis="y2",  # Secondary Y axis
+        )
+    )
+
     # Set up the labels for the genomes to add to the axis
     genome_labels = list(node_positions.genome_order)
 
@@ -523,12 +520,25 @@ def plot_gig_map_heatmap(selections):
             tickvals=list(range(node_positions.df.shape[0])),
             ticktext=genome_labels,
             side="right",
+            anchor="x3",
+            showticklabels=True,
+            domain=[0, 0.9]
+        ),
+        # Secondary y-axis (with the colorbar)
+        yaxis2=dict(
             anchor="x2",
-            showticklabels=selections["show-on-right"] == "genome-labels"
+            showticklabels=True,
+            domain=[0.91, 1.0]
         ),
         # Secondary x-axis (with the heatmap),
         xaxis2=dict(
             domain=[selections["tree-width"], 1.0],
+        ),
+        # Tertiary x-axis (with the colorbar),
+        xaxis3=dict(
+            domain=[selections["tree-width"], 1.0],
+            anchor="y2",
+            side="top",
         ),
         paper_bgcolor='white',
         plot_bgcolor='white',

@@ -2,6 +2,7 @@
 
 from direct_redis import DirectRedis
 import logging
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from skbio import DistanceMatrix
@@ -249,20 +250,38 @@ def plot_heatmap(tables, node_positions, selections, data, xaxis='x', yaxis='y')
         xaxis=xaxis,
         yaxis=yaxis,
         colorscale=selections["heatmap-colorscale"],
-        showscale=selections["show-on-right"] == "colorscale",
+        showscale=False,
         hovertemplate="%{text}<extra></extra>",
-        # Title of the colorbar
-        colorbar=dict(
-            title=dict(
-                pident="Alignment Identity",
-                coverage="Alignment Coverage",
-            ).get(
-                selections["color-genes-by"],
-                selections["color-genes-by"]
-            ),
-        ),
     )
 
+def plot_colorbar(
+    min_val=0.,
+    max_val=100.,
+    colorscale="blues",
+    color_genes_by="pctid",
+    label="Percent Identity",
+    xaxis="x3",
+    yaxis="y2",
+):
+    """Render a colorbar as a heatmap on a dedicated axis."""
+
+    value_list = [
+        v
+        for v in np.linspace(
+            min_val, max_val, num=100
+        )
+    ]
+
+    return go.Heatmap(
+        y=[label],
+        x=value_list,
+        z=[value_list],
+        xaxis=xaxis,
+        yaxis=yaxis,
+        colorscale=colorscale,
+        showscale=False,
+        hovertemplate="%{z}<extra></extra>",
+    )
 
 def plot_tree(node_positions, selections, data, xaxis='x', yaxis='y'):
     """Return a Plotly trace rendered from a skbio tree."""
