@@ -144,7 +144,7 @@ with pd.HDFStore(args.input, "r") as store:
         axis=1
     ).set_index(
         "gene_id"
-    ).sample(3)
+    )
 
     # If there are results of association tests at the CAG-level with experimental design
     if "/stats/cag/corncob" in store:
