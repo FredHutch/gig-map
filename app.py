@@ -457,6 +457,8 @@ def plot_gig_map_heatmap(selections):
         "description"
     ).reindex(
         index=plot_df.index.values
+    ).fillna(
+        "No alignments found"
     )
 
     # Create a tree using the set of genomes which contain alignments
