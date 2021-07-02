@@ -245,7 +245,7 @@ menus = [
                 type="slider",
                 min_val=200,
                 max_val=2400,
-                value=460,
+                value=650,
                 step=20,
             ),
         ]
