@@ -46,6 +46,7 @@ include {
     order_genes;
     generate_gene_map;
     annotate_genes;
+    annotate_genes_with_abundances;
     aggregate_results;
 } from './modules' params(
     output_folder: params.output_folder,
