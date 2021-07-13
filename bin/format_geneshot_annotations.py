@@ -4,6 +4,7 @@
 import numpy as np
 import pandas as pd
 import argparse
+import logging
 
 ###################
 # PARSE ARGUMENTS #
@@ -20,6 +21,11 @@ parser.add_argument(
     type=str,
     required=True,
     help='Geneshot results in HDF5 format (.results.hdf5)'
+)
+parser.add_argument(
+    '--details',
+    default=None,
+    help='Geneshot abundances in HDF5 format (.details.hdf5)'
 )
 parser.add_argument(
     '--output',
@@ -112,9 +118,11 @@ def format_combined_name(output, check_for_function=False):
 
 
 # Open a connection to the HDF store
+logging.info(f"Opening {args.input}")
 with pd.HDFStore(args.input, "r") as store:
 
     # Read in the table with all gene annotations
+    logging.info("Reading /annot/gene/all")
     gene_annots = pd.read_hdf(
         store,
         "/annot/gene/all"
@@ -150,6 +158,7 @@ with pd.HDFStore(args.input, "r") as store:
     if "/stats/cag/corncob" in store:
 
         # Read in the stats table
+        logging.info("Reading /stats/cag/corncob")
         stats_df = pd.read_hdf(
             store,
             "/stats/cag/corncob"
@@ -181,7 +190,41 @@ with pd.HDFStore(args.input, "r") as store:
         # Add the CAG stats results to the gene annotation table
         gene_annots = pd.merge(gene_annots, stats_df, on='CAG')
 
-    # Write out to a file
-    gene_annots.to_csv(args.output)
+# If the details HDF5 was provided
+logging.info(f"Opening {args.details}")
+if args.details is not None:
 
-    print(f"Wrote out to {args.output}")
+    # Open a connection to the HDF store
+    with pd.HDFStore(args.details, "r") as store:
+
+        # Iterate over all of the keys
+        for hdf_key in store.keys():
+
+            # If the object contains gene-level abundances
+            if hdf_key.startswith("/abund/gene/long/"):
+
+                # Parse the sample name
+                sample_name = hdf_key.replace("/abund/gene/long/", "")
+
+                # Read the table of abundances
+                logging.info(f"Reading {hdf_key}")
+                sample_abund = pd.read_hdf(store, hdf_key)
+
+                # Assign the abundances to the gene annotation table
+                gene_annots = gene_annots.assign(
+                    SAMPLE_ABUNDANCE=sample_abund.set_index(
+                        "id"
+                    )[
+                        "depth"
+                    ]
+                ).rename(
+                    columns=dict(
+                        SAMPLE_ABUNDANCE=f"Abundance in {sample_name}"
+                    )
+                )
+
+# Write out to a file
+logging.info(f"Writing out to {args.output}")
+gene_annots.to_csv(args.output)
+
+logging.info("Done")

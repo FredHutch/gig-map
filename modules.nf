@@ -610,6 +610,32 @@ format_geneshot_annotations.py \
 
 }
 
+// Format a set of gene annotations from the geneshot pipeline as a flat CSV
+process annotate_genes_with_abundances {
+    container "${container__pandas}"
+    label 'mem_medium'
+    publishDir "${params.output_folder}", mode: 'copy', overwrite: true
+   
+    input:
+    file geneshot_results_hdf
+    file geneshot_details_hdf
+
+    output:
+    file "${params.output_prefix}.gene_annotations.csv.gz"
+
+"""#!/bin/bash
+
+set -Eeuo pipefail
+
+format_geneshot_annotations.py \
+    --input "${geneshot_results_hdf}" \
+    --details "${geneshot_details_hdf}" \
+    --output "${params.output_prefix}.gene_annotations.csv.gz"
+
+"""
+
+}
+
 
 // Group together all results into a single HDF5 file object
 process aggregate_results {

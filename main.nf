@@ -20,6 +20,7 @@ params.max_evalue = 0.001
 params.culling_limit = 5
 params.max_target_seqs = 100000
 params.annotate_geneshot = false
+params.abundances_geneshot = false
 params.max_n_genes_train_pca = 10000
 params.max_pcs_tsne = 50
 params.sketch_size = 10000
@@ -91,7 +92,13 @@ def helpMessage() {
       --max_target_seqs     Maximum number of alignments to keep, per genome (default: 100000)
       --annotate_geneshot   Optionally format annotations from the geneshot pipeline in a format
                             which can be easily loaded into the gig-map visualization app.
+                            This flag does not require the use of --abundances_geneshot (below).
                             The expected file is the output of geneshot named *.results.hdf5.
+      --abundances_geneshot Optionally annotate genes using their observed relative abundances
+                            from a set of metagenomic datasets, using the output of the geneshot
+                            analysis pipeline. This flag can only be used in combination with
+                            --annotate_geneshot.
+                            The expected file is the output of geneshot named *.details.hdf5.
       --max_n_genes_train_pca
                             The maximum number of genes used to train the PCA model used
                             for ordering genes based on the similarity of the genomes
@@ -419,13 +426,33 @@ workflow {
     // If a set of geneshot results were provided
     if (params.annotate_geneshot){
 
-        // Format those annotations as a CSV
-        annotate_genes(
-            Channel
-                .fromPath(
-                    params.annotate_geneshot
-                )
-        )
+        // If the metagenomic abundances were also provided
+        if (params.abundances_geneshot){
+
+            // Format the gene annotations and abundances as a CSV
+            annotate_genes_with_abundances(
+                Channel
+                    .fromPath(
+                        params.annotate_geneshot
+                    ),
+                Channel
+                    .fromPath(
+                        params.abundances_geneshot
+                    )
+            )
+
+        }else{
+
+            // Format the gene annotations (only) as a CSV
+            annotate_genes(
+                Channel
+                    .fromPath(
+                        params.annotate_geneshot
+                    )
+            )
+
+        }
+
     }
 
     // Group together all results into a single HDF5 file object
