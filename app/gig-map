@@ -4,8 +4,10 @@
 from menu_driven_figure.app import MenuDrivenFigure
 
 import argparse
+from dash import callback_context as ctx
+from dash.exceptions import PreventUpdate
+from dash.dependencies import Input, Output, State, ALL
 from direct_redis import DirectRedis
-from functools import lru_cache
 import json
 import logging
 import numpy as np
@@ -13,6 +15,8 @@ import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from scipy.cluster.hierarchy import fcluster, linkage
+from scipy.spatial.distance import squareform
 from skbio import DistanceMatrix
 from skbio.tree import nj
 
@@ -63,26 +67,19 @@ def read_data(args):
         # Get the mapping of genome_ix to filenames
         output["genome_ix"] = r.get("genome_ix")
         assert output["genome_ix"] is not None
+        logger.info("Read in genome index")
+
+        # Add the genome names to the alignments table
+        output["alignments"] = output["alignments"].assign(
+            genome_name = output["alignments"].genome_ix.apply(
+                lambda i: output["genome_ix"][i]
+            )
+        )
 
         # Get the mapping of gene_ix to strings
         output["gene_ix"] = r.get("gene_ix")
         assert output["gene_ix"] is not None
-
-        # Format a wide table with the alignments,
-        #  once each for pident, coverage, and description
-        for value_key in ['pident', 'coverage', 'description']:
-            output[
-                f"alignments_{value_key}"
-            ] = output[
-                "alignments"
-            ].pivot(
-                index="genome_ix",
-                columns="gene_ix",
-                values=value_key
-            ).rename(
-                index=lambda genome_ix: output["genome_ix"][genome_ix],
-                columns=lambda gene_ix: output["gene_ix"][gene_ix],
-            )
+        logger.info("Read in gene index")
 
         # Read in the pairwise genome distances, merging multiple shards
         output["distances"] = pd.concat(
@@ -90,6 +87,43 @@ def read_data(args):
                 r.get(redis_key)
                 for redis_key in r.get("distances_keys")
             ]
+        )
+        logger.info("Read in distances")
+
+        # Partition the genomes into groups using the tree
+        output["genome_groups"] = make_genome_groups(
+            output["distances"],
+            args["ani_distance_threshold"],
+            output["alignments"]
+        )
+        logger.info("Assigned {:,} genomes into {:,} groups".format(
+            output["genome_groups"].shape[0],
+            output["genome_groups"].unique().shape[0]
+        ))
+
+        # Add the genome group to the alignment table
+        output["alignments"] = output["alignments"].assign(
+            genome_group = output["alignments"].genome_name.apply(
+                output["genome_groups"].get
+            )
+        )
+
+        # Make a summary of the genome groups
+        output["genome_group_summary"] = pd.DataFrame(
+            [
+                dict(
+                    group=group_ix,
+                    n_genomes=group_df.genome_ix.unique().shape[0],
+                    n_genes=group_df.gene_ix.unique().shape[0]
+                )
+                for group_ix, group_df in output["alignments"].groupby("genome_group")
+            ]
+        # Sort the genome groups by the number of uniquely aligning genes
+        ).sort_values(
+            by="n_genes",
+            ascending=False
+        ).set_index(
+            "group"
         )
 
         # Read in the t-SNE coordinates
@@ -167,6 +201,51 @@ def read_data(args):
     # Return data formatted as a dict
     return output
 
+def empty_plot():
+    return go.Figure(
+        layout=dict(
+            xaxis=dict(
+                visible=False
+            ),
+            yaxis=dict(
+                visible=False
+            ),
+            plot_bgcolor="rgba(0, 0, 0, 0)",
+            paper_bgcolor="rgba(0, 0, 0, 0)",
+        )
+    )
+
+
+def make_genome_groups(
+    distances,
+    ani_distance_threshold,
+    alignments
+):
+    """Partition the genomes into groups using a fixed ANI threshold."""
+
+    cluster_id_list = fcluster(
+        linkage(
+            squareform(distances.values),
+            method="average",
+        ),
+        ani_distance_threshold,
+        criterion="distance"
+    )
+
+    # Make a Series linking the genome to its group
+    genome_groups = pd.Series(
+        cluster_id_list,
+        index=distances.columns.values
+    )
+
+    # Reorder the indexes based on the size of each group
+    new_order = list(genome_groups.value_counts().index.values)
+    genome_groups = genome_groups.apply(
+        new_order.index
+    )
+
+    return genome_groups
+
 
 # Generate a neighbor-joining tree from a subset of genomes
 def make_nj_tree(genome_list, dists_df):
@@ -214,16 +293,31 @@ def make_nj_tree(genome_list, dists_df):
     # Return the layout of the tree
     return node_positions
 
-def plot_heatmap(tables, node_positions, selections, data, xaxis='x', yaxis='y'):
+
+def plot_heatmap(plot_df, node_positions, selections, xaxis='x', yaxis='y'):
     """Return a heatmap rendered from the gene DataFrame and the genome positions."""
 
-    # Manipulate both the value and text DataFrames equivalently
-    for k in ["values", "text"]:
-
-        # Reorder the rows to match the tree
-        tables[k] = tables[k].reindex( 
+    # Format a set of wide tables
+    tables = {
+        table_key: plot_df.pivot(
+            index="genome_name",
+            columns="gene_ix",
+            values=column_key
+        ).sort_index(
+            # Sorting on the column index preserves the t-SNE order
+            axis=1
+        ).reindex( 
+            # Reorder the rows (genomes) to match the tree
             index=node_positions.genome_order,
+        ).rename(
+            # Transform the gene index to the gene ID string
+            columns=lambda i: data["gene_ix"][i]
         )
+        for table_key, column_key in [
+            ("values", selections["color-genes-by"]),
+            ("text", "description"),
+        ]
+    }
 
     # If the user elected to label the genes by something other than their ID
     if selections["label-genes-by"] != "":
@@ -270,6 +364,137 @@ def plot_heatmap(tables, node_positions, selections, data, xaxis='x', yaxis='y')
         hovertemplate="%{text}<extra></extra>",
     )
 
+# def plot_heatmap(plot_df, node_positions, selections, xaxis='x', yaxis='y'):
+#     """Return a heatmap rendered from the gene DataFrame and the genome positions."""
+
+#     # The `gene_ix` has been set up to reflect the ordering from 1D t-SNE
+#     # To make the plot, we just need to remove the genes after filtering
+#     # Get the unique list of gene indexes
+#     updated_gene_ix = plot_df.gene_ix.unique()
+#     # Sort the indexes
+#     updated_gene_ix.sort()
+#     # Make a dict with the index position of each
+#     updated_gene_ix = dict(zip(
+#         updated_gene_ix,
+#         map(list(updated_gene_ix).index, updated_gene_ix)
+#     ))
+
+#     # Set the X and Y position in the plot_df
+#     # To set the Y position, we need to go from the genome_ix to
+#     # the genome ID string, and then get the index position of that
+#     # genome ID string in the `node_positions.genome_order` list
+#     plot_df = plot_df.assign(
+#         x = plot_df.gene_ix.apply(updated_gene_ix.get),
+#         y = plot_df.genome_ix.apply(
+#             lambda i: node_positions.genome_order.index(
+#                 data["genome_ix"][i]
+#             )
+#         )
+#     )
+
+#     # # If the user elected to label the genes by something other than their ID
+#     # if selections["label-genes-by"] != "":
+
+#     #     # Function to rename genes
+#     #     def format_gene_id(gene_id):
+
+#     #         # Get the value
+#     #         gene_label = data[
+#     #             "gene_annotations"
+#     #         ][
+#     #             selections["label-genes-by"]
+#     #         ].get(gene_id)
+
+#     #         # If there is no value
+#     #         if gene_label is None:
+
+#     #             # Just show the gene ID
+#     #             return gene_id
+
+#     #         # If there is a value
+#     #         else:
+
+#     #             # Join together the gene ID and the annotated label,
+#     #             #  up to a maximum length
+#     #             return f"{gene_label} ({gene_id})"[
+#     #                 :selections["max-gene-label-len"]
+#     #             ]
+
+#     #     # Rename the columns of the DataFrame
+#     #     for k in ["values", "text"]:
+#     #         tables[k] = tables[k].rename(
+#     #             columns=format_gene_id
+#     #         )
+
+#     # Format the color for each point
+#     cmap = make_colormap(
+#         plot_df[selections["color-genes-by"]].dropna().unique(),
+#         selections["heatmap-colorscale"]
+#     )
+
+#     plot_df = plot_df.assign(
+#         color=plot_df[
+#             selections["color-genes-by"]
+#         ].apply(cmap.get)
+#     )
+
+#     # Return a list of rectangles which will make up the heatmap
+#     return [
+#         format_heatmap_rectangle(
+#             r,
+#             xaxis=xaxis,
+#             yaxis=yaxis,
+#         )
+#         for _, r in plot_df.iterrows()
+#     ]
+
+
+def make_colormap(value_list, colorscale):
+    # Adjust the range of values from 0 to 1
+    norm_values = value_list.copy()
+    norm_values.sort()
+    norm_values = norm_values - norm_values.min()
+    norm_values = norm_values / norm_values.max()
+    return dict(
+        zip(
+            value_list,
+            px.colors.sample_colorscale(
+                colorscale,
+                norm_values,
+            )
+        )
+    )
+
+
+def format_heatmap_rectangle(
+    r,
+    xaxis=None,
+    yaxis=None,
+):
+    """Format a single rectangle in the heatmap."""
+    return go.Scatter(
+        x=[
+            r.x - 0.5,
+            r.x - 0.5,
+            r.x + 0.5,
+            r.x + 0.5,
+        ],
+        y=[
+            r.y - 0.5,
+            r.y + 0.5,
+            r.y + 0.5,
+            r.y - 0.5,
+        ],
+        fill="toself",
+        hovertext=r.description,
+        fillcolor=r.color,
+        xaxis=xaxis,
+        yaxis=yaxis,
+        showlegend=False,
+        mode="none",
+    )
+
+
 def plot_colorbar(
     min_val=0.,
     max_val=100.,
@@ -299,20 +524,23 @@ def plot_colorbar(
         hovertemplate="%{z}<extra></extra>",
     )
 
-def plot_tree(node_positions, selections, data, xaxis='x', yaxis='y'):
+def plot_tree(node_positions, selections, xaxis='x', yaxis='y', try_relabel=True):
     """Return a Plotly trace rendered from a skbio tree."""
 
     # If the user decided to label the genomes
-    if selections["label-genomes-by"] != "":
+    if try_relabel and selections["label-genomes-by"] != "":
 
         # Replace the values in the 'name' column of the DataFrame used for plotting
+        label_genomes_dict = data[
+            "genome_annotations"
+        ][
+            selections["label-genomes-by"]
+        ].to_dict()
+
+        # If there is no annotation, keep the original label
         node_positions.df = node_positions.df.replace(
             to_replace=dict(
-                name=data[
-                    "genome_annotations"
-                ][
-                    selections["label-genomes-by"]
-                ].to_dict()
+                name=lambda l: label_genomes_dict.get(l, l)
             )
         )
 
@@ -597,6 +825,12 @@ parser.add_argument(
     default=None,
     help='(optional) File containing initial settings for display'
 )
+parser.add_argument(
+    '--ani-distance-threshold',
+    type=float,
+    default=0.1,
+    help='Distance threshold (ANI) used to partition genomes'
+)
 
 # Parse the arguments
 args = parser.parse_args()
@@ -614,6 +848,32 @@ menus = [
         # Label to be displayed at the top of the tab
         label="Customize Display",
         params=[
+            # The maximum number of genome groups to display
+            dict(
+                # ID used to access the value of this menu item
+                elem_id="max-n-groups",
+                # Define the type of menu item
+                type="input",
+                # Define the value type
+                input_type="number",
+                # Label displayed along this menu item
+                label="Maximum Number of Genome Groups to Display",
+                # Default value
+                value=30,
+            ),
+            # The maximum number of genomes to display
+            dict(
+                # ID used to access the value of this menu item
+                elem_id="max-n-genomes",
+                # Define the type of menu item
+                type="input",
+                # Define the value type
+                input_type="number",
+                # Label displayed along this menu item
+                label="Maximum Number of Genomes to Display",
+                # Default value
+                value=20,
+            ),
             # Filter alignments by a minimum percent identity (similarity)
             dict(
                 # ID used to access the value of this menu item
@@ -645,7 +905,7 @@ menus = [
                 type="input",
                 input_type="number",
                 label="Minimum Number of Genes to Display Genome",
-                value=1,
+                value=10,
             ),
             # Allow the user to color the genes by the
             # coverage or identity of the alignment, as well
@@ -777,71 +1037,63 @@ deprecated_menu_items = [
 ]
 
 
-@lru_cache(maxsize=1)
-def get_mask(min_pctid, min_cov):
+def filter_alignments(
+    selected_group,
+    max_n_genomes,
+    min_pctid,
+    min_cov,
+    min_genes_per_genome
+):
+    """
+    Filter the alignments for genomes in the selected group
+    based on pident, coverage, and the number of genes aligned per genome.
+    """
 
-    # Compute the mask for which genes/genomes pass the filter
-    return (data["alignments_pident"] >= min_pctid) & \
-           (data["alignments_coverage"] >= min_cov)
+    # Get the logger
+    logger = logging.getLogger('gig-map')
+    logger.info(f"Selected Group: {selected_group}")
+    logger.info(f"Max Genomes: {max_n_genomes}")
+    logger.info(f"Minimum Percent Identity: {min_pctid}")
+    logger.info(f"Minimum Coverage: {min_cov}")
+    logger.info(f"Minimum Genes per Genome: {min_genes_per_genome}")
 
+    # Filter by genome group
+    filtered_alignments = data["alignments"].query(
+        f"genome_group == {selected_group}"
+    )
 
-# Generate a wide table of alignments based on minimum thresholds
-def format_alignments_wide(min_pctid, min_cov, display_value):
+    # Filter by alignment quality
+    filtered_alignments = filtered_alignments.query(
+        f"pident >= {min_pctid}"
+    ).query(
+        f"coverage >= {min_cov}"
+    ).assign(
+        mask = True
+    )
 
-    # The options for `display_value` are:
-    #   pident
-    #   coverage
-    #   description
-    #   mask (returns a bool for each cell reflecting the filter)
-    assert display_value in ['pident', 'coverage', 'description', 'mask']
+    # Count up the number of genes per genome
+    genes_per_genome = filtered_alignments.genome_ix.value_counts()
 
-    # Compute the mask for which genes/genomes pass the filter
-    # Using a subfunction allows us to cache the value to help with
-    # multiple calls to the format_alignments_wide() function
-    mask = get_mask(min_pctid, min_cov)
+    # Set a maximum number of genomes to retain
+    genes_per_genome = genes_per_genome.head(max_n_genomes)
 
-    # If that is all we need to return
-    if display_value == "mask":
+    # Apply the minimum threshold of the number of genes per genome
+    genomes_passing_filter = set(genes_per_genome.index.values[
+        genes_per_genome >= min_genes_per_genome
+    ])
+    genomes_passing_filter = set(list(genomes_passing_filter))
 
-        # Return the DataFrame of bools
-        return mask
+    logger.info(f"{len(genomes_passing_filter):,} genomes")
 
-    # Otherwise:
-    else:
+    # Filter the alignments to only include those genomes which pass the filter
+    filtered_alignments = filtered_alignments.loc[
+        filtered_alignments.genome_ix.isin(genomes_passing_filter)
+    ]
 
-        # Format the key for the source data
-        data_key = f"alignments_{display_value}"
+    logger.info(f"{filtered_alignments.shape[0]:,} alignments")
 
-        # Make sure that the key is valid
-        assert data_key in list(data.keys())
+    return filtered_alignments
 
-        # Return the alignments which pass the filter
-        return data[data_key].where(mask)
-
-
-def plot_gig_map(_, selections):
-    """Render the gig-map display based on the data and the user's menu selections."""
-
-    # Render that figure
-    return plot_gig_map_heatmap(selections)
-
-    # DEPRECATED BEHAVIOR BELOW WAS TO SUPPORT T-SNE
-    # # The two options for display are 'heatmap' and 'tnse'
-    # assert selections["display-type"] in ['heatmap', 'tsne']
-
-    # # If the user selected the option to display a heatmap + tree
-    # if selections["display-type"] == "heatmap":
-
-    #     # Render that figure
-    #     return plot_gig_map_heatmap(selections)
-
-    # # Otherwise
-    # else:
-
-    #     assert selections["display-type"] == 'tsne'
-
-    #     # Render that figure
-    #     return plot_gig_map_tsne(selections)
 
 def get_gene_annot_values(selections):
     """Return a dict with the specified annotation for 'color-genes-by'."""
@@ -865,126 +1117,224 @@ def get_gene_annot_values(selections):
 
     return value_dict
 
-def plot_gig_map_tsne(selections):
-    """Render the t-SNE map display."""
+# def plot_gig_map_tsne(selections):
+#     """Render the t-SNE map display."""
 
-    # Read the t-SNE coordinates
-    tsne = data["tsne"]
+#     # Read the t-SNE coordinates
+#     tsne = data["tsne"]
 
-    # If there are gene annotations
-    if "gene_annotations" in data:
+#     # If there are gene annotations
+#     if "gene_annotations" in data:
 
-        # For all of the possible annotations
-        for col_name, col_values in data["gene_annotations"].items():
+#         # For all of the possible annotations
+#         for col_name, col_values in data["gene_annotations"].items():
 
-            # Add the values as a column to the table to display
-            tsne = tsne.assign(
-                **{
-                    col_name: col_values.apply(
-                        # Limit the length of each label, if the label is a string
-                        lambda v: v[:selections["max-gene-label-len"]] if isinstance(v, str) else v
-                    )
-                }
-            )
+#             # Add the values as a column to the table to display
+#             tsne = tsne.assign(
+#                 **{
+#                     col_name: col_values.apply(
+#                         # Limit the length of each label, if the label is a string
+#                         lambda v: v[:selections["max-gene-label-len"]] if isinstance(v, str) else v
+#                     )
+#                 }
+#             )
 
-    # Genes cannot be colored by genome-specific alignment data
-    # If the user has selected another piece of metadata to color by
-    if selections["color-genes-by"] not in [None, "pident", "coverage"]:
+#     # Genes cannot be colored by genome-specific alignment data
+#     # If the user has selected another piece of metadata to color by
+#     if selections["color-genes-by"] not in [None, "pident", "coverage"]:
 
-        # Set the name of the column to use for colors
-        color_by_column=selections['color-genes-by']
+#         # Set the name of the column to use for colors
+#         color_by_column=selections['color-genes-by']
 
-    else:
+#     else:
 
-        # Set a null value for the color_by_column
-        color_by_column = None
+#         # Set a null value for the color_by_column
+#         color_by_column = None
 
-    fig = px.scatter(
-        data_frame=tsne.reset_index(),
-        x='t-SNE 1',
-        y='t-SNE 2',
-        hover_name='index',
-        color=color_by_column,
-        hover_data=tsne.columns.values
+#     fig = px.scatter(
+#         data_frame=tsne.reset_index(),
+#         x='t-SNE 1',
+#         y='t-SNE 2',
+#         hover_name='index',
+#         color=color_by_column,
+#         hover_data=tsne.columns.values
+#     )
+
+#     # Set up the layout
+#     fig.update_layout(
+#         # White background
+#         paper_bgcolor='white',
+#         plot_bgcolor='white',
+#         # Figure height and width
+#         height=selections['figure-height'],
+#         width=selections['figure-width'],
+#     )
+
+#     return fig
+
+
+def plot_genome_group_overview(_, selections):
+    """Render the genome overview display."""
+
+    # Get the logger
+    logger = logging.getLogger('gig-map')
+
+    # Compute the average distances between genome groups
+    group_distance_df = data['distances'].groupby(
+        data["genome_groups"]
+    ).mean(
+    ).sort_index(
+    ).T.groupby(
+        data["genome_groups"]
+    ).mean(
+    ).sort_index(
     )
 
+    # Apply the maximum number of groups to display
+    groups_to_plot = data["genome_group_summary"].head(
+        selections["max-n-groups"]
+    ).index.values
+    group_distance_df = group_distance_df.reindex(
+        index=groups_to_plot,
+        columns=groups_to_plot
+    )
+
+    # Set the diagonal to zero and make symmetric
+    for i in range(group_distance_df.shape[0]):
+        group_distance_df.iloc[i, i] = 0
+        for j in range(i):
+            group_distance_df.iloc[i, j] = group_distance_df.iloc[j, i]
+
+    # Format the distances as expected by skbio
+    group_distances_dm = DistanceMatrix(
+        group_distance_df.values, 
+        list(map(str, group_distance_df.index.values))
+    )
+
+    # Make a neighbor-joining tree
+    group_tree = nj(group_distances_dm)
+
+    # Root at midpoint
+    group_tree = group_tree.root_at_midpoint()
+
+    # Assign x/y to create a DataFrame
+    group_node_positions = CartesianTree(
+        group_tree,
+        y_offset=-0.5,
+    )
+
+    # Set up a base level figure
+    fig = go.Figure()
+
+    # Render the tree with multiple traces
+    logger.info("Plotting tree")
+    for trace in plot_tree(
+        group_node_positions,
+        selections,
+        xaxis="x",  # Primary X axis
+        yaxis="y",  # Primary Y axis
+        try_relabel=False,
+    ):
+        fig.add_trace(
+            trace
+        )
+
+    # Set up the labels for the genome groups to add to the axis
+    genome_labels = [
+        "Group #{} ({:,} {}, {:,} genes)".format(
+            group_ix,
+            data["genome_group_summary"].loc[group_ix, "n_genomes"],
+            "genome" if data["genome_group_summary"].loc[group_ix, "n_genomes"] == 1 else "genomes",
+            data["genome_group_summary"].loc[group_ix, "n_genes"],
+        )
+        for group_ix in map(int, group_node_positions.genome_order)
+    ]
+
     # Set up the layout
+    logger.info("Updating layout")
     fig.update_layout(
-        # White background
+        # Set up the primary x-axis (with the tree)
+        xaxis=dict(
+            title_text="Genome Distance (ANI)",
+        ),
+        # Primary y-axis (with the tree)
+        yaxis=dict(
+            tickmode="array",
+            tickvals=list(range(len(genome_labels))),
+            ticktext=genome_labels,
+            side="right",
+            showticklabels=True,
+        ),
         paper_bgcolor='white',
         plot_bgcolor='white',
         # Figure height and width
         height=selections['figure-height'],
         width=selections['figure-width'],
     )
+    logger.info("Rendering plot")
 
     return fig
 
 
-def plot_gig_map_heatmap(selections):
+def plot_gig_map_heatmap(selected_group, selections):
     """Render the heatmap + tree display."""
 
-    # Format a wide table with gene alignments
-    # If the user wants to display alignment stats
-    if selections["color-genes-by"] in ["pident", "coverage"]:
+    # Get the logger
+    logger = logging.getLogger('gig-map')
 
-        # Make a table with the alignment stats
-        plot_df = format_alignments_wide(
-            selections["minimum-pctid"],
-            selections["minimum-coverage"],
-            selections["color-genes-by"]
-        )
+    # Filter the alignments using the thresholds set by the user
+    logger.info("Filtering alignments")
+    plot_df = filter_alignments(
+        selected_group,
+        selections["max-n-genomes"],
+        selections["minimum-pctid"],
+        selections["minimum-coverage"],
+        selections["minimum-genes-per-genome"]
+    )
 
-    # Otherwise, the user wants to color by gene annotation
-    else:
+    # If the user wants to color by gene annotation
+    if selections["color-genes-by"] not in ["pident", "coverage"]:
 
         # Get the values for each gene as a dict
+        logger.info(f"Getting values for {selections['color-genes-by']}")
         value_dict = get_gene_annot_values(selections)
 
-        # Start with a table filtered by alignment characteristics, and filled in with True/False
-        plot_df = format_alignments_wide(
-            selections["minimum-pctid"],
-            selections["minimum-coverage"],
-            "mask"
-        # Now replace any non-null value (for which an alignment is present) with the annotation
-        ).replace(
-            to_replace={
-                gene_name: {
-                    True: gene_value,
-                    False: None
-                }
-                for gene_name, gene_value in value_dict.items()
+        # Add that column to the DataFrame
+        logger.info(f"Adding column for {selections['color-genes-by']}")
+        plot_df = plot_df.assign(
+            **{
+                selections["color-genes-by"]: plot_df["gene_ix"].apply(
+                    lambda i: value_dict.get(data["gene_ix"][i])
+                )
             }
         )
 
-    # Drop any genomes which don't have the minimum number of alignments
-    plot_df = plot_df.loc[
-        plot_df.notnull().sum(axis=1) >= selections["minimum-genes-per-genome"]
-    ]
+        # Filter down to just those genes the selected annotation
+        plot_df = plot_df.loc[
+            plot_df[selections["color-genes-by"]].apply(pd.notnull)
+        ]
 
-    # Drop any genes which don't have any alignments
-    plot_df = plot_df.loc[
-        :,
-        plot_df.notnull().sum() > 0
-    ]
+    # Count up the number of unique genomes and genes
+    logger.info("Getting genome names")
+    unique_genomes = list(map(
+        lambda i: data["genome_ix"][i],
+        plot_df.genome_ix.unique()
+    ))
+    unique_genes = plot_df.gene_ix.unique()
 
-    # Make sure that there are at least two genomes with alignments
-    assert plot_df.shape[0] > 1, "<=1 genome with alignments passing filter"
+    logger.info("{:,} genomes, {:,} genes, {:,} alignments".format(
+        len(unique_genomes),
+        len(unique_genes),
+        plot_df.shape[0]
+    ))
 
-    # Make a table with the text descriptions of each alignment
-    text_df = format_alignments_wide(
-        selections["minimum-pctid"],
-        selections["minimum-coverage"],
-        "description"
-    ).reindex(
-        index=plot_df.index.values,
-        columns=plot_df.columns.values,
-    ).fillna(
-        "No alignments found"
-    )
+    # Make sure that there are at least three genomes with alignments
+    assert len(unique_genomes) >= 3, "At least three genomes are needed to display a comparison"
 
     # Create a tree using the set of genomes which contain alignments
-    node_positions = make_nj_tree(plot_df.index.values, data['distances'])
+    node_positions = make_nj_tree(unique_genomes, data['distances'])
+
+    logger.info("Grouped genomes by ANI")
 
     # The figure will render with a dendrogram on the left and a heatmap on the right
 
@@ -992,10 +1342,10 @@ def plot_gig_map_heatmap(selections):
     fig = go.Figure()
 
     # Render the tree with multiple traces
+    logger.info("Plotting tree")
     for trace in plot_tree(
         node_positions,
         selections,
-        data,
         xaxis="x",  # Primary X axis
         yaxis="y",  # Primary Y axis
     ):
@@ -1004,25 +1354,27 @@ def plot_gig_map_heatmap(selections):
         )
 
     # Render the heatmap
-    fig.add_trace(
+    logger.info("Plotting heatmap")
+    fig.add_traces(
         plot_heatmap(
-            dict(
-                values=plot_df,
-                text=text_df
-            ),
+            plot_df,
             node_positions,
             selections,
-            data,
             xaxis="x2",  # Secondary X axis
             yaxis="y",   # Primary Y axis
         )
     )
 
     # Render the colorbar
+    logger.info("Plotting colorbar")
     fig.add_trace(
         plot_colorbar(
-            min_val=plot_df.fillna(100).min().min(),
-            max_val=plot_df.fillna(0).max().max(),
+            min_val=plot_df[
+                selections["color-genes-by"]
+            ].min(),
+            max_val=plot_df[
+                selections["color-genes-by"]
+            ].max(),
             color_genes_by=selections["color-genes-by"],
             label={
                 i['value']: i['label']
@@ -1044,12 +1396,15 @@ def plot_gig_map_heatmap(selections):
 
         # Map the labels to the values from the annotation table
         genome_labels = list(map(
-            data["genome_annotations"][selections["label-genomes-by"]].get,
+            lambda l: data["genome_annotations"][selections["label-genomes-by"]].get(l, l),
             genome_labels
         ))
 
     # Set up the layout
+    logger.info("Updating layout")
     fig.update_layout(
+        # Set up the title of the plot
+        title=f"Genome Group {selected_group}",
         # Set up the primary x-axis (with the tree)
         xaxis=dict(
             title_text="Genome Distance (ANI)",
@@ -1094,8 +1449,127 @@ def plot_gig_map_heatmap(selections):
         height=selections['figure-height'],
         width=selections['figure-width'],
     )
+    logger.info("Rendering plot")
 
     return fig
+
+
+def add_callbacks(app):
+    """Decorate the callback needed to render the heatmap display."""
+
+    @app.callback(
+        Output("selected_group", "children"),
+        [
+            Input("genome-group-tree", "clickData")
+        ]
+    )
+    def save_selected_genome_group(clickData):
+        """Keep track of which genome group is being viewed."""
+
+        # Get the logger
+        logger = logging.getLogger('gig-map')
+
+        # If the user has clicked on a group
+        if isinstance(clickData, dict):
+            if "points" in clickData:
+                if isinstance(clickData["points"], list):
+                    if len(clickData["points"]) == 1:
+                        if isinstance(clickData["points"][0], dict):
+                            if "text" in clickData["points"][0]:
+                                if clickData["points"][0]["text"] is not None:
+                                    selected_group = int(
+                                        clickData["points"][0]["text"]
+                                    )
+                                    logger.info(f"Selected group: {selected_group}")
+
+                                    return selected_group
+        
+        # Otherwise, if the user has not clicked on a group
+        # Then just display the first group
+        logger.info("No group has been selected, default to 0")
+        return 0
+
+    @app.callback(
+        [
+            Output("gig-heatmap", "figure"),
+            Output(f"gig-heatmap-toast", "is_open"),
+            Output(f"gig-heatmap-toast", "children")
+        ],
+        [
+            Input("selected_group", "children"),
+            Input({"menu": ALL, "elem": "redraw-button"}, "n_clicks"),
+            Input({"menu": ALL, "elem": "close-button"}, "n_clicks"),
+            Input({"menu": ALL, "elem": "open-button"}, "n_clicks"),
+            Input("current-settings", "children"),
+        ]
+    )
+    def heatmap_callback(
+        selected_group,
+        redraw_clicks,
+        close_clicks,
+        open_clicks,
+        selected_params
+    ):
+
+        logger.info(f"Selected group for heatmap: {selected_group}")
+        
+        # If no group has been selected
+        if selected_group is None:
+
+            # Do not render the plot
+            logger.info("Cannot render heatmap, stopping")
+            raise PreventUpdate
+
+        # Otherwise, a group has been selected
+
+        # If the open buttons have never been pressed
+        if all([v is None for v in open_clicks]):
+
+            # Then let's go ahead and redraw the figure, since this
+            # callback must have been triggered by the default
+            # parameters loading
+            pass
+
+        # Otherwise
+        else:
+
+            # Get the element which triggered the callback
+            trigger = ctx.triggered[0]['prop_id']
+
+            # If this was triggered by the user clicking "Close and Redraw",
+            #  or if a new group was selected
+            if "close-button" in trigger or "redraw-button" in trigger or "selected_group" in trigger:
+
+                # Then we will redraw the figure
+                pass
+
+            # Otherwise
+            else:
+
+                # Do not redraw the figure
+                raise PreventUpdate
+
+        # Parse the parameters from the serialized JSON
+        selected_params = json.loads(selected_params)
+
+        # Try to render the figure
+        try:
+
+            # Generate a figure object
+            fig = plot_gig_map_heatmap(selected_group, selected_params)
+
+            # If everything went well, just show the figure
+            return fig, False, None
+
+        # If there was an error
+        except Exception as e:
+
+            # Format a message to display
+            msg = f"Unable to render -- {e}"
+            logger.info(f"Encountered error: {e}")
+
+            # Show an empty figure, and open the notification
+            return empty_plot(), True, msg
 
 # If the user provided initial settings
 if args.settings is not None:
@@ -1118,14 +1592,21 @@ else:
 mdf = MenuDrivenFigure(
     data=data,
     menus=menus,
-    function=plot_gig_map,
+    function=plot_genome_group_overview,
+    # Set up two distinct plots
+    figures=["genome-group-tree", "gig-heatmap"],
+    # Add a hidden Div for the selected genome group
+    state_variables=["selected_group"],
     title="Genes in Genomes Map",
     initial_settings=initial_settings
 )
+
+# Decorate additional callbacks
+add_callbacks(mdf.app)
 
 # Launch the Dash/Flask app
 mdf.run_server(
     host='0.0.0.0',
     port=8080,
-    debug=True,
+    debug=False,
 )
