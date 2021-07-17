@@ -662,6 +662,7 @@ redis-server \
     --bind 127.0.0.1 \
     --rdbcompression yes \
     --dbfilename "${params.output_prefix}.rdb" \
+    --save "" \
     --dir \$PWD &
 
 aggregate_results.py \
