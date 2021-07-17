@@ -76,6 +76,12 @@ parser.add_argument(
     default=1000,
     help='Number of rows to use for each chunk of distances'
 )
+parser.add_argument(
+    '--alignments-n-rows',
+    type=int,
+    default=1000000,
+    help='Number of rows to use for each chunk of alignments'
+)
 
 # Parse the arguments
 args = parser.parse_args()
@@ -199,14 +205,34 @@ alignments = alignments.assign(
 logger.info(f"Connecting to redis at {args.host}:{args.port}")
 with DirectRedis(host=args.host, port=args.port) as r:
 
-    # Save the alignment information in a single table
-    logger.info("Saving alignments to redis")
-    r.set(
-        # The key at which the values may be accessed
-        "alignments",
-        # The values which will be accessed at the key
-        alignments
-    )
+    # Save the alignment information in a set of tables
+    logger.info(f"Saving {alignments.shape[0]:,} alignments to redis")
+    alignments_keys = []
+
+    # Iterate over chunks of the DataFrame
+    for chunk_ix, chunk_start in enumerate(np.arange(0, alignments.shape[0], args.alignments_n_rows)):
+
+        # Set the ending row index of the chunk
+        chunk_end = min(chunk_start + args.alignments_n_rows, alignments.shape[0])
+
+        # Set the key used for this chunk in redis
+        chunk_key = f"alignments_{chunk_ix}"
+
+        # Write the chunk of the DataFrame
+        r.set(
+            # The key at which the values may be accessed
+            chunk_key,
+            # The values which will be accessed at the key
+            alignments.loc[
+                chunk_start: chunk_end
+            ]
+        )
+
+        # Add the key to the list
+        alignments_keys.append(chunk_key)
+
+    # Save the list of chunk keys to redis
+    r.set("alignments_keys", alignments_keys)
 
     # Save the mapping of gene_ix to a name
     logger.info("Saving gene_ix to redis")
