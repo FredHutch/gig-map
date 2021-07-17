@@ -35,18 +35,24 @@ def remove_genome_file_ext(fp):
 def read_alignments(r):
     """Read in the alignment information from redis"""
 
+    # Get the logger
+    logger = logging.getLogger('gig-map')
+
     # Try to get the list of keys used to store slices of the alignments
+    logger.info("Reading alignment shard keys")
     alignments_keys = r.get("alignments_keys")
 
     # If there are no keys
     if alignments_keys is None:
 
         # Just read in all of the alignments directly
+        logger.info("Reading unsharded alignments")
         return r.get("alignments")
 
     # Otherwise, if there are keys
     else:
 
+        logger.info("Reading alignments in shards")
         # Read in all of the chunks and combine them
         return pd.concat(map(r.get, alignments_keys))
 
@@ -81,13 +87,14 @@ def read_data(args):
     with DirectRedis(host=args['host'], port=args['port']) as r:
 
         # Read in the alignment information in long format
+        logger.info("Reading alignments")
         output["alignments"] = read_alignments(r)
         assert output["alignments"] is not None
 
         # Get the mapping of genome_ix to filenames
+        logger.info("Reading genome index")
         output["genome_ix"] = r.get("genome_ix")
         assert output["genome_ix"] is not None
-        logger.info("Read in genome index")
 
         # Add the genome names to the alignments table
         output["alignments"] = output["alignments"].assign(
@@ -97,9 +104,9 @@ def read_data(args):
         )
 
         # Get the mapping of gene_ix to strings
+        logger.info("Reading gene index")
         output["gene_ix"] = r.get("gene_ix")
         assert output["gene_ix"] is not None
-        logger.info("Read in gene index")
 
         # Read in the pairwise genome distances, merging multiple shards
         output["distances"] = pd.concat(
