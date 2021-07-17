@@ -31,6 +31,26 @@ def remove_genome_file_ext(fp):
             fp = fp[:-len(ext)]
     return fp
 
+
+def read_alignments(r):
+    """Read in the alignment information from redis"""
+
+    # Try to get the list of keys used to store slices of the alignments
+    alignments_keys = r.get("alignments_keys")
+
+    # If there are no keys
+    if alignments_keys is None:
+
+        # Just read in all of the alignments directly
+        return r.get("alignments")
+
+    # Otherwise, if there are keys
+    else:
+
+        # Read in all of the chunks and combine them
+        return pd.concat(map(r.get, alignments_keys))
+
+
 def read_data(args):
     """Read in the data needed to render the heatmap."""
 
@@ -61,7 +81,7 @@ def read_data(args):
     with DirectRedis(host=args['host'], port=args['port']) as r:
 
         # Read in the alignment information in long format
-        output["alignments"] = r.get("alignments")
+        output["alignments"] = read_alignments(r)
         assert output["alignments"] is not None
 
         # Get the mapping of genome_ix to filenames
