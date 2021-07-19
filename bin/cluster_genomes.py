@@ -8,8 +8,6 @@ import numpy as np
 import pandas as pd
 from scipy.cluster.hierarchy import fcluster, linkage
 from scipy.spatial.distance import squareform
-from skbio import DistanceMatrix
-from skbio.tree import nj
 
 ##################
 # SET UP LOGGING #
