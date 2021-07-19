@@ -223,6 +223,9 @@ if args.details is not None:
                     )
                 )
 
+# Set the name of the index column
+gene_annots.index.rename("gene_id", inplace=True)
+
 # Write out to a file
 logging.info(f"Writing out to {args.output}")
 gene_annots.to_csv(args.output)
