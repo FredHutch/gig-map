@@ -5,6 +5,7 @@ import argparse
 from direct_redis import DirectRedis
 import gzip
 import logging
+import os
 import numpy as np
 import pandas as pd
 
@@ -173,6 +174,48 @@ dists = dists.reindex(
 )
 
 
+###################
+# GENOME CLUSTERS #
+###################
+
+# Read in each of the groupings which result from ANI-based genome clustering
+genome_clustering = dict()
+
+# Each set of results is available as genome_clusters/{ani_threshold}.hdf5
+for fp in os.listdir("genome_clusters"):
+
+    # Only read in HDF5 files
+    if not fp.endswith(".hdf5"):
+        continue
+
+    # Parse the threshold from the file name
+    ani_threshold = fp[:-5]
+    logger.info(f"Parsing results of clustering at {ani_threshold} percent identity")
+    
+    # The threshold must be an integer (indicating a percentage)
+    ani_threshold = int(ani_threshold)
+
+    # Open the HDF5 file for reading
+    fp = f"genome_clusters/{fp}"
+    logger.info(f"Opening {fp}")
+    with pd.HDFStore(fp, "r") as store:
+
+        # Iterate over a set of keys
+        for hdf_key in ["genome_groups", "genome_group_df", "group_distance_df"]:
+
+            logger.info(f"Reading key {hdf_key}")
+
+            # Save the DataFrame to `genome_clustering`
+            genome_clustering[
+                f"{hdf_key} {ani_threshold}"
+            ] = pd.read_hdf(
+                store,
+                hdf_key
+            )
+
+logger.info("Done reading genome clusters")
+
+
 #############
 # GENE LIST #
 #############
@@ -293,6 +336,11 @@ with DirectRedis(host=args.host, port=args.port) as r:
         "distances_keys",
         dists_keys
     )
+
+    # Write out all of the genome clustering information
+    for k, v in genome_clustering.items():
+        logger.info(f"Writing {k} to redis")
+        r.set(k, v)
     
     # Save the table of t-SNE coordinates
     logger.info("Saving tsne to redis")

@@ -25,6 +25,7 @@ params.max_n_genes_train_pca = 10000
 params.max_pcs_tsne = 50
 params.sketch_size = 10000
 params.genome_distances = false
+params.ani_thresholds = "99,95,90,80,70,60,50"
 
 
 // Import the processes to run in this workflow
@@ -47,6 +48,7 @@ include {
     generate_gene_map;
     annotate_genes;
     annotate_genes_with_abundances;
+    cluster_genomes;
     aggregate_results;
 } from './modules' params(
     output_folder: params.output_folder,
@@ -62,6 +64,7 @@ include {
     max_n_genes_train_pca: params.max_n_genes_train_pca,
     max_pcs_tsne: params.max_pcs_tsne,
     sketch_size: params.sketch_size,
+    ani_thresholds: params.ani_thresholds,
     publishFTP: 'false'
 )
 
@@ -111,6 +114,9 @@ def helpMessage() {
                             you can directly import them into the analysis instead of repeating
                             that time-consuming process. This flag should be used to indicate
                             the distances.csv.gz file produced for this exact set of genomes.
+      --ani_thresholds      Comma-delimited list of percent identity thresholds at which
+                            genomes will be clustered for more rapid visualization.
+                            Default: 99,95,90,80,70,60,50
 
     
     Specifing Genomes for Alignment:
@@ -456,12 +462,24 @@ workflow {
 
     }
 
+    // Cluster genomes by ANI
+    cluster_genomes(
+        concatenate_alignments.out.combine(
+            genome_distances_csv
+        ).combine(
+            Channel.of(
+                params.ani_thresholds.splitText(",")
+            )
+        )
+    )
+
     // Group together all results into a single HDF5 file object
     aggregate_results(
         concatenate_alignments.out,
         order_genes.out,
         genome_distances_csv,
         generate_gene_map.out,
+        cluster_genomes.out.toSortedList()
     )
 
 }

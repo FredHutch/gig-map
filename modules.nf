@@ -637,6 +637,30 @@ format_geneshot_annotations.py \
 }
 
 
+// Cluster genomes by ANI
+process cluster_genomes {
+    container "${container__pandas}"
+    label 'mem_medium'
+   
+    input:
+    tuple file(alignments_csv_gz), file(dists_csv_gz), val(ani_threshold)
+
+    output:
+    file "${ani_threshold}.hdf5"
+
+"""#!/bin/bash
+
+set -Eeuo pipefail
+
+cluster_genomes.py \
+    --alignments "${alignments_csv_gz}" \
+    --dists "${dists_csv_gz}" \
+    --ani-threshold ${ani_threshold}
+
+"""
+
+}
+
 // Group together all results into a single HDF5 file object
 process aggregate_results {
     container "${container__pandas}"
@@ -648,6 +672,7 @@ process aggregate_results {
     file gene_order_txt_gz
     file dists_csv_gz
     file tsne_coords_csv_gz
+    file "genome_clusters/*"
 
     output:
     file "${params.output_prefix}.rdb"
