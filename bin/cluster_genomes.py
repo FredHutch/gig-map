@@ -137,7 +137,7 @@ genome_group_df = pd.DataFrame(
     [
         dict(
             group=group_ix,
-            n_genomes=group_df.genome_ix.unique().shape[0],
+            n_genomes=group_df.genome.unique().shape[0],
             n_genes=group_df.gene_ix.unique().shape[0]
         )
         for group_ix, group_df in alignments.groupby(
