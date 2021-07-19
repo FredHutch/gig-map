@@ -468,7 +468,7 @@ workflow {
             genome_distances_csv
         ).combine(
             Channel.of(
-                params.ani_thresholds.splitText(",")
+                params.ani_thresholds.split(/,/)
             )
         )
     )
