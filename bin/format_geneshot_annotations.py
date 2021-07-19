@@ -150,8 +150,6 @@ with pd.HDFStore(args.input, "r") as store:
     gene_annots = gene_annots.apply(
         format_gene_annot,
         axis=1
-    ).set_index(
-        "gene_id"
     )
 
     # If there are results of association tests at the CAG-level with experimental design
@@ -210,24 +208,36 @@ if args.details is not None:
                 logging.info(f"Reading {hdf_key}")
                 sample_abund = pd.read_hdf(store, hdf_key)
 
+                # Format as a dict of per-gene abundances
+                sample_abund = sample_abund.set_index(
+                    "id"
+                )[
+                    "depth"
+                ].to_dict()
+
                 # Assign the abundances to the gene annotation table
                 gene_annots = gene_annots.assign(
-                    SAMPLE_ABUNDANCE=sample_abund.set_index(
-                        "id"
-                    )[
-                        "depth"
-                    ]
+                    SAMPLE_ABUNDANCE=gene_annots.gene_id.apply(
+                        sample_abund.get
+                    )
                 ).rename(
                     columns=dict(
                         SAMPLE_ABUNDANCE=f"Abundance in {sample_name}"
                     )
                 )
 
-# Set the name of the index column
-gene_annots.index.rename("gene_id", inplace=True)
+# Set the order of the columns
+gene_annots = gene_annots.reindex(
+    columns=[
+        "gene_id"
+    ] + [
+        col_name for col_name in gene_annots.columns.values
+        if col_name != "gene_id"
+    ]
+)
 
 # Write out to a file
 logging.info(f"Writing out to {args.output}")
-gene_annots.to_csv(args.output)
+gene_annots.to_csv(args.output, index=None)
 
 logging.info("Done")
