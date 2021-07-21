@@ -56,8 +56,8 @@ parser.add_argument(
 parser.add_argument(
     '--method',
     type=str,
-    default="ward",
-    help='Method used to perform linkage clustering'
+    default="average",
+    help='Method used to perform linkage clustering (default is "average", which corresponds to UPGMA)'
 )
 
 # Parse the arguments
