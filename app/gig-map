@@ -982,9 +982,15 @@ def filter_alignments(
     genome_groups = read_genome_groups(ani_threshold)
 
     # Filter by genome group
+    genomes_in_selected_group = set([
+        n
+        for n, i in genome_groups.items()
+        if i == selected_group
+    ])
     filtered_alignments = data["alignments"].loc[
-        data["alignments"]["genome_name"].apply(genome_groups.get) == selected_group
+        data["alignments"]["genome_name"].isin(genomes_in_selected_group)
     ]
+    logger.info(f"Filtered by genome group - {filtered_alignments.shape[0]:,} lines")
 
     # Filter by alignment quality
     filtered_alignments = filtered_alignments.query(
@@ -994,6 +1000,7 @@ def filter_alignments(
     ).assign(
         mask = True
     )
+    logger.info(f"Filtered by alignment quality - {filtered_alignments.shape[0]:,} lines")
 
     # Count up the number of genes per genome
     genes_per_genome = filtered_alignments.genome_ix.value_counts()
@@ -1009,12 +1016,17 @@ def filter_alignments(
 
     logger.info(f"{len(genomes_passing_filter):,} genomes")
 
+    # Only keep a single alignment per gene / genome
+    filtered_alignments = filtered_alignments.groupby(
+        ["genome_ix", "gene_ix"]
+    ).head(1)
+    logger.info(f"Deduplicated alignments - {filtered_alignments.shape[0]:,} lines")
+
     # Filter the alignments to only include those genomes which pass the filter
     filtered_alignments = filtered_alignments.loc[
         filtered_alignments.genome_ix.isin(genomes_passing_filter)
     ]
-
-    logger.info(f"{filtered_alignments.shape[0]:,} alignments")
+    logger.info(f"Filtered by final genome set - {filtered_alignments.shape[0]:,} lines")
 
     return filtered_alignments
 
