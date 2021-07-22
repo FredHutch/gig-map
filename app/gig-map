@@ -8,6 +8,8 @@ from dash import callback_context as ctx
 from dash.exceptions import PreventUpdate
 from dash.dependencies import Input, Output, State, ALL
 from direct_redis import DirectRedis
+from filelock import FileLock
+from functools import lru_cache
 import json
 import logging
 import numpy as np
@@ -19,7 +21,6 @@ from scipy.cluster.hierarchy import fcluster, linkage
 from scipy.spatial.distance import squareform
 from skbio import DistanceMatrix
 from skbio.tree import nj
-
 
 ####################
 # HELPER FUNCTIONS #
@@ -117,41 +118,27 @@ def read_data(args):
         )
         logger.info("Read in distances")
 
-        # Partition the genomes into groups using the tree
-        output["genome_groups"] = make_genome_groups(
-            output["distances"],
-            args["ani_distance_threshold"],
-            output["alignments"]
-        )
-        logger.info("Assigned {:,} genomes into {:,} groups".format(
-            output["genome_groups"].shape[0],
-            output["genome_groups"].unique().shape[0]
-        ))
+        # Read the genome groups which have been pre-computed
+        # Results will be output to keys in data formatted as:
+        # "genome_groups {threshold}"
+        # "genome_group_df {threshold}"
+        # "group_distance_df {threshold}"
+        # Keep track of all possible values for `threshold`
+        output["genome_group_thresholds"] = set([])
+        for key in r.keys():
+            if key.startswith(("genome_groups ", "genome_group_df ", "group_distance_df ")):
+                # Save the data
+                output[key] = r.get(key)
+                # Parse the threshold value
+                threshold_value = int(key.rsplit(" ", 1)[-1])
+                # Add the threshold value
+                output["genome_group_thresholds"].add(threshold_value)
+        
+        # Format output["genome_group_thresholds"] as a list
+        output["genome_group_thresholds"] = list(output["genome_group_thresholds"])
 
-        # Add the genome group to the alignment table
-        output["alignments"] = output["alignments"].assign(
-            genome_group = output["alignments"].genome_name.apply(
-                output["genome_groups"].get
-            )
-        )
-
-        # Make a summary of the genome groups
-        output["genome_group_summary"] = pd.DataFrame(
-            [
-                dict(
-                    group=group_ix,
-                    n_genomes=group_df.genome_ix.unique().shape[0],
-                    n_genes=group_df.gene_ix.unique().shape[0]
-                )
-                for group_ix, group_df in output["alignments"].groupby("genome_group")
-            ]
-        # Sort the genome groups by the number of uniquely aligning genes
-        ).sort_values(
-            by="n_genes",
-            ascending=False
-        ).set_index(
-            "group"
-        )
+        # Sort the keys numerically
+        output["genome_group_thresholds"].sort()
 
         # Read in the t-SNE coordinates
         output["tsne"] = r.get("tsne")
@@ -241,37 +228,6 @@ def empty_plot():
             paper_bgcolor="rgba(0, 0, 0, 0)",
         )
     )
-
-
-def make_genome_groups(
-    distances,
-    ani_distance_threshold,
-    alignments
-):
-    """Partition the genomes into groups using a fixed ANI threshold."""
-
-    cluster_id_list = fcluster(
-        linkage(
-            squareform(distances.values),
-            method="average",
-        ),
-        ani_distance_threshold,
-        criterion="distance"
-    )
-
-    # Make a Series linking the genome to its group
-    genome_groups = pd.Series(
-        cluster_id_list,
-        index=distances.columns.values
-    )
-
-    # Reorder the indexes based on the size of each group
-    new_order = list(genome_groups.value_counts().index.values)
-    genome_groups = genome_groups.apply(
-        new_order.index
-    )
-
-    return genome_groups
 
 
 # Generate a neighbor-joining tree from a subset of genomes
@@ -390,90 +346,6 @@ def plot_heatmap(plot_df, node_positions, selections, xaxis='x', yaxis='y'):
         showscale=False,
         hovertemplate="%{text}<extra></extra>",
     )
-
-# def plot_heatmap(plot_df, node_positions, selections, xaxis='x', yaxis='y'):
-#     """Return a heatmap rendered from the gene DataFrame and the genome positions."""
-
-#     # The `gene_ix` has been set up to reflect the ordering from 1D t-SNE
-#     # To make the plot, we just need to remove the genes after filtering
-#     # Get the unique list of gene indexes
-#     updated_gene_ix = plot_df.gene_ix.unique()
-#     # Sort the indexes
-#     updated_gene_ix.sort()
-#     # Make a dict with the index position of each
-#     updated_gene_ix = dict(zip(
-#         updated_gene_ix,
-#         map(list(updated_gene_ix).index, updated_gene_ix)
-#     ))
-
-#     # Set the X and Y position in the plot_df
-#     # To set the Y position, we need to go from the genome_ix to
-#     # the genome ID string, and then get the index position of that
-#     # genome ID string in the `node_positions.genome_order` list
-#     plot_df = plot_df.assign(
-#         x = plot_df.gene_ix.apply(updated_gene_ix.get),
-#         y = plot_df.genome_ix.apply(
-#             lambda i: node_positions.genome_order.index(
-#                 data["genome_ix"][i]
-#             )
-#         )
-#     )
-
-#     # # If the user elected to label the genes by something other than their ID
-#     # if selections["label-genes-by"] != "":
-
-#     #     # Function to rename genes
-#     #     def format_gene_id(gene_id):
-
-#     #         # Get the value
-#     #         gene_label = data[
-#     #             "gene_annotations"
-#     #         ][
-#     #             selections["label-genes-by"]
-#     #         ].get(gene_id)
-
-#     #         # If there is no value
-#     #         if gene_label is None:
-
-#     #             # Just show the gene ID
-#     #             return gene_id
-
-#     #         # If there is a value
-#     #         else:
-
-#     #             # Join together the gene ID and the annotated label,
-#     #             #  up to a maximum length
-#     #             return f"{gene_label} ({gene_id})"[
-#     #                 :selections["max-gene-label-len"]
-#     #             ]
-
-#     #     # Rename the columns of the DataFrame
-#     #     for k in ["values", "text"]:
-#     #         tables[k] = tables[k].rename(
-#     #             columns=format_gene_id
-#     #         )
-
-#     # Format the color for each point
-#     cmap = make_colormap(
-#         plot_df[selections["color-genes-by"]].dropna().unique(),
-#         selections["heatmap-colorscale"]
-#     )
-
-#     plot_df = plot_df.assign(
-#         color=plot_df[
-#             selections["color-genes-by"]
-#         ].apply(cmap.get)
-#     )
-
-#     # Return a list of rectangles which will make up the heatmap
-#     return [
-#         format_heatmap_rectangle(
-#             r,
-#             xaxis=xaxis,
-#             yaxis=yaxis,
-#         )
-#         for _, r in plot_df.iterrows()
-#     ]
 
 
 def make_colormap(value_list, colorscale):
@@ -852,12 +724,6 @@ parser.add_argument(
     default=None,
     help='(optional) File containing initial settings for display'
 )
-parser.add_argument(
-    '--ani-distance-threshold',
-    type=float,
-    default=0.1,
-    help='Distance threshold (ANI) used to partition genomes'
-)
 
 # Parse the arguments
 args = parser.parse_args()
@@ -875,6 +741,32 @@ menus = [
         # Label to be displayed at the top of the tab
         label="Customize Display",
         params=[
+            # The distance threshold used to group genomes
+            dict(
+                # ID used to access the value of this menu item
+                elem_id="ani-threshold",
+                # Define the type of menu item
+                type="dropdown",
+                # Define the options in the dropdown
+                options=[
+                    dict(
+                        value=v,
+                        label=f"{int(v)}% Identity",
+                    )
+                    for v in data["genome_group_thresholds"]
+                ] + [
+                    dict(
+                        value=None,
+                        label="No Grouping"
+                    )
+                ],
+                # Default value
+                value=80.,
+                # Suffix to display
+                suffix="%",
+                # Label displayed along this menu item
+                label="Genome Group Clustering Threshold (ANI)",
+            ),
             # The maximum number of genome groups to display
             dict(
                 # ID used to access the value of this menu item
@@ -949,8 +841,8 @@ menus = [
                 elem_id="label-genes-by",
                 label="Label Genes By",
                 type="dropdown",
-                options=data['available_gene_labels'],
-                value="",
+                options=data["available_gene_labels"],
+                value="combined_name" if "combined_name" in data["gene_annotations"].columns.values else "",
             ),
             # Limit the length of each gene label
             dict(
@@ -968,7 +860,7 @@ menus = [
                 label="Label Genomes By",
                 type="dropdown",
                 options=data['available_genome_labels'],
-                value="",
+                value="Formatted Name" if "Formatted Name" in data["genome_annotations"].columns.values else "",
             ),
             # Limit the length of each genome label
             dict(
@@ -1008,7 +900,7 @@ menus = [
                 type="slider",
                 min_val=200,
                 max_val=2400,
-                value=800,
+                value=1200,
                 step=20,
             ),
             dict(
@@ -1017,7 +909,7 @@ menus = [
                 type="slider",
                 min_val=200,
                 max_val=2400,
-                value=650,
+                value=1000,
                 step=20,
             ),
         ]
@@ -1064,7 +956,9 @@ deprecated_menu_items = [
 ]
 
 
+@lru_cache(maxsize=16)
 def filter_alignments(
+    ani_threshold,
     selected_group,
     max_n_genomes,
     min_pctid,
@@ -1084,10 +978,13 @@ def filter_alignments(
     logger.info(f"Minimum Coverage: {min_cov}")
     logger.info(f"Minimum Genes per Genome: {min_genes_per_genome}")
 
+    # Get the genome groups based on this ANI threshold
+    genome_groups = read_genome_groups(ani_threshold)
+
     # Filter by genome group
-    filtered_alignments = data["alignments"].query(
-        f"genome_group == {selected_group}"
-    )
+    filtered_alignments = data["alignments"].loc[
+        data["alignments"]["genome_name"].apply(genome_groups.get) == selected_group
+    ]
 
     # Filter by alignment quality
     filtered_alignments = filtered_alignments.query(
@@ -1199,6 +1096,16 @@ def get_gene_annot_values(selections):
 
 #     return fig
 
+def read_genome_groups(ani_threshold):
+    """Read in the assignment of genomes to groups at a particular ANI threshold."""
+    return data[
+        f"genome_groups {ani_threshold}"
+    ].set_index(
+        "genome"
+    )[
+        "group"
+    ]
+
 
 def plot_genome_group_overview(_, selections):
     """Render the genome overview display."""
@@ -1206,19 +1113,32 @@ def plot_genome_group_overview(_, selections):
     # Get the logger
     logger = logging.getLogger('gig-map')
 
-    # Compute the average distances between genome groups
-    group_distance_df = data['distances'].groupby(
-        data["genome_groups"]
-    ).mean(
-    ).sort_index(
-    ).T.groupby(
-        data["genome_groups"]
-    ).mean(
-    ).sort_index(
-    )
+    # Get the genome groups based on this ANI threshold
+    ani_threshold = selections["ani-threshold"]
+    logger.info(f"Plotting groups at {ani_threshold} percent identity")
+    genome_groups = read_genome_groups(ani_threshold)
+    # A summary of each genome group
+    genome_group_df = data[f"genome_group_df {ani_threshold}"]
+    logger.info(genome_group_df)
+    # The mean ANI between groups
+    group_distance_df = data[f"group_distance_df {ani_threshold}"]
+
+    # If there is only one group
+    if genome_groups.unique().shape[0] <= 1:
+
+        # Return an empty plot
+        fig = go.Figure()
+        fig.update_layout(
+            paper_bgcolor='white',
+            plot_bgcolor='white',
+            height=10,
+            width=10,
+        )
+        return fig
+
 
     # Apply the maximum number of groups to display
-    groups_to_plot = data["genome_group_summary"].head(
+    groups_to_plot = genome_group_df.head(
         selections["max-n-groups"]
     ).index.values
     group_distance_df = group_distance_df.reindex(
@@ -1270,9 +1190,9 @@ def plot_genome_group_overview(_, selections):
     genome_labels = [
         "Group #{} ({:,} {}, {:,} genes)".format(
             group_ix,
-            data["genome_group_summary"].loc[group_ix, "n_genomes"],
-            "genome" if data["genome_group_summary"].loc[group_ix, "n_genomes"] == 1 else "genomes",
-            data["genome_group_summary"].loc[group_ix, "n_genes"],
+            genome_group_df.loc[group_ix, "n_genomes"],
+            "genome" if genome_group_df.loc[group_ix, "n_genomes"] == 1 else "genomes",
+            genome_group_df.loc[group_ix, "n_genes"],
         )
         for group_ix in map(int, group_node_positions.genome_order)
     ]
@@ -1295,8 +1215,8 @@ def plot_genome_group_overview(_, selections):
         paper_bgcolor='white',
         plot_bgcolor='white',
         # Figure height and width
-        height=selections['figure-height'],
-        width=selections['figure-width'],
+        height=selections['max-n-groups'] * 25,
+        width=650,
     )
     logger.info("Rendering plot")
 
@@ -1312,6 +1232,7 @@ def plot_gig_map_heatmap(selected_group, selections):
     # Filter the alignments using the thresholds set by the user
     logger.info("Filtering alignments")
     plot_df = filter_alignments(
+        selections["ani-threshold"],
         selected_group,
         selections["max-n-genomes"],
         selections["minimum-pctid"],
