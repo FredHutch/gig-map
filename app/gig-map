@@ -6,9 +6,8 @@ from menu_driven_figure.app import MenuDrivenFigure
 import argparse
 from dash import callback_context as ctx
 from dash.exceptions import PreventUpdate
-from dash.dependencies import Input, Output, State, ALL
+from dash.dependencies import Input, Output, ALL
 from direct_redis import DirectRedis
-from filelock import FileLock
 from functools import lru_cache
 import json
 import logging
@@ -17,8 +16,6 @@ import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from scipy.cluster.hierarchy import fcluster, linkage
-from scipy.spatial.distance import squareform
 from skbio import DistanceMatrix
 from skbio.tree import nj
 
@@ -1053,60 +1050,6 @@ def get_gene_annot_values(selections):
 
     return value_dict
 
-# def plot_gig_map_tsne(selections):
-#     """Render the t-SNE map display."""
-
-#     # Read the t-SNE coordinates
-#     tsne = data["tsne"]
-
-#     # If there are gene annotations
-#     if "gene_annotations" in data:
-
-#         # For all of the possible annotations
-#         for col_name, col_values in data["gene_annotations"].items():
-
-#             # Add the values as a column to the table to display
-#             tsne = tsne.assign(
-#                 **{
-#                     col_name: col_values.apply(
-#                         # Limit the length of each label, if the label is a string
-#                         lambda v: v[:selections["max-gene-label-len"]] if isinstance(v, str) else v
-#                     )
-#                 }
-#             )
-
-#     # Genes cannot be colored by genome-specific alignment data
-#     # If the user has selected another piece of metadata to color by
-#     if selections["color-genes-by"] not in [None, "pident", "coverage"]:
-
-#         # Set the name of the column to use for colors
-#         color_by_column=selections['color-genes-by']
-
-#     else:
-
-#         # Set a null value for the color_by_column
-#         color_by_column = None
-
-#     fig = px.scatter(
-#         data_frame=tsne.reset_index(),
-#         x='t-SNE 1',
-#         y='t-SNE 2',
-#         hover_name='index',
-#         color=color_by_column,
-#         hover_data=tsne.columns.values
-#     )
-
-#     # Set up the layout
-#     fig.update_layout(
-#         # White background
-#         paper_bgcolor='white',
-#         plot_bgcolor='white',
-#         # Figure height and width
-#         height=selections['figure-height'],
-#         width=selections['figure-width'],
-#     )
-
-#     return fig
 
 def read_genome_groups(ani_threshold):
     """Read in the assignment of genomes to groups at a particular ANI threshold."""
