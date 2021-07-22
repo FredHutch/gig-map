@@ -716,6 +716,12 @@ parser.add_argument(
     help='(optional) Annotations for genomes to use for plotting (must contain a column named `genome_id`)'
 )
 parser.add_argument(
+    '--color-genes-by',
+    type=str,
+    default=None,
+    help='(optional) Indicate a column from the gene annotation table to use for coloring genes'
+)
+parser.add_argument(
     '--settings',
     type=str,
     default=None,
@@ -1072,9 +1078,10 @@ def plot_genome_group_overview(_, selections):
     ani_threshold = selections["ani-threshold"]
     logger.info(f"Plotting groups at {ani_threshold} percent identity")
     genome_groups = read_genome_groups(ani_threshold)
+    
     # A summary of each genome group
     genome_group_df = data[f"genome_group_df {ani_threshold}"]
-    logger.info(genome_group_df)
+    
     # The mean ANI between groups
     group_distance_df = data[f"group_distance_df {ani_threshold}"]
 
@@ -1477,19 +1484,25 @@ def add_callbacks(app):
 # If the user provided initial settings
 if args.settings is not None:
 
-    # Make sure that the string points to a file
-    assert os.path.exists(args.settings)
+    # If the string points to a file
+    if os.path.exists(args.settings):
 
-    # Read in the file as JSON
-    with open(args.settings, 'r') as handle:
+        # Read in the file as JSON
+        with open(args.settings, 'r') as handle:
 
-        initial_settings = json.load(handle)
+            initial_settings = json.load(handle)
 
 # Otherwise
 else:
 
     # There are no initial settings
-    initial_settings = None
+    initial_settings = dict()
+
+# If the user specified --color-genes-by
+if args.color_genes_by is not None:
+
+    # Add that to the initial settings
+    initial_settings["color-genes-by"] = args.color_genes_by
 
 # Instantiate the MenuDrivenFigure object
 mdf = MenuDrivenFigure(
