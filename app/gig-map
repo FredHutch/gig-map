@@ -84,6 +84,11 @@ def read_data(args):
     logger.info(f"Connecting to redis at {args['host']}:{args['port']}")
     with DirectRedis(host=args['host'], port=args['port']) as r:
 
+        # Log the available keys, to help with debugging
+        logger.info("Available keys in redis:")
+        for k in r.keys():
+            logger.info(k)
+
         # Read in the alignment information in long format
         logger.info("Reading alignments")
         output["alignments"] = read_alignments(r)
