@@ -11,8 +11,8 @@ params.genomes = false
 params.genes_fasta = false
 params.genes_dmnd = false
 params.genome_tables = false
-params.min_coverage = 50
-params.min_identity = 50
+params.min_coverage = 90
+params.min_identity = 90
 params.aligner = 'diamond'
 params.ftp_threads = 25
 params.query_gencode = 11
@@ -86,8 +86,8 @@ def helpMessage() {
 
     Optional Arguments:
       --aligner             Alignment algorithm to use (options: diamond, blast; default: diamond)
-      --min_identity        Percent identity threshold used for alignment (default: 50)
-      --min_coverage        Percent coverage threshold used for alignment (default: 50)
+      --min_identity        Percent identity threshold used for alignment (default: 90)
+      --min_coverage        Percent coverage threshold used for alignment (default: 90)
       --ftp_threads         Number of FTP downloads to execute concurrently (default: 25)
       --query_gencode       Genetic code to use for conceptual translation (default: 11)
       --max_evalue          Maximum E-value for any alignment (default: 0.001)
