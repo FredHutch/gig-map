@@ -508,7 +508,7 @@ def downloadHelpMessage() {
 
     Usage:
 
-    nextflow run FredHutch/gig-map/download <ARGUMENTS>
+    nextflow run FredHutch/gig-map -entry download <ARGUMENTS>
 
     Required Arguments:
       --genome_tables       Tables of NCBI genomes to analyze (see note below)
