@@ -739,7 +739,7 @@ process cdhit {
     
     output:
     file "clustered.genes.fasta.gz"
-    file "clusters.membership.csv.gz"
+    file "clustered.membership.csv.gz"
     
 """
 #!/bin/bash
