@@ -636,9 +636,9 @@ def deduplicateHelpMessage() {
     the centroids of each cluster.
 
     Output files:
-        clusters.fasta.gz - Amino acid sequences of the centroids of each cluster
-        clusters.annot.csv.gz - Table with annotations for each cluster
-        clusters.membership.csv.gz - Table linking inputs to each cluster
+        clustered.genes.fasta.gz - Amino acid sequences of the centroids of each cluster
+        clustered.genes.csv.gz - Table with annotations for each cluster
+        clustered.membership.csv.gz - Table linking inputs to each cluster
 
     Usage:
 

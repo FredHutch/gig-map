@@ -788,7 +788,7 @@ cd-hit \
 # Compress the outputs
 gzip clustered.genes.fasta
 gzip clustered.genes.fasta.clstr
-mv clustered.genes.fasta.clstr.gz clusters.membership.csv.gz
+mv clustered.genes.fasta.clstr.gz clustered.membership.csv.gz
 """
 }
 
