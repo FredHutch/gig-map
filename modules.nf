@@ -1,9 +1,9 @@
 // Docker containers reused across processes
-container__wget = "quay.io/fhcrc-microbiome/wget:latest"
 container__pandas = "quay.io/fhcrc-microbiome/python-pandas:7e911f9"
 container__mashtree = "quay.io/hdc-workflows/mashtree:1.2.0"
 container__blast = "quay.io/biocontainers/blast:2.11.0--pl526he19e7b1_0"
 container__diamond = "quay.io/fhcrc-microbiome/docker-diamond:v2.0.6-biopython"
+container__cdhit = "quay.io/biocontainers/cd-hit:4.8.1--h2e03b76_5"
 
 // Default values for parameters
 params.output_folder = 'output'
@@ -19,6 +19,10 @@ params.aln_fmt = "qseqid sseqid pident length qstart qend qlen sstart send slen"
 params.max_n_genes_train_pca = 10000
 params.max_pcs_tsne = 50
 params.sketch_size = 10000
+params.parse_genome_csv_suffix = "_genomic.fna.gz"
+params.cluster_similarity = 0.9
+params.cluster_coverage = 0.9
+params.skip_missing_ftp = "false"
 
 // Parse the NCBI Genome Browser CSV 
 process parse_genome_csv {
@@ -55,7 +59,7 @@ def format_ftp(ftp_prefix):
     id_str = ftp_prefix.rsplit("/", 1)[-1]
 
     # Return the path to the genome FASTA
-    return f"{ftp_prefix}/{id_str}_genomic.fna.gz"
+    return f"{ftp_prefix}/{id_str}${params.parse_genome_csv_suffix}"
 
 # Populate a list with formatted annotations for each file
 # which will be downloaded from NCBI
@@ -66,7 +70,7 @@ def format_annotation(r):
 
     # Get the name of the file which will be downloaded
     annots = dict(
-        genome_id=r["GenBank FTP"].rsplit("/", 1)[-1] + "_genomic.fna.gz"
+        genome_id=r["GenBank FTP"].rsplit("/", 1)[-1] + "${params.parse_genome_csv_suffix}"
     )
 
     # Rename fields
@@ -135,7 +139,7 @@ pd.DataFrame(annotation_list).set_index("genome_id").to_csv(
 
 // Fetch a file via FTP
 process fetchFTP {
-    container "${container__wget}"
+    container "${container__pandas}"
     label 'io_limited'
     publishDir "${params.ftp_output_folder}", mode: 'copy', overwrite: true, enabled: "${params.publishFTP}" == "true"
 
@@ -145,27 +149,37 @@ process fetchFTP {
         val ftp_url
     
     output:
-        file "*"
+        file "*" optional params.skip_missing_ftp == "true"
     
-"""
-#!/bin/bash
-set -e
+"""#!/usr/bin/env python3
 
-echo "Downloading from ${ftp_url}"
+import shutil
+import urllib.request as request
+from urllib.error import URLError
+from contextlib import closing
 
-wget --quiet ${ftp_url}
 
-# For any gzip-compressed files
-for fp in *.gz; do
+remote_path = "${ftp_url}"
+local_path = remote_path.rsplit("/", 1)[-1]
+print(f"Downloading from {remote_path}")
+print(f"Local path is {local_path}")
 
-    # If any such file exists
-    if [ -s \$fp ]; then
-        # Make sure that it is appropriately compressed
-        echo "Checking that \$fp is gzip-compressed"
-        gzip -t \$fp
-    fi
-
-done
+try:
+    with closing(
+        request.urlopen(
+            remote_path,
+            timeout=60
+        )
+    ) as r:
+        with open(local_path, 'wb') as f:
+            shutil.copyfileobj(r, f)
+except URLError as e:
+    print("The URL appears to not be valid")
+    if "${params.skip_missing_ftp}" == "true":
+        print("Missing FTP paths will be ignored")
+    else:
+        print("Raising error")
+        raise e
 
 """
 }
@@ -711,4 +725,115 @@ echo "Done"
 
 """
 
+}
+
+
+// Cluster genomes by ANI
+process cdhit {
+    container "${container__cdhit}"
+    label 'mem_medium'
+    publishDir "${params.output_folder}", mode: 'copy', overwrite: true
+   
+    input:
+    file "input.genes.*.fasta.gz"
+    
+    output:
+    file "clustered.genes.fasta.gz"
+    file "clustered.genes.fasta.clstr.gz"
+    
+"""
+#!/bin/bash
+
+set -e
+
+# Combine all of the files
+
+# Iterate over each of the input files
+for f in input.genes.*.fasta.gz; do
+    
+    # Make sure the input file exits
+    if [[ -s \$f ]]; then
+
+        # If the file is compressed
+        if gzip -t \$f; then
+
+            # Decompress it to a stream
+            gunzip -c \$f
+
+        else
+
+            # Cat to a stream
+            cat \$f
+
+        fi
+
+    fi
+
+# Write the stream to a file
+done \
+    > input.genes.fasta
+
+
+# Cluster the inputs
+cd-hit \
+    -i input.genes.fasta \
+    -o clustered.genes.fasta \
+    -c ${params.cluster_similarity} \
+    -aS ${params.cluster_coverage} \
+    -T ${task.cpus} \
+    -M ${task.memory.toMega()} \
+    -p 1 \
+    -d 0 \
+
+# Compress the outputs
+gzip clustered.genes.fasta
+gzip clustered.genes.fasta.clstr
+
+"""
+}
+
+// Generate a simple annotation file for each centroid
+process annotate_centroids {
+    container "${container__pandas}"
+    label 'io_limited'
+    publishDir "${params.output_folder}", mode: 'copy', overwrite: true
+   
+    input:
+    file "clustered.genes.fasta.gz"
+    
+    output:
+    file "clustered.genes.csv.gz"
+    
+"""#!/usr/bin/env python3
+
+import gzip
+
+fpi = "clustered.genes.fasta.gz"
+fpo = "clustered.genes.csv.gz"
+
+# Open both file paths, input and output
+with gzip.open(fpi, "rt") as i, gzip.open(fpo, "wt") as o:
+
+    # Write a header line
+    o.write("gene_id,combined_name\\n")
+
+    # Write to the output
+    o.write(
+        # A newline delimited list
+        "\\n".join(
+            [
+                # Where each value is formatted from a line of the input
+                # The formatting will 
+                    # - remove the leading '>' character
+                    # - replace the first ' ' with ','
+                    # - and remove the trailing newline, if any
+                line[1:].rstrip("\\n").replace(" ", ",", 1)
+                # Parsed from each line of the input
+                for line in i
+                # For that subset of lines which start with '>' and which contain a space
+                if line[0] == '>' and ' ' in line
+            ]
+        )
+    )
+"""
 }

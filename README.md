@@ -32,6 +32,26 @@ how to run Nextflow on your system, take a look at [their documentation](https:/
 For a detailed set of instructions on how to specify your genes and genomes for analysis,
 run `nextflow run FredHutch/gig-map --help` to display the associated help message.
 
+## Download Bacterial Genomes
+
+It can be useful to decouple the process of downloading reference genomes from the
+work it takes to align genes against those genomes. Similarly, we often want to download
+a set of genomes and then align multiple distinct sets of genes against those genomes.
+For those cases, it can be very helpfult to download the genomes in one step with a dedicated
+utility. To view the instructions for running this utility,
+run `nextflow run FredHutch/gig-map -entry download --help`
+
+## Dedupliate Bacterial Genes
+
+When aligning a set of genes, it can be helpful to first combine any genes which have a
+very similar sequence. We refer to that particular process as "deduplicating" a set of genes.
+To deduplicate a set of genes based on a threshold of amino acid similarity and overlap,
+there is a standalone utility provided along with `gig-map`. To view the instructions for
+running this utility, run `nextflow run FredHutch/gig-map -entry deduplicate --help`.
+This utility uses the CD-HIT algorithm under the hood to cluster coding sequences
+(with support to download directly from NCBI via FTP) and save the combined gene
+catalog for downstream alignment.
+
 ## GiG-map Visualization
 
 To visualize the results of the gig-map alignment workflow, the output files may be
@@ -41,3 +61,4 @@ rendered using the interactive tool provided as `app.py`. In order to use this t
 2. Create a python virtual environment (tested with Python 3.8 and higher)
 3. Install the python dependencies contained in `requirements.txt`
 4. Run `python3 app.py --help` for detailed instructions on launching the visualization
+

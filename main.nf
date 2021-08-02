@@ -26,6 +26,8 @@ params.max_pcs_tsne = 50
 params.sketch_size = 10000
 params.genome_distances = false
 params.ani_thresholds = "99,95,90,80,70,60,50"
+params.cluster_similarity = 0.9
+params.cluster_coverage = 0.9
 
 
 // Import the processes to run in this workflow
@@ -65,6 +67,7 @@ include {
     max_pcs_tsne: params.max_pcs_tsne,
     sketch_size: params.sketch_size,
     ani_thresholds: params.ani_thresholds,
+    parse_genome_csv_suffix: "_genomic.fna.gz",
     publishFTP: 'false'
 )
 
@@ -261,6 +264,7 @@ workflow {
             parse_genome_csv
                 .out[0]
                 .splitText()
+                .map({it.trim()})
         )
 
         // Join the genome annotations from the NCBI table
@@ -591,6 +595,7 @@ workflow download {
         parse_genome_csv
             .out[0]
             .splitText()
+            .map({it.trim()})
     )
 
     // Join the genome annotations from the NCBI table
@@ -598,6 +603,192 @@ workflow download {
         parse_genome_csv
             .out[1]
             .toSortedList()
+    )
+
+}
+
+
+// Workflow dedicated to gene deduplication only
+
+include {
+    parse_genome_csv as parse_genes_csv;
+    cdhit;
+    fetchFTP as tryFetchFTP;
+    annotate_centroids;
+} from './modules' params(
+    output_folder: params.output_folder,
+    ftp_output_folder: "${params.output_folder}/ncbi_genes",
+    output_prefix: params.output_prefix,
+    cluster_similarity: params.cluster_similarity,
+    cluster_coverage: params.cluster_coverage,
+    ftp_threads: params.ftp_threads,
+    parse_genome_csv_suffix: "_protein.faa.gz",
+    skip_missing_ftp: "true",
+    publishFTP: 'true'
+)
+
+// Function which prints help message text
+def deduplicateHelpMessage() {
+    log.info"""
+    Dedicated gene deduplication utility
+    
+    Clusters a collection of gene sequences by amino acid similarity and outputs
+    the centroids of each cluster.
+
+    Output files:
+        clusters.fasta.gz - Amino acid sequences of the centroids of each cluster
+        clusters.annot.csv.gz - Table with annotations for each cluster
+        clusters.membership.csv.gz - Table linking inputs to each cluster
+
+    Usage:
+
+    nextflow run FredHutch/gig-map -entry deduplicate <ARGUMENTS>
+
+    Required Arguments:
+      --genome_tables       Tables of NCBI genomes to analyze (see note below)
+      --genes_fasta         Amino acid sequences to search for (multi-FASTA format)
+      --output_folder       Folder to write output
+
+    Optional Arguments:
+      --cluster_similarity  Similarity threshold for clustering, ranges 0-1 (default: 0.9)
+      --cluster_coverage    Overlap (coverage) threshold for clustering, ranges 0-1 (default: 0.9)
+      --ftp_threads         Number of FTP downloads to execute concurrently (default: 25)
+
+
+    Specifing genes for deduplication:
+
+    Gene sequences can be specified for input in two complementary ways, either using
+    one or more tables describing a list of genomes to download directly from NCBI,
+    as well as one or more FASTA files containing the amino acid sequences of the genes
+    to cluster.
+
+    Genomes can be selected for download directly from the NCBI Prokaryotic Genome Browser
+    found at (https://www.ncbi.nlm.nih.gov/genome/browse#!/prokaryotes/). After selecting
+    your genomes of interest, click on the "Download" button to save a CSV listing all
+    of the genomes for alignment. That CSV file must be specified with the --genome_tables
+    flag. More than one table of genomes may be specified using a comma delimiter.
+
+    NOTE: Not all genomes in NCBI have gene sequences provided. Any genomes in the table
+    provided by the user which are missing gene sequences will be ignored.
+    """.stripIndent()
+}
+
+
+workflow deduplicate {
+
+    // Show help message if the user specifies the --help flag at runtime
+    if (params.help){
+        // Invoke the function above which prints the help message
+        deduplicateHelpMessage()
+        // Exit out and do not run anything else
+        exit 0
+    }
+    
+
+    // The user must specify an output folder
+    if (!params.output_folder){
+        log.info"""
+
+        -----------------------
+        MISSING --output_folder
+        -----------------------
+
+        """.stripIndent()
+        downloadHelpMessage()
+
+        // Exit out and do not run anything else
+        exit 0
+    }
+
+    // The user must specify genomes from NCBI or genes in FASTA format
+    if (!params.genome_tables && !params.genes_fasta){
+        log.info"""
+
+        -----------------------------------------
+        MISSING --genome_tables and --genes_fasta
+        -----------------------------------------
+
+        """.stripIndent()
+        downloadHelpMessage()
+
+        // Exit out and do not run anything else
+        exit 0
+    }
+
+    // If the user provided a table of genomes from NCBI
+    if (params.genome_tables != false){
+
+        // Set up a channel with those files
+        Channel
+            .fromPath(
+                params.genome_tables.split(",").toList()
+            )
+            .set {
+                genome_manifests
+            }
+        
+        // Read the contents of each manifest file
+        parse_genes_csv(
+            genome_manifests
+        )
+
+        // Download each of the files
+        tryFetchFTP(
+            parse_genes_csv
+                .out[0]
+                .splitText()
+                .map({it.trim()})
+        )
+
+        // Set the channel with those files to a channel
+        genes_from_ncbi = tryFetchFTP.out
+        
+    // Otherwise, if --genome_tables was not set
+    }else{
+
+        // Make an empty channel with the same name
+        Channel
+            .empty()
+            .set {
+                genes_from_ncbi
+            }
+
+    }
+
+    // If the user provided a list of FASTAs with genes in amino acid sequence
+    if (params.genes_fasta != false){
+
+        // Set up a channel with those files
+        Channel
+            .fromPath(
+                params.genes_fasta.split(",").toList()
+            )
+            .set {
+                genes_from_fasta
+            }
+        
+    // Otherwise, if --genes_fasta was not set
+    }else{
+
+        // Make an empty channel with the same name
+        Channel
+            .empty()
+            .set {
+                genes_from_fasta
+            }
+
+    }
+
+    // Run CD-HIT on all of the gene sequences
+    cdhit(
+        genes_from_ncbi
+            .mix(genes_from_fasta)
+            .toSortedList()
+    )
+
+    // Generate a simple annotation file for each centroid
+    annotate_centroids(
+        cdhit.out[0]
     )
 
 }
