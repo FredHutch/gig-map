@@ -16,8 +16,10 @@ import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from redis.exceptions import BusyLoadingError
 from skbio import DistanceMatrix
 from skbio.tree import nj
+from time import sleep
 
 ####################
 # HELPER FUNCTIONS #
@@ -83,6 +85,19 @@ def read_data(args):
     # Open the redis store for reading
     logger.info(f"Connecting to redis at {args['host']}:{args['port']}")
     with DirectRedis(host=args['host'], port=args['port']) as r:
+
+        # Wait for the database to load - up to 120 seconds
+        for _ in range(120):
+
+            # Try to load the keys
+            try:
+                _ = r.keys()
+                break
+
+            # Catch the BusyLoadingError
+            except BusyLoadingError:
+                logger.info("Redis is loading...")
+                sleep(1)
 
         # Log the available keys, to help with debugging
         logger.info("Available keys in redis:")
