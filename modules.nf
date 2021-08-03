@@ -827,7 +827,7 @@ with gzip.open(fpi, "rt") as i, gzip.open(fpo, "wt") as o:
                     # - remove the leading '>' character
                     # - replace the first ' ' with ','
                     # - and remove the trailing newline, if any
-                line[1:].rstrip("\\n").replace(" ", ",", 1)
+                line[1:].rstrip("\\n").replace(",", " ").replace(" ", ",", 1)
                 # Parsed from each line of the input
                 for line in i
                 # For that subset of lines which start with '>' and which contain a space
