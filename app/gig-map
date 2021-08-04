@@ -17,7 +17,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly import colors
 from redis.exceptions import BusyLoadingError
-from skbio import DistanceMatrix
+from skbio import DistanceMatrix, TreeNode
 from skbio.tree import nj
 from time import sleep
 
@@ -247,6 +247,69 @@ def empty_plot():
     )
 
 
+def get_node_positions(distance_df, y_offset=-0.5):
+    """Construct a CartesianTree object from a set of distances."""
+
+    # If there are more than two genomes/groups
+    if distance_df.shape[0] > 2:
+
+        # Format the distances as expected by skbio
+        distances_dm = DistanceMatrix(
+            distance_df.values, 
+            list(map(str, distance_df.index.values))
+        )
+
+        # Make a neighbor-joining tree
+        tree = nj(distances_dm)
+
+        # Root at midpoint
+        tree = tree.root_at_midpoint()
+
+    # If there are only two genomes/groups
+    elif distance_df.shape[0] == 2:
+
+        # Get the distance betweeen the genomes/groups
+        distance_between = distance_df.values[0, 1]
+
+        # Make a simple tree linking the two
+        tree = TreeNode(
+            name='root',
+            children=[
+                TreeNode(
+                    name=distance_df.index.values[0],
+                    length=distance_between / 2.
+                ),
+                TreeNode(
+                    name=distance_df.index.values[1],
+                    length=distance_between / 2.
+                )
+            ]
+        )
+
+    # If there is only one genomes/groups
+    elif distance_df.shape[0] == 1:
+
+        # Make a simple tree with a single leaf
+        tree = TreeNode(
+            name='root',
+            children=[
+                TreeNode(
+                    name=distance_df.index.values[0],
+                    length=0
+                )
+            ]
+        )
+
+    # Assign x/y to create a DataFrame
+    node_positions = CartesianTree(
+        tree,
+        y_offset=y_offset,
+    )
+
+    # Return that CartesianTree object
+    return node_positions
+
+
 # Generate a neighbor-joining tree from a subset of genomes
 def make_nj_tree(genome_list, dists_df):
 
@@ -262,18 +325,9 @@ def make_nj_tree(genome_list, dists_df):
         index=genome_list,
     )
 
-    # Format the distances as expected by skbio
-    dm = DistanceMatrix(subset_dists.values, genome_list)
-
-    # Make a neighbor-joining tree
-    tree = nj(dm)
-
-    # Root at midpoint
-    tree = tree.root_at_midpoint()
-
-    # Assign x/y to create a DataFrame
-    node_positions = CartesianTree(
-        tree,
+    # Get the positions of the nodes in the tree
+    node_positions = get_node_positions(
+        subset_dists,
         y_offset=-0.5,
     )
 
@@ -779,7 +833,7 @@ menus = [
                     for v in data["genome_group_thresholds"]
                 ] + [
                     dict(
-                        value=None,
+                        value='None',
                         label="No Grouping"
                     )
                 ],
@@ -1134,21 +1188,9 @@ def plot_genome_group_overview(_, selections):
         for j in range(i):
             group_distance_df.iloc[i, j] = group_distance_df.iloc[j, i]
 
-    # Format the distances as expected by skbio
-    group_distances_dm = DistanceMatrix(
-        group_distance_df.values, 
-        list(map(str, group_distance_df.index.values))
-    )
-
-    # Make a neighbor-joining tree
-    group_tree = nj(group_distances_dm)
-
-    # Root at midpoint
-    group_tree = group_tree.root_at_midpoint()
-
-    # Assign x/y to create a DataFrame
-    group_node_positions = CartesianTree(
-        group_tree,
+    # Get the positions of the nodes in the tree
+    group_node_positions = get_node_positions(
+        group_distance_df,
         y_offset=-0.5,
     )
 
