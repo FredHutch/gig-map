@@ -14,8 +14,8 @@ import logging
 import numpy as np
 import os
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
+from plotly import colors
 from redis.exceptions import BusyLoadingError
 from skbio import DistanceMatrix
 from skbio.tree import nj
@@ -374,7 +374,7 @@ def make_colormap(value_list, colorscale):
     return dict(
         zip(
             value_list,
-            px.colors.sample_colorscale(
+            colors.sample_colorscale(
                 colorscale,
                 norm_values,
             )
@@ -902,7 +902,7 @@ menus = [
                 type="dropdown",
                 options=[
                     dict(label=v, value=v)
-                    for v in px.colors.named_colorscales()
+                    for v in colors.named_colorscales()
                 ],
                 value="blues",
             ),

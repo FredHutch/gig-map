@@ -2,4 +2,5 @@ numpy
 direct_redis>=0.3.1
 scikit-bio>=0.5.6
 tables>=3.6.1
+plotly
 git+https://github.com/FredHutch/menu-driven-figure.git@66e52a3
