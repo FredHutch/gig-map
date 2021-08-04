@@ -8,6 +8,7 @@ work/
 output*
 download_genomes/
 deduplicate_genomes/
+test_data/example_projects
 
 # C extensions
 *.so
