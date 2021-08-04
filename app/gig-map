@@ -6,7 +6,7 @@ from menu_driven_figure.app import MenuDrivenFigure
 import argparse
 from dash import callback_context as ctx
 from dash.exceptions import PreventUpdate
-from dash.dependencies import Input, Output, ALL
+from dash.dependencies import Input, Output, State, ALL
 from direct_redis import DirectRedis
 from functools import lru_cache
 import json
@@ -243,6 +243,8 @@ def empty_plot():
             ),
             plot_bgcolor="rgba(0, 0, 0, 0)",
             paper_bgcolor="rgba(0, 0, 0, 0)",
+            height=10,
+            width=10,
         )
     )
 
@@ -340,7 +342,7 @@ def make_nj_tree(genome_list, dists_df):
     # Now make a new list, ordered by the node_positions, with the complete
     # filenames (including the underscores)
     node_positions.genome_order = list(map(
-        filename_mapping.get,
+        lambda s: filename_mapping.get(s, s),
         node_positions.genome_order
     ))
 
@@ -1049,25 +1051,35 @@ def filter_alignments(
 
     # Get the logger
     logger = logging.getLogger('gig-map')
+    logger.info(f"ANI Grouping Threshold: {ani_threshold}")
     logger.info(f"Selected Group: {selected_group}")
     logger.info(f"Max Genomes: {max_n_genomes}")
     logger.info(f"Minimum Percent Identity: {min_pctid}")
     logger.info(f"Minimum Coverage: {min_cov}")
     logger.info(f"Minimum Genes per Genome: {min_genes_per_genome}")
 
-    # Get the genome groups based on this ANI threshold
-    genome_groups = read_genome_groups(ani_threshold)
+    # If no ANI grouping has been selected
+    if ani_threshold == "None":
 
-    # Filter by genome group
-    genomes_in_selected_group = set([
-        n
-        for n, i in genome_groups.items()
-        if i == selected_group
-    ])
-    filtered_alignments = data["alignments"].loc[
-        data["alignments"]["genome_name"].isin(genomes_in_selected_group)
-    ]
-    logger.info(f"Filtered by genome group - {filtered_alignments.shape[0]:,} lines")
+        # There is no need to filter the alignments
+        filtered_alignments = data["alignments"]
+
+    # If an ANI threshold _has_ been selected
+    else:
+
+        # Get the genome groups based on this ANI threshold
+        genome_groups = read_genome_groups(ani_threshold)
+
+        # Filter by genome group
+        genomes_in_selected_group = set([
+            n
+            for n, i in genome_groups.items()
+            if i == selected_group
+        ])
+        filtered_alignments = data["alignments"].loc[
+            data["alignments"]["genome_name"].isin(genomes_in_selected_group)
+        ]
+        logger.info(f"Filtered by genome group - {filtered_alignments.shape[0]:,} lines")
 
     # Filter by alignment quality
     filtered_alignments = filtered_alignments.query(
@@ -1148,11 +1160,20 @@ def plot_genome_group_overview(_, selections):
     # Get the logger
     logger = logging.getLogger('gig-map')
 
-    # Get the genome groups based on this ANI threshold
     ani_threshold = selections["ani-threshold"]
+
+    # If "No Grouping" has been selected for ANI threshold
+    if ani_threshold == "None":
+
+        # Return an empty plot
+        return empty_plot()
+
+    # Otherwise, a threshold has been selected for grouping genomes
+
+    # Get the genome groups based on this ANI threshold
     logger.info(f"Plotting groups at {ani_threshold} percent identity")
     genome_groups = read_genome_groups(ani_threshold)
-    
+
     # A summary of each genome group
     genome_group_df = data[f"genome_group_df {ani_threshold}"]
     
@@ -1163,15 +1184,7 @@ def plot_genome_group_overview(_, selections):
     if genome_groups.unique().shape[0] <= 1:
 
         # Return an empty plot
-        fig = go.Figure()
-        fig.update_layout(
-            paper_bgcolor='white',
-            plot_bgcolor='white',
-            height=10,
-            width=10,
-        )
-        return fig
-
+        return empty_plot()
 
     # Apply the maximum number of groups to display
     groups_to_plot = genome_group_df.head(
@@ -1300,9 +1313,6 @@ def plot_gig_map_heatmap(selected_group, selections):
         len(unique_genes),
         plot_df.shape[0]
     ))
-
-    # Make sure that there are at least three genomes with alignments
-    assert len(unique_genomes) >= 3, "At least three genomes are needed to display a comparison"
 
     # Create a tree using the set of genomes which contain alignments
     node_positions = make_nj_tree(unique_genomes, data['distances'])
@@ -1433,34 +1443,85 @@ def add_callbacks(app):
     @app.callback(
         Output("selected_group", "children"),
         [
-            Input("genome-group-tree", "clickData")
+            Input("genome-group-tree", "clickData"),
+            Input({"menu": ALL, "elem": "redraw-button"}, "n_clicks"),
+            Input({"menu": ALL, "elem": "close-button"}, "n_clicks"),
+        ],
+        [
+            State({"input_elem": "ani-threshold"}, "value"),
+            State("selected_group", "children")
         ]
     )
-    def save_selected_genome_group(clickData):
+    def save_selected_genome_group(
+        clickData,
+        trigger_redraw,
+        trigger_close_and_redraw,
+        ani_threshold,
+        prev_selected_group
+    ):
         """Keep track of which genome group is being viewed."""
 
         # Get the logger
         logger = logging.getLogger('gig-map')
 
-        # If the user has clicked on a group
-        if isinstance(clickData, dict):
-            if "points" in clickData:
-                if isinstance(clickData["points"], list):
-                    if len(clickData["points"]) == 1:
-                        if isinstance(clickData["points"][0], dict):
-                            if "text" in clickData["points"][0]:
-                                if clickData["points"][0]["text"] is not None:
-                                    selected_group = int(
-                                        clickData["points"][0]["text"]
-                                    )
-                                    logger.info(f"Selected group: {selected_group}")
+        # If there is no selected group in the browser (initial load)
+        if prev_selected_group is None:
 
-                                    return selected_group
-        
-        # Otherwise, if the user has not clicked on a group
-        # Then just display the first group
-        logger.info("No group has been selected, default to 0")
-        return 0
+            # Then just fill in None for each value
+            prev_ani_threshold = None
+            prev_selected_group = None
+
+        # Otherwise
+        else:
+
+            # Get the previously selected group and ani_threshold from the browser
+            prev_ani_threshold, prev_selected_group = prev_selected_group
+
+        # Get the element which triggered the callback
+        trigger = ctx.triggered[0]['prop_id']
+
+        # If the user clicked on the tree
+        if trigger == "genome-group-tree.clickData":
+
+            # The clickData must be a dict with a particular format
+            assert isinstance(clickData, dict)
+            assert("points" in clickData)
+            assert(isinstance(clickData["points"], list))
+            assert(len(clickData["points"]) == 1)
+            assert(isinstance(clickData["points"][0], dict))
+            assert("text" in clickData["points"][0])
+            assert(clickData["points"][0]["text"] is not None)
+
+            # Parse the group which they clicked on
+            selected_group = int(
+                clickData["points"][0]["text"]
+            )
+            logger.info(f"Selected group: {selected_group}")
+
+            # If this is the same group which was previously selected
+            if selected_group == prev_selected_group:
+
+                # Do not return a callback
+                raise PreventUpdate
+
+            # Otherwise, update the `selected_group` element
+            return [ani_threshold, selected_group]
+
+        # Otherwise, the user must have triggered a redraw of the figure
+        # Or this is the first time we have loaded the page, either way
+        else:
+
+            # If the ANI threshold did not change
+            if prev_ani_threshold == ani_threshold:
+
+                # Do not return a value from the callback
+                raise PreventUpdate
+
+            # Otherwise, the updated group should be 0
+            selected_group = 0
+            
+            # Update the `selected_group` element
+            return [ani_threshold, selected_group]
 
     @app.callback(
         [
@@ -1484,8 +1545,6 @@ def add_callbacks(app):
         selected_params
     ):
 
-        logger.info(f"Selected group for heatmap: {selected_group}")
-        
         # If no group has been selected
         if selected_group is None:
 
@@ -1494,6 +1553,12 @@ def add_callbacks(app):
             raise PreventUpdate
 
         # Otherwise, a group has been selected
+
+        # Parse both the ANI and selected group from the inputs
+        ani_threshold, selected_group = selected_group
+
+        logger.info(f"Selected group for heatmap: {selected_group}")
+        logger.info(f"Selected ANI threshold for heatmap: {ani_threshold}")
 
         # If the open buttons have never been pressed
         if all([v is None for v in open_clicks]):
@@ -1524,6 +1589,10 @@ def add_callbacks(app):
 
         # Parse the parameters from the serialized JSON
         selected_params = json.loads(selected_params)
+
+        # Overwrite the ANI threshold using the value from the browser
+        # This is intended to prevent race conditions from other callbacks
+        selected_params["ani-threshold"] = ani_threshold
 
         # Try to render the figure
         try:
