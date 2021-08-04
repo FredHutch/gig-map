@@ -1239,9 +1239,10 @@ def plot_genome_group_overview(_, selections):
         paper_bgcolor='white',
         plot_bgcolor='white',
         # Figure height and width
-        height=selections['max-n-groups'] * 25,
+        height=(group_distance_df.shape[0] * 25) + 150,
         width=650,
     )
+
     logger.info("Rendering plot")
 
     return fig
