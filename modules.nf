@@ -4,7 +4,7 @@ container__mashtree = "quay.io/hdc-workflows/mashtree:1.2.0"
 container__blast = "quay.io/biocontainers/blast:2.11.0--pl526he19e7b1_0"
 container__diamond = "quay.io/fhcrc-microbiome/docker-diamond:v2.0.6-biopython"
 container__cdhit = "quay.io/biocontainers/cd-hit:4.8.1--h2e03b76_5"
-container__mafft = "quay.io/biocontainers/mafft:7.487--h779adbc_0"
+container__clustal = "biocontainers/clustal-omega:1.2.1-1"
 container__emboss = "biocontainers/emboss:v6.6.0dfsg-7b1-deb_cv1"
 
 // Default values for parameters
@@ -486,6 +486,32 @@ extract_markers.py \
 }
 
 
+// Go from nucleotide sequences to amino acid
+process translate_markers {
+    container "${container__emboss}"
+    label "io_limited"
+
+    input:
+        file input_fasta
+
+    output:
+        file "${input_fasta}"
+
+"""#!/bin/bash
+
+set -e
+
+transeq \
+    -sequence ${input_fasta} \
+    -outseq TEMP \
+    -table ${params.query_gencode}
+
+mv TEMP ${input_fasta}
+
+"""
+}
+
+
 // Reorganize the marker sequence
 process reorganize_markers {
     container "${container__pandas}"
@@ -509,7 +535,7 @@ reorganize_markers.py
 
 // Make the multiple sequence alignment
 process combine_markers {
-    container "${container__mafft}"
+    container "${container__clustal}"
     label "io_limited"
     publishDir "${params.output_folder}/markers/", mode: 'copy', overwrite: true
 
@@ -518,40 +544,20 @@ process combine_markers {
 
     output:
         file "${unaligned_fasta}.msa"
+        file "${unaligned_fasta}.distmat"
 
 """#!/bin/bash
 
 set -e
 
-mafft --auto <(gunzip -c ${unaligned_fasta}) > ${unaligned_fasta}.msa
-"""
-}
+gunzip -c ${unaligned_fasta} \
+| clustalo \
+    -t Protein \
+    --distmat-out=${unaligned_fasta}.distmat \
+    --out=${unaligned_fasta}.msa \
+    --threads ${task.cpus} \
+    --verbose
 
-
-// Calculate the distance matrix from the multiple sequence alignments
-process calc_marker_distances {
-    container "${container__emboss}"
-    label "io_limited"
-    publishDir "${params.output_folder}/markers/", mode: 'copy', overwrite: true
-
-    input:
-        file msa
-
-    output:
-        file "*.distmat"
-
-"""#!/bin/bash
-
-set -e
-
-MSA="${msa}"
-DISTMAT="\$(echo \$MSA | sed 's/.msa/.distmat/')"
-
-distmat \
-    -sequence \$MSA \
-    -nucmethod 1 \
-    -outfile \$DISTMAT \
-    -gapweight 0
 """
 }
 

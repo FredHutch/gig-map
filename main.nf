@@ -29,7 +29,7 @@ params.ani_thresholds = "99,95,90,80,70,60,50"
 params.cluster_similarity = 0.9
 params.cluster_coverage = 0.9
 params.marker_genes = false
-params.min_marker_coverage = 50
+params.min_marker_coverage = 90
 
 
 // Import the processes to run in this workflow
@@ -55,9 +55,9 @@ include {
     annotate_genes;
     annotate_genes_with_abundances;
     extract_markers;
+    translate_markers;
     reorganize_markers;
     combine_markers;
-    calc_marker_distances;
     cluster_genomes;
     aggregate_results;
 } from './modules' params(
@@ -521,23 +521,23 @@ workflow {
             )
         )
 
+        // Go from nucleotide sequences to amino acid
+        translate_markers(
+            extract_markers.out
+        )
+
         // The output of extract_markers has one file per genome, with the
         // FASTA headers indicating the marker of origin
 
         // Next we will reformat the markers to have one file per marker,
         // with the FASTA headers indicating the genome of origin
         reorganize_markers(
-            extract_markers.out.toSortedList()
+            translate_markers.out.toSortedList()
         )
 
         // Run the MSA
         combine_markers(
             reorganize_markers.out.flatten()
-        )
-
-        // Generate the distance matrices
-        calc_marker_distances(
-            combine_markers.out
         )
 
     }
