@@ -21,7 +21,7 @@ params.culling_limit = 5
 params.max_target_seqs = 100000
 params.annotate_geneshot = false
 params.abundances_geneshot = false
-params.max_n_genes_train_pca = 10000
+params.max_n_genes_train_pca = 100000
 params.max_pcs_tsne = 50
 params.sketch_size = 10000
 params.genome_distances = false
@@ -109,7 +109,10 @@ def helpMessage() {
       --max_n_genes_train_pca
                             The maximum number of genes used to train the PCA model used
                             for ordering genes based on the similarity of the genomes
-                            which they align to (default: 10000)
+                            which they align to (default: 100000)
+                            NOTE: If this dataset has fewer genes than this, the ordering of
+                            genes by similarity of genome alignments will be performed more 
+                            precisely by linkage clustering.
       --max_pcs_tsne        The maximum number of dimensions from the PCA output to use
                             for ordering genes by 1-dimensional t-SNE (default: 50)
       --sketch_size         Sketch size (see mash documentation) (default: 10000)
