@@ -9,6 +9,7 @@ container__cdhit = "quay.io/biocontainers/cd-hit:4.8.1--h2e03b76_5"
 params.output_folder = 'output'
 params.output_prefix = 'output'
 params.min_coverage = 50
+params.min_marker_coverage = 50
 params.min_identity = 50
 params.ftp_threads = 25
 params.query_gencode = 11
@@ -456,6 +457,32 @@ process makedb_diamond {
     """
 
 }
+
+
+// Extract the marker sequence from a BLAST alignment
+process extract_markers {
+    container "${container__pandas}"
+    label "io_limited"
+
+    input:
+        tuple val(genome_name), file(alignments), file(genome)
+
+    output:
+        tuple val(genome_name), file("marker_sequences.fasta.gz")
+
+"""#!/bin/bash
+
+set -e
+
+extract_markers.py \
+    "${alignments}" \
+    "${genome}" \
+    "${params.aln_fmt}" \
+    "${params.min_marker_coverage}"
+
+"""
+}
+
 
 // Add the query genome file name as the last column to the alignments
 process add_genome_name {

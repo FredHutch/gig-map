@@ -28,6 +28,8 @@ params.genome_distances = false
 params.ani_thresholds = "99,95,90,80,70,60,50"
 params.cluster_similarity = 0.9
 params.cluster_coverage = 0.9
+params.marker_genes = false
+params.min_marker_coverage = 50
 
 
 // Import the processes to run in this workflow
@@ -40,7 +42,9 @@ include {
     mash_dist;
     aggregate_distances;
     makedb_blast;
+    makedb_blast as makedb_markers;
     align_blast;
+    align_blast as align_markers;
     align_diamond;
     makedb_diamond;
     add_genome_name;
@@ -50,6 +54,7 @@ include {
     generate_gene_map;
     annotate_genes;
     annotate_genes_with_abundances;
+    extract_markers;
     cluster_genomes;
     aggregate_results;
 } from './modules' params(
@@ -58,6 +63,7 @@ include {
     output_prefix: params.output_prefix,
     min_identity: params.min_identity,
     min_coverage: params.min_coverage,
+    min_marker_coverage: params.min_marker_coverage,
     ftp_threads: params.ftp_threads,
     query_gencode: params.query_gencode,
     max_evalue: params.max_evalue,
@@ -88,6 +94,12 @@ def helpMessage() {
       --output_prefix       Prefix to use for output file names
 
     Optional Arguments:
+      --marker_genes       Optionally provide marker genes in FASTA format which will be used
+                            in addition to ANI to estimate a phylogeny for the provided genomes.
+                            More than one FASTA file can be specified with comma delimiters.
+                            Genes should be provided in amino acid sequence.
+      --min_marker_coverage Minimum percent coverage required to use the aligned marker sequence
+                            from a particular genome (default: 50)
       --aligner             Alignment algorithm to use (options: diamond, blast; default: diamond)
       --min_identity        Percent identity threshold used for alignment (default: 90)
       --min_coverage        Percent coverage threshold used for alignment (default: 90)
@@ -479,6 +491,34 @@ workflow {
             )
         )
     )
+
+    // If the user specified any marker sequences
+    if (params.marker_genes){
+
+        // Build a BLAST database with the marker sequences
+        makedb_markers(
+            Channel.fromPath(
+                params.marker_genes.split(",").toList()
+            )
+            .toSortedList()
+        )
+
+        // Align the genomes against those markers
+        align_markers(
+            makedb_markers.out,
+            all_genomes
+        )
+
+        // Extract the aligned regions for each marker
+        extract_markers(
+            align_markers.out.join(
+                all_genomes.map({
+                    it -> [it.name, it]
+                })
+            )
+        )
+
+    }
 
     // Group together all results into a single HDF5 file object
     aggregate_results(

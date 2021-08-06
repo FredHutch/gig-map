@@ -149,3 +149,6 @@ if aln.shape[0] > 0:
             )
 
         # Write out to a file
+        with gzip.open("marker_sequences.fasta.gz", "wt") as handle:
+            for marker_name, marker_sequence in marker_sequences.items():
+                handle.write(f">{marker_name}\n{marker_sequence}\n")
