@@ -468,7 +468,7 @@ process extract_markers {
         tuple val(genome_name), file(alignments), file(genome)
 
     output:
-        tuple val(genome_name), file("marker_sequences.fasta.gz")
+        file "*.markers.fasta.gz"
 
 """#!/bin/bash
 
@@ -480,6 +480,26 @@ extract_markers.py \
     "${params.aln_fmt}" \
     "${params.min_marker_coverage}"
 
+"""
+}
+
+
+// Reorganize the marker sequence
+process reorganize_markers {
+    container "${container__pandas}"
+    label "io_limited"
+
+    input:
+        file "fastas_by_genome/*"
+
+    output:
+        file "fastas_by_marker/*"
+
+"""#!/bin/bash
+
+set -e
+
+reorganize_markers.py
 """
 }
 

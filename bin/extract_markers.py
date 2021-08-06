@@ -58,8 +58,7 @@ def get_aligned_region(aln_r, genome):
 
         # Extract the region
         region = genome[aln_r.qseqid][
-            int(aln_r.qstart - 1), 
-            int(aln_r.qend)
+            int(aln_r.qstart - 1):int(aln_r.qend)
         ]
         print(region)
 
@@ -68,8 +67,7 @@ def get_aligned_region(aln_r, genome):
 
         # Extract the region
         region = genome[aln_r.qseqid][
-            int(aln_r.qend - 1),
-            int(aln_r.qstart)
+            int(aln_r.qend - 1):int(aln_r.qstart)
         ]
 
         # Reverse complement it
@@ -82,9 +80,6 @@ def get_aligned_region(aln_r, genome):
         print(region)
 
     return region
-
-    # Write out the aligned region to a file
-
 
 
 # Read in the alignments
@@ -149,6 +144,6 @@ if aln.shape[0] > 0:
             )
 
         # Write out to a file
-        with gzip.open("marker_sequences.fasta.gz", "wt") as handle:
+        with gzip.open(f"{genome_fp}.markers.fasta.gz", "wt") as handle:
             for marker_name, marker_sequence in marker_sequences.items():
                 handle.write(f">{marker_name}\n{marker_sequence}\n")

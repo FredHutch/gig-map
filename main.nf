@@ -55,6 +55,7 @@ include {
     annotate_genes;
     annotate_genes_with_abundances;
     extract_markers;
+    reorganize_markers;
     cluster_genomes;
     aggregate_results;
 } from './modules' params(
@@ -516,6 +517,15 @@ workflow {
                     it -> [it.name, it]
                 })
             )
+        )
+
+        // The output of extract_markers has one file per genome, with the
+        // FASTA headers indicating the marker of origin
+
+        // Next we will reformat the markers to have one file per marker,
+        // with the FASTA headers indicating the genome of origin
+        reorganize_markers(
+            extract_markers.out.toSortedList()
         )
 
     }
