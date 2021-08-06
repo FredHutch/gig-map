@@ -56,6 +56,8 @@ include {
     annotate_genes_with_abundances;
     extract_markers;
     reorganize_markers;
+    combine_markers;
+    calc_marker_distances;
     cluster_genomes;
     aggregate_results;
 } from './modules' params(
@@ -526,6 +528,16 @@ workflow {
         // with the FASTA headers indicating the genome of origin
         reorganize_markers(
             extract_markers.out.toSortedList()
+        )
+
+        // Run the MSA
+        combine_markers(
+            reorganize_markers.out.flatten()
+        )
+
+        // Generate the distance matrices
+        calc_marker_distances(
+            combine_markers.out
         )
 
     }
