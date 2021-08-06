@@ -52,7 +52,6 @@ def get_aligned_region(aln_r, genome):
     assert len(genome[aln_r.qseqid]) >= aln_r.qstart
     assert len(genome[aln_r.qseqid]) >= aln_r.qend
 
-
     # If the alignment is in the forward direction
     if aln_r.qstart < aln_r.qend:
 

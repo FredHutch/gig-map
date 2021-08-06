@@ -3,14 +3,20 @@
 from collections import defaultdict
 import gzip
 import os
+import pandas as pd
 
 # Yet another FASTA parser
-def read_fasta(handle):
+def read_fasta(fp):
+
+    if fp.endswith(".gz"):
+        lines = gzip.open(fp, "rt").readlines()
+    else:
+        lines = open(fp, "r").readlines()
 
     header = None
     seq = ""
 
-    for line in handle:
+    for line in lines:
 
         line = line.rstrip('\n')
         if line[0] == ">":
@@ -28,11 +34,8 @@ def read_fasta(handle):
     yield header, seq
 
 
-# The output object will be a dict of dicts
-# The first-level key will be the marker of interest
-# The second level key will be the genome of interest
-# The final value will be the marker sequence for that gene in that genome
-output = defaultdict(dict)
+# Organize markers in a table
+output = []
 
 
 # Make variables with the input and output folders and file endings
@@ -59,10 +62,19 @@ for input_fp in os.listdir(input_folder):
     ):
 
         # Add it to the output
-        output[marker_name][genome_name] = marker_sequence
+        output.append(
+            dict(
+                marker_name=marker_name,
+                marker_sequence=marker_sequence,
+                genome_name=genome_name
+            )
+        )
+
+# Format as a DataFrame
+df = pd.DataFrame(output)
 
 # Iterate over the markers
-for marker_name, marker_dict in output.items():
+for marker_name, marker_df in df.groupby("marker_name"):
 
     # Open a file path for the output
     with gzip.open(
@@ -71,7 +83,7 @@ for marker_name, marker_dict in output.items():
     ) as handle:
 
         # Iterate over the sequences for each genome
-        for genome_name, marker_sequence in marker_dict.items():
+        for _, r in marker_df.iterrows():
 
             # Write out the sequence
-            handle.write(f">{genome_name}\n{marker_sequence}\n")
+            handle.write(f">{r.genome_name}\n{r.marker_sequence}\n")

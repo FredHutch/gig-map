@@ -499,6 +499,7 @@ process reorganize_markers {
 
 set -e
 
+mkdir fastas_by_marker
 reorganize_markers.py
 """
 }
