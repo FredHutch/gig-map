@@ -47,4 +47,8 @@ jobs:
 
       - name:  Gene ordering by t-SNE
         run: |
-          NXF_VER=21.04.1 nextflow run main.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --genome_tables test_data/NCBI_Escherichia_coli_genomes.test_subset.csv --genes_fasta test_data/cpn60.fasta.gz --output_folder output_diamond_fasta --output_prefix output -resume --max_n_genes_train_pca 2000
+          NXF_VER=21.04.1 nextflow run main.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --genome_tables test_data/NCBI_Escherichia_coli_genomes.test_subset.csv --genes_fasta test_data/GCA_000005845.2_ASM584v2_protein.faa.gz --output_folder output_diamond_fasta --output_prefix output -resume --max_n_genes_train_pca 2000
+
+      - name:  Test marker gene
+        run: |
+          NXF_VER=21.04.1 nextflow run main.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --genome_tables test_data/NCBI_Escherichia_coli_genomes.test_subset.csv --genes_fasta test_data/GCA_000005845.2_ASM584v2_protein.faa.gz --output_folder output_diamond_fasta --output_prefix output -resume --marker_genes test_data/cpn60.fasta.gz
