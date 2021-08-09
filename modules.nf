@@ -502,7 +502,7 @@ process translate_markers {
 set -e
 
 transeq \
-    -sequence ${input_fasta} \
+    -sequence <(gunzip -c ${input_fasta}) \
     -outseq TEMP \
     -table ${params.query_gencode}
 
