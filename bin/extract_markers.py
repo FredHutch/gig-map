@@ -59,7 +59,6 @@ def get_aligned_region(aln_r, genome):
         region = genome[aln_r.qseqid][
             int(aln_r.qstart - 1):int(aln_r.qend)
         ]
-        print(region)
 
     # If the alignment is in the reverse direction
     else:
@@ -76,20 +75,19 @@ def get_aligned_region(aln_r, genome):
                 list(region.upper())[::-1]
             )
         )
-        print(region)
 
     return region
 
 
 # Read in the alignments
-print(f"Reading in {alignments_fp}")
+logging.info(f"Reading in {alignments_fp}")
 aln = pd.read_csv(
     alignments_fp,
     sep="\t",
     header=None,
     names=header_string.split(" ")
 )
-print(f"Read in {aln.shape[0]:,} alignments")
+logging.info(f"Read in {aln.shape[0]:,} alignments")
 
 # Read in the genome
 
@@ -118,7 +116,7 @@ if aln.shape[0] > 0:
         f"coverage >= {min_coverage}"
     )
     
-    print(f"{aln.shape[0]:,} alignments pass the coverage threshold of {min_coverage}")
+    logging.info(f"{aln.shape[0]:,} alignments pass the coverage threshold of {min_coverage}")
 
     # If there are alignments which pass that threshold
     if aln.shape[0] > 0:
