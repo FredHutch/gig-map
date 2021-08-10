@@ -80,13 +80,87 @@ logger.info(f"Read in a list of {len(genome_list):,} genomes which have alignmen
 # DISTANCES #
 #############
 
+# Function to read in a distmat matrix
+def read_distmat(fp):
+    logger.info("Reading .distmat file")
+
+    # Make a list with the contents of each line
+    output = []
+    # Make a list with the index
+    index = []
+
+    # Iterate over the lines in the file
+    for line_i, line in enumerate(open(fp, "r")):
+
+        # If this is the first line
+        if line_i == 0:
+
+            # Skip it
+            continue
+
+        # For every other line
+        else:
+
+            # Remove the newline character at the end of the line
+            line = line.rstrip("\n")
+
+            # Remove every double space in the line
+            while "  " in line:
+                line = line.replace("  ", " ")
+
+            # Split up the fields of the line
+            fields = line.split(" ")
+            
+            # The index is the first position
+            index.append(fields[0])
+
+            # The rest of the fields are fields in the matrix
+            output.append(fields[1:])
+
+    # Format a DataFrame
+    df = pd.DataFrame(
+        output,
+        index=index,
+        columns=index
+    ).applymap(
+        float
+    )
+
+    # Return the DataFrame
+    return df
+
+
 # Read in the pairwise genome distances
 logger.info(f"Reading from {args.dists}")
-dists = pd.read_csv(
-    args.dists,
-    index_col=0
-)
+# If the distances were output by ClustalO
+if args.dists.endswith(".distmat"):
+
+    # Read the distances with a specific 'distmat' format
+    dists = read_distmat(args.dists)
+
+    # Get the name of the marker from the input file name
+    msg = f"Input file does not conform to expected pattern: {args.dists}"
+    assert args.dists.endswith(".markers.fasta.gz.distmat"), msg
+    marker_name = args.dists.replace(".markers.fasta.gz.distmat", "")
+
+    # Add the marker name to the output file name
+    output_fp = f"{marker_name}.{args.ani_threshold}.hdf5"
+
+# If the distances were output as a CSV
+else:
+
+    # Read in the distances in CSV format
+    dists = pd.read_csv(
+        args.dists,
+        sep=",",
+        index_col=0
+    )
+
+    # The output file will just contain the ANI in the filename
+    output_fp = f"{args.ani_threshold}.hdf5"
+
 logger.info(f"Read in {dists.shape[0]:,} rows and {dists.shape[1]:,} columns")
+print(dists)
 
 # Subset and order by the list of genomes with alignments
 logger.info(f"Ordering distance matrix by the list of genomes")
@@ -170,7 +244,7 @@ group_distance_df = dists.groupby(
 ################
 
 # Write out to an HDF5 file
-with pd.HDFStore(f"{args.ani_threshold}.hdf5", "w") as store:
+with pd.HDFStore(output_fp, "w") as store:
 
     # Write out the table of which genomes are assigned to which cluster
     logger.info("Writing out genome_groups")

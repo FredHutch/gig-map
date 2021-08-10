@@ -58,6 +58,7 @@ include {
     reorganize_markers;
     combine_markers;
     cluster_genomes;
+    cluster_genomes as cluster_genomes_by_marker;
     aggregate_results;
 } from './modules' params(
     output_folder: params.output_folder,
@@ -534,6 +535,27 @@ workflow {
             reorganize_markers.out.flatten()
         )
 
+        // Make genome groups based on the percent identity
+        // in the region of the marker genes
+        cluster_genomes_by_marker(
+            concatenate_alignments.out.combine(
+                combine_markers.out[0]
+            ).combine(
+                Channel.of(
+                    params.ani_thresholds.split(/,/)
+                )
+            )
+        )
+
+        // Set up a handle for the output of all of the genome clusters
+        // for all markers, at each ANI threshold
+        clustered_genomes_by_marker = cluster_genomes_by_marker.out.toSortedList()
+
+    } else {
+        // If no marker genes were provided
+
+        // Set up an empty handle to take the place of marker gene output
+        clustered_genomes_by_marker = Channel.of([[]])
     }
 
     // Group together all results into a single HDF5 file object
@@ -542,7 +564,8 @@ workflow {
         order_genes.out,
         genome_distances_csv,
         generate_gene_map.out,
-        cluster_genomes.out.toSortedList()
+        cluster_genomes.out.toSortedList(),
+        clustered_genomes_by_marker
     )
 
 }

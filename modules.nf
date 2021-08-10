@@ -548,8 +548,8 @@ process combine_markers {
         file unaligned_fasta
 
     output:
-        file "${unaligned_fasta}.msa"
         file "${unaligned_fasta}.distmat"
+        file "${unaligned_fasta}.msa"
 
 """#!/bin/bash
 
@@ -774,7 +774,7 @@ process cluster_genomes {
     tuple file(alignments_csv_gz), file(dists_csv_gz), val(ani_threshold)
 
     output:
-    file "${ani_threshold}.hdf5"
+    file "*.hdf5"
 
 """#!/bin/bash
 
@@ -801,6 +801,7 @@ process aggregate_results {
     file dists_csv_gz
     file tsne_coords_csv_gz
     file "genome_clusters/*"
+    file "marker_clusters/*"
 
     output:
     file "${params.output_prefix}.rdb"

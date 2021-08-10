@@ -215,6 +215,46 @@ for fp in os.listdir("genome_clusters"):
 
 logger.info("Done reading genome clusters")
 
+# Read in each of the groupings which result from marker-gene based clustering
+marker_clustering = dict()
+marker_names = set()
+
+# Each set of results is available as marker_clusters/{marker_name}.{ani_threshold}.hdf5
+for fp in os.listdir("marker_clusters"):
+
+    # Only read in HDF5 files
+    if not fp.endswith(".hdf5"):
+        continue
+
+    # Parse the threshold from the file name
+    marker_name, ani_threshold = fp[:-5].rsplit(".", 1)
+    msg = f"Parsing results of clustering from {marker_name} at {ani_threshold}% ID"
+    logger.info(msg)
+
+    # Add the marker name to the list of markers
+    marker_names.add(marker_name)
+    
+    # The threshold must be an integer (indicating a percentage)
+    ani_threshold = int(ani_threshold)
+
+    # Open the HDF5 file for reading
+    fp = f"marker_clusters/{fp}"
+    logger.info(f"Opening {fp}")
+    with pd.HDFStore(fp, "r") as store:
+
+        # Iterate over a set of keys
+        for hdf_key in ["genome_groups", "genome_group_df", "group_distance_df"]:
+
+            logger.info(f"Reading key {hdf_key}")
+
+            # Save the DataFrame to `marker_clustering`
+            marker_clustering[
+                f"{marker_name} {hdf_key} {ani_threshold}"
+            ] = pd.read_hdf(
+                store,
+                hdf_key
+            )
+
 
 #############
 # GENE LIST #
@@ -339,6 +379,18 @@ with DirectRedis(host=args.host, port=args.port) as r:
 
     # Write out all of the genome clustering information
     for k, v in genome_clustering.items():
+        logger.info(f"Writing {k} to redis")
+        r.set(k, v)
+
+    # Format the list of markers as a list
+    marker_names = list(marker_names)
+    marker_names.sort()
+
+    # Write the list of markers to redis
+    r.set("marker_genes", marker_names)
+
+    # Write out all of the marker clustering information
+    for k, v in marker_clustering.items():
         logger.info(f"Writing {k} to redis")
         r.set(k, v)
     
