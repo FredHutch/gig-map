@@ -470,7 +470,7 @@ process extract_markers {
         tuple val(genome_name), file(alignments), file(genome)
 
     output:
-        file "*.markers.fasta.gz"
+        file "*.markers.fasta.gz" optional true
 
 """#!/bin/bash
 
