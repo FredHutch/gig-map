@@ -102,7 +102,8 @@ def read_data(args):
 
         # Log the available keys, to help with debugging
         logger.info("Available keys in redis:")
-        for k in r.keys():
+        all_keys = r.keys()
+        for k in all_keys:
             logger.info(k)
 
         # Read in the alignment information in long format
@@ -143,7 +144,7 @@ def read_data(args):
         # "group_distance_df {threshold}"
         # Keep track of all possible values for `threshold`
         output["genome_group_thresholds"] = set([])
-        for key in r.keys():
+        for key in all_keys:
             if key.startswith(("genome_groups ", "genome_group_df ", "group_distance_df ")):
                 # Save the data
                 output[key] = r.get(key)
@@ -151,10 +152,43 @@ def read_data(args):
                 threshold_value = int(key.rsplit(" ", 1)[-1])
                 # Add the threshold value
                 output["genome_group_thresholds"].add(threshold_value)
-        
+
         # Format output["genome_group_thresholds"] as a list
         output["genome_group_thresholds"] = list(output["genome_group_thresholds"])
 
+        # If marker genes were used, there will be a list in `marker_genes`
+        output["marker_genes"] = r.get("marker_genes") if "marker_genes" in all_keys else []
+
+        # If there were any marker genes used
+        if len(output["marker_genes"]) > 0:
+
+            # Set up a nested dict to use for the marker gene groups
+            output["marker_gene_groups"] = dict()
+
+            # Iterate over each marker gene
+            for marker_gene in output["marker_genes"]:
+
+                # Set up a dict
+                output["marker_gene_groups"][marker_gene] = dict()
+
+                # Iterate over each threshold value
+                for threshold_value in output["genome_group_thresholds"]:
+
+                    # Set up a dict
+                    output["marker_gene_groups"][marker_gene][threshold_value] = dict()
+
+                    # Iterate over each individual table
+                    for table_name in ["genome_groups", "genome_group_df", "group_distance_df"]:
+
+                        # Format the key based on the marker gene and the threshold
+                        key = f"{marker_gene} {table_name} {threshold_value}"
+
+                        # Make sure the key is present
+                        assert key in all_keys, f"Expected to find key {key}"
+
+                        # Read the table
+                        output["marker_gene_groups"][marker_gene][threshold_value][table_name] = r.get(key)
+        
         # Sort the keys numerically
         output["genome_group_thresholds"].sort()
 
@@ -821,6 +855,30 @@ menus = [
         # Label to be displayed at the top of the tab
         label="Customize Display",
         params=[
+            # Use either ANI or a marker gene to group genomes
+            dict(
+                # ID used to access the value of this menu item
+                elem_id="clustering-method",
+                # Define the type of menu item
+                type="dropdown",
+                # Define the options in the dropdown
+                options=[
+                    dict(
+                        value="ani",
+                        label="Whole-Genome Average Nucleotide Identity (ANI)",
+                    )
+                ] + [
+                    dict(
+                        value=marker_gene,
+                        label=marker_gene
+                    )
+                    for marker_gene in data["marker_genes"]
+                ],
+                # Default value
+                value="ani",
+                # Label displayed along this menu item
+                label="Cluster Genomes By"
+            ),
             # The distance threshold used to group genomes
             dict(
                 # ID used to access the value of this menu item
@@ -845,7 +903,7 @@ menus = [
                 # Suffix to display
                 suffix="%",
                 # Label displayed along this menu item
-                label="Genome Group Clustering Threshold (ANI)",
+                label="Genome Group Clustering Threshold",
             ),
             # The maximum number of genome groups to display
             dict(
@@ -1038,6 +1096,7 @@ deprecated_menu_items = [
 
 @lru_cache(maxsize=16)
 def filter_alignments(
+    clustering_method,
     ani_threshold,
     selected_group,
     max_n_genomes,
@@ -1069,7 +1128,10 @@ def filter_alignments(
     else:
 
         # Get the genome groups based on this ANI threshold
-        genome_groups = read_genome_groups(ani_threshold)
+        genome_groups = read_genome_groups(
+            clustering_method,
+            ani_threshold
+        )
 
         # Filter by genome group
         genomes_in_selected_group = set([
@@ -1144,15 +1206,31 @@ def get_gene_annot_values(selections):
     return value_dict
 
 
-def read_genome_groups(ani_threshold):
+def read_genome_groups(clustering_method, ani_threshold):
     """Read in the assignment of genomes to groups at a particular ANI threshold."""
-    return data[
-        f"genome_groups {ani_threshold}"
-    ].set_index(
-        "genome"
-    )[
-        "group"
-    ]
+
+    if clustering_method == "ani":
+        return data[
+            f"genome_groups {ani_threshold}"
+        ].set_index(
+            "genome"
+        )[
+            "group"
+        ]
+    else:
+        return data[
+            "marker_gene_groups"
+        ][
+            clustering_method
+        ][
+            ani_threshold
+        ][
+            "genome_groups"
+        ].set_index(
+            "genome"
+        )[
+            "group"
+        ]
 
 
 def plot_genome_group_overview(_, selections):
@@ -1161,6 +1239,7 @@ def plot_genome_group_overview(_, selections):
     # Get the logger
     logger = logging.getLogger('gig-map')
 
+    clustering_method = selections["clustering-method"]
     ani_threshold = selections["ani-threshold"]
 
     # If "No Grouping" has been selected for ANI threshold
@@ -1172,14 +1251,46 @@ def plot_genome_group_overview(_, selections):
     # Otherwise, a threshold has been selected for grouping genomes
 
     # Get the genome groups based on this ANI threshold
+    # for this particular distance method (ANI vs. marker genes)
     logger.info(f"Plotting groups at {ani_threshold} percent identity")
-    genome_groups = read_genome_groups(ani_threshold)
+    genome_groups = read_genome_groups(
+        clustering_method,
+        ani_threshold
+    )
 
-    # A summary of each genome group
-    genome_group_df = data[f"genome_group_df {ani_threshold}"]
-    
-    # The mean ANI between groups
-    group_distance_df = data[f"group_distance_df {ani_threshold}"]
+    # If the whole-genome ANI method is used
+    if clustering_method == "ani":
+
+        # A summary of each genome group
+        genome_group_df = data[f"genome_group_df {ani_threshold}"]
+        
+        # The mean ANI between groups
+        group_distance_df = data[f"group_distance_df {ani_threshold}"]
+
+    # If a marker gene was selected
+    else:
+        
+        # A summary of each genome group
+        genome_group_df = data[
+            "marker_gene_groups"
+        ][
+            clustering_method
+        ][
+            ani_threshold
+        ][
+            "genome_group_df"
+        ]
+        
+        # The mean ANI between groups
+        group_distance_df = data[
+            "marker_gene_groups"
+        ][
+            clustering_method
+        ][
+            ani_threshold
+        ][
+            "group_distance_df"
+        ]
 
     # If there is only one group
     if genome_groups.unique().shape[0] <= 1:
@@ -1271,6 +1382,7 @@ def plot_gig_map_heatmap(selected_group, selections):
     # Filter the alignments using the thresholds set by the user
     logger.info("Filtering alignments")
     plot_df = filter_alignments(
+        selections["clustering-method"],
         selections["ani-threshold"],
         selected_group,
         selections["max-n-genomes"],
@@ -1449,6 +1561,7 @@ def add_callbacks(app):
             Input({"menu": ALL, "elem": "close-button"}, "n_clicks"),
         ],
         [
+            State({"input_elem": "clustering-method"}, "value"),
             State({"input_elem": "ani-threshold"}, "value"),
             State("selected_group", "children")
         ]
@@ -1457,6 +1570,7 @@ def add_callbacks(app):
         clickData,
         trigger_redraw,
         trigger_close_and_redraw,
+        clustering_method,
         ani_threshold,
         prev_selected_group
     ):
@@ -1469,6 +1583,7 @@ def add_callbacks(app):
         if prev_selected_group is None:
 
             # Then just fill in None for each value
+            prev_clustering_method = None
             prev_ani_threshold = None
             prev_selected_group = None
 
@@ -1476,7 +1591,7 @@ def add_callbacks(app):
         else:
 
             # Get the previously selected group and ani_threshold from the browser
-            prev_ani_threshold, prev_selected_group = prev_selected_group
+            prev_clustering_method, prev_ani_threshold, prev_selected_group = prev_selected_group
 
         # Get the element which triggered the callback
         trigger = ctx.triggered[0]['prop_id']
@@ -1506,14 +1621,14 @@ def add_callbacks(app):
                 raise PreventUpdate
 
             # Otherwise, update the `selected_group` element
-            return [ani_threshold, selected_group]
+            return [clustering_method, ani_threshold, selected_group]
 
         # Otherwise, the user must have triggered a redraw of the figure
         # Or this is the first time we have loaded the page, either way
         else:
 
-            # If the ANI threshold did not change
-            if prev_ani_threshold == ani_threshold:
+            # If the clustering method and the ANI threshold did not change
+            if prev_ani_threshold == ani_threshold and prev_clustering_method == clustering_method:
 
                 # Do not return a value from the callback
                 raise PreventUpdate
@@ -1522,7 +1637,7 @@ def add_callbacks(app):
             selected_group = 0
             
             # Update the `selected_group` element
-            return [ani_threshold, selected_group]
+            return [clustering_method, ani_threshold, selected_group]
 
     @app.callback(
         [
@@ -1556,8 +1671,9 @@ def add_callbacks(app):
         # Otherwise, a group has been selected
 
         # Parse both the ANI and selected group from the inputs
-        ani_threshold, selected_group = selected_group
+        clustering_method, ani_threshold, selected_group = selected_group
 
+        logger.info(f"Selected clustering method: {clustering_method}")
         logger.info(f"Selected group for heatmap: {selected_group}")
         logger.info(f"Selected ANI threshold for heatmap: {ani_threshold}")
 
@@ -1593,6 +1709,7 @@ def add_callbacks(app):
 
         # Overwrite the ANI threshold using the value from the browser
         # This is intended to prevent race conditions from other callbacks
+        selected_params["clustering-method"] = clustering_method
         selected_params["ani-threshold"] = ani_threshold
 
         # Try to render the figure
