@@ -171,6 +171,14 @@ dists = dists.reindex(
     np.float16
 )
 
+# Make sure that the distances are symmetric
+for genome_a in genome_list:
+    dists.loc[genome_a, genome_a] = 0
+    for genome_b in genome_list:
+        if genome_a < genome_b:
+            dists.loc[genome_a, genome_b] = dists.loc[genome_b, genome_a]
+
+
 
 
 ######################
