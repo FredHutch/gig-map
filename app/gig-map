@@ -922,7 +922,7 @@ menus = [
                 label="Label Genes By",
                 type="dropdown",
                 options=data["available_gene_labels"],
-                value="combined_name" if "combined_name" in data["gene_annotations"].columns.values else "",
+                value="combined_name" if (data["gene_annotations"] is not None and "combined_name" in data["gene_annotations"].columns.values) else "",
             ),
             # Limit the length of each gene label
             dict(
