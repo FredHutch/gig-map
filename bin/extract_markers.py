@@ -105,6 +105,7 @@ else:
 
 genome = read_fasta(handle)
 handle.close()
+logging.info(f"Read in {len(genome):,} genome records")
 
 # If there are alignments
 if aln.shape[0] > 0:

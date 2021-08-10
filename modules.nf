@@ -481,12 +481,12 @@ extract_markers.py \
     "${genome}" \
     "${params.aln_fmt}" \
     "${params.min_marker_coverage}"
-
 """
 }
 
 
 // Go from nucleotide sequences to amino acid
+// CURRENTLY UNUSED
 process translate_markers {
     container "${container__emboss}"
     label "io_limited"
@@ -495,18 +495,23 @@ process translate_markers {
         file input_fasta
 
     output:
-        file "${input_fasta}"
+        file "*.gz"
 
 """#!/bin/bash
 
 set -e
 
+OUTPUT_PATH=\$(echo "${input_fasta}" | sed 's/.fasta.gz/.fastp/')
+echo "Input: ${input_fasta}"
+echo "Output: \$OUTPUT_PATH"
+
 transeq \
     -sequence <(gunzip -c ${input_fasta}) \
-    -outseq TEMP \
+    -outseq \$OUTPUT_PATH \
     -table ${params.query_gencode}
 
-mv TEMP ${input_fasta}
+echo Compressing output
+gzip \$OUTPUT_PATH
 
 """
 }
@@ -550,13 +555,17 @@ process combine_markers {
 
 set -e
 
+
 gunzip -c ${unaligned_fasta} \
 | clustalo \
-    -t Protein \
+    --in - \
+    -t DNA \
+    --full \
     --distmat-out=${unaligned_fasta}.distmat \
     --out=${unaligned_fasta}.msa \
     --threads ${task.cpus} \
-    --verbose
+    --verbose \
+    --outfmt=clustal
 
 """
 }

@@ -55,7 +55,6 @@ include {
     annotate_genes;
     annotate_genes_with_abundances;
     extract_markers;
-    translate_markers;
     reorganize_markers;
     combine_markers;
     cluster_genomes;
@@ -521,18 +520,13 @@ workflow {
             )
         )
 
-        // Go from nucleotide sequences to amino acid
-        translate_markers(
-            extract_markers.out
-        )
-
         // The output of extract_markers has one file per genome, with the
         // FASTA headers indicating the marker of origin
 
         // Next we will reformat the markers to have one file per marker,
         // with the FASTA headers indicating the genome of origin
         reorganize_markers(
-            translate_markers.out.toSortedList()
+            extract_markers.out.toSortedList()
         )
 
         // Run the MSA
