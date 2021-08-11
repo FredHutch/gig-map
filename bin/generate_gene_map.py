@@ -29,6 +29,7 @@ df = pd.read_csv(
 # Initialize the PCA object
 pca = PCA(
     n_components=min(
+        df.shape[0],
         df.shape[1],
         max_pcs_tsne
     )
