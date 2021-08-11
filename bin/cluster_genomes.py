@@ -162,6 +162,12 @@ else:
 logger.info(f"Read in {dists.shape[0]:,} rows and {dists.shape[1]:,} columns")
 print(dists)
 
+# Subset to genomes which have a valid distance measured
+genome_list = [
+    g for g in genome_list if g in dists.index.values
+]
+assert len(genome_list) > 0, "There are no genomes with alignments and the marker"
+
 # Subset and order by the list of genomes with alignments
 logger.info(f"Ordering distance matrix by the list of genomes")
 dists = dists.reindex(
