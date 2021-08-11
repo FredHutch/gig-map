@@ -128,15 +128,6 @@ def read_data(args):
         output["gene_ix"] = r.get("gene_ix")
         assert output["gene_ix"] is not None
 
-        # Read in the pairwise genome distances, merging multiple shards
-        output["distances"] = pd.concat(
-            [
-                r.get(redis_key)
-                for redis_key in r.get("distances_keys")
-            ]
-        )
-        logger.info("Read in distances")
-
         # Read the genome groups which have been pre-computed
         # Results will be output to keys in data formatted as:
         # "genome_groups {threshold}"
@@ -195,6 +186,41 @@ def read_data(args):
         # Read in the t-SNE coordinates
         output["tsne"] = r.get("tsne")
 
+        #####################
+        # DISTANCE MATRICES #
+        #####################
+
+        # Set up a dict with all of the distance matrices
+        output["distances"] = dict()
+
+        # Read in the ANI pairwise genome distances, merging multiple shards
+        output["distances"]["ani"] = pd.concat(
+            [
+                r.get(redis_key)
+                for redis_key in r.get("distances_keys")
+            ]
+        )
+        logger.info("Read in ANI distances")
+
+        # Read in the distances for each marker gene (if any)
+        for marker_gene in output["marker_genes"]:
+
+            # Format the key which has the list of shards to read in
+            marker_gene_distances_key = f"distances_keys {marker_gene}"
+
+            # Make sure that the key is present
+            msg = f"Could not find pairwise distances for {marker_gene}"
+            assert marker_gene_distances_key in all_keys, msg
+
+            # Use the name of the marker gene as the key of the dict
+            output["distances"][marker_gene] = pd.concat(
+                [
+                    r.get(redis_key)
+                    for redis_key in r.get(marker_gene_distances_key)
+                ]
+            )
+            logger.info(f"Read in distances for {marker_gene}")
+        
     # Read in the gene annotations, if any
     if args['gene_annotations'] is None:
         output["gene_annotations"] = None
@@ -1111,7 +1137,8 @@ def filter_alignments(
 
     # Get the logger
     logger = logging.getLogger('gig-map')
-    logger.info(f"ANI Grouping Threshold: {ani_threshold}")
+    logger.info(f"Method for grouping genomes: {clustering_method}")
+    logger.info(f"Grouping Threshold: {ani_threshold}")
     logger.info(f"Selected Group: {selected_group}")
     logger.info(f"Max Genomes: {max_n_genomes}")
     logger.info(f"Minimum Percent Identity: {min_pctid}")
@@ -1123,6 +1150,24 @@ def filter_alignments(
 
         # There is no need to filter the alignments
         filtered_alignments = data["alignments"]
+
+        # However, if a marker gene has been selected for clustering
+        if clustering_method != "ani":
+
+            # Then we will need to find the subset of genomes
+            # which contain the marker gene
+
+            # The genomes which have the marker are in this list
+            genomes_with_marker = set(list(data[
+                "distances"
+            ][
+                clustering_method
+            ].index.values))
+
+            # Filter the alignments
+            filtered_alignments = filtered_alignments.loc[
+                filtered_alignments.genome_name.isin(genomes_with_marker)
+            ]
 
     # If an ANI threshold _has_ been selected
     else:
@@ -1428,9 +1473,16 @@ def plot_gig_map_heatmap(selected_group, selections):
     ))
 
     # Create a tree using the set of genomes which contain alignments
-    node_positions = make_nj_tree(unique_genomes, data['distances'])
+    node_positions = make_nj_tree(
+        unique_genomes,
+        data[
+            'distances'
+        ][
+            selections["clustering-method"]
+        ]
+    )
 
-    logger.info("Grouped genomes by ANI")
+    logger.info(f"Grouped genomes by {selections['clustering-method']}")
 
     # The figure will render with a dendrogram on the left and a heatmap on the right
 
