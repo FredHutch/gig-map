@@ -1364,6 +1364,12 @@ def plot_genome_group_overview(_, selections):
         y_offset=-0.5,
     )
 
+    # Each group should be specified as an integer
+    group_node_positions.genome_order = list(map(
+        lambda i: int(float(i)),
+        group_node_positions.genome_order
+    ))
+
     # Set up a base level figure
     fig = go.Figure()
 
@@ -1391,12 +1397,18 @@ def plot_genome_group_overview(_, selections):
         for group_ix in map(int, group_node_positions.genome_order)
     ]
 
+    # Set up the label which will be used underneath the tree
+    if clustering_method == "ani":
+        tree_xaxis_label = "Genome Distance (ANI)"
+    else:
+        tree_xaxis_label = f"Genome Distance ({clustering_method})"
+
     # Set up the layout
     logger.info("Updating layout")
     fig.update_layout(
         # Set up the primary x-axis (with the tree)
         xaxis=dict(
-            title_text="Genome Distance (ANI)",
+            title_text=tree_xaxis_label,
         ),
         # Primary y-axis (with the tree)
         yaxis=dict(
@@ -1548,6 +1560,12 @@ def plot_gig_map_heatmap(selected_group, selections):
             genome_labels
         ))
 
+    # Set up the label which will be used underneath the tree
+    if selections["clustering-method"] == "ani":
+        tree_xaxis_label = "Genome Distance (ANI)"
+    else:
+        tree_xaxis_label = f"Genome Distance ({selections['clustering-method']})"
+
     # Set up the layout
     logger.info("Updating layout")
     fig.update_layout(
@@ -1555,7 +1573,7 @@ def plot_gig_map_heatmap(selected_group, selections):
         title=f"Genome Group {selected_group}",
         # Set up the primary x-axis (with the tree)
         xaxis=dict(
-            title_text="Genome Distance (ANI)",
+            title_text=tree_xaxis_label,
             domain=[0, selections["tree-width"]],
             range=[
                 node_positions.df['x'].max() * -0.01,
