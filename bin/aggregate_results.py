@@ -174,6 +174,70 @@ dists = dists.reindex(
 )
 
 
+# Function to read in a distmat matrix
+def read_distmat(fp):
+    logger.info("Reading .distmat file")
+
+    # Make a list with the contents of each line
+    output = []
+    # Make a list with the index
+    index = []
+
+    # Iterate over the lines in the file
+    for line_i, line in enumerate(open(fp, "r")):
+
+        # If this is the first line
+        if line_i == 0:
+
+            # Skip it
+            continue
+
+        # For every other line
+        else:
+
+            # Remove the newline character at the end of the line
+            line = line.rstrip("\n")
+
+            # Remove every double space in the line
+            while "  " in line:
+                line = line.replace("  ", " ")
+
+            # Split up the fields of the line
+            fields = line.split(" ")
+            
+            # The index is the first position
+            index.append(fields[0])
+
+            # The rest of the fields are fields in the matrix
+            output.append(fields[1:])
+
+    # Format a DataFrame
+    df = pd.DataFrame(
+        output,
+        index=index,
+        columns=index
+    ).applymap(
+        float
+    )
+
+    # Return the DataFrame
+    return df
+
+# Read in all of the distances based on marker distances
+marker_dists = dict()
+
+# Iterate over any marker gene distance matrices that are provided
+for fp in os.listdir("marker_distances"):
+
+    msg = f"Input file does not conform to expected pattern: {fp}"
+    assert fp.endswith(".markers.fasta.gz.distmat"), msg
+    marker_name = fp.replace(".markers.fasta.gz.distmat", "")
+
+    # Read in the distances
+    marker_dists[marker_name] = read_distmat(
+        os.path.join("marker_distances", fp)
+    )
+
 ###################
 # GENOME CLUSTERS #
 ###################
@@ -284,6 +348,53 @@ alignments = alignments.assign(
 # WRITE OUTPUT #
 ################
 
+# Function to write a distance matrix to redis in chunks
+def save_dm_to_redis(dists_df, dists_key_suffix, dists_n_rows=args.dists_n_rows):
+    """Save a distance matrix to redis, and append the indicated suffix to the keys."""
+
+    # Keep track of the keys used to store chunks in the database
+    dists_keys = []
+
+    # Iterate until all of the distances have been written
+    while dists_df.shape[0] > 0:
+
+        # Set up a key for this chunk of distances
+        chunk_key = f"distances_{len(dists_keys)}{dists_key_suffix}"
+
+        # Write a chunk of distances
+        r.set(
+            # Key the chunk by the index
+            chunk_key,
+            # Write the first `dists_n_rows` rows to redis
+            dists_df.iloc[:min(dists_df.shape[0], dists_n_rows)]
+        )
+
+        # Keep track of the key that was used
+        dists_keys.append(chunk_key)
+
+        logger.info(f"Wrote {len(dists_keys):,} chunks of distances")
+
+        # If the complete set of distances has been written
+        if dists_df.shape[0] <= dists_n_rows:
+
+            # Stop iterating
+            break
+
+        # Otherwise
+        else:
+
+            # Remove the written chunk from the overall dists table
+            dists_df = dists_df.iloc[dists_n_rows:]
+
+    logger.info(f"Done writing distances")
+
+    # Store the list of keys which were used for the chunks
+    r.set(
+        f"distances_keys{dists_key_suffix}",
+        dists_keys
+    )
+
+
 # Connect to redis
 logger.info(f"Connecting to redis at {args.host}:{args.port}")
 with DirectRedis(host=args.host, port=args.port) as r:
@@ -338,44 +449,26 @@ with DirectRedis(host=args.host, port=args.port) as r:
     # Save the table of distances in chunks of `dists_n_rows` each
     logger.info("Saving distances to redis")
 
-    # Keep track of the keys used to store chunks in the database
-    dists_keys = []
+    # Save the ANI distances
+    logger.info("Saving ANI distances")
 
-    # Iterate until all of the distances have been written
-    while dists.shape[0] > 0:
+    # No suffix is used for ANI (for backwards compatibility)
+    save_dm_to_redis(dists, "")
 
-        # Write a chunk of distances
-        r.set(
-            # Key the chunk by the index
-            f"distances_{len(dists_keys)}",
-            # Write the first `dists_n_rows` rows to redis
-            dists.iloc[:min(dists.shape[0], args.dists_n_rows)]
-        )
+    # For each of the marker genes
+    for marker_name in list(marker_names):
 
-        # Keep track of the key that was used
-        dists_keys.append(f"distances_{len(dists_keys)}")
+        # Save the distances based on that marker gene
+        logger.info(f"Saving distances based on the marker gene: {marker_name}")
 
-        logger.info(f"Wrote {len(dists_keys):,} chunks of distances")
+        # Make sure that there was a distance matrix found
+        # If not, then this marker gene has genome groups defined, but no distance matrix
+        # which wouldn't make any sense (since the DM is what was used to build groups)
+        msg = f"Error: no distance matrix found for marker gene {marker_name}"
+        assert marker_name in marker_dists.keys(), msg
 
-        # If the complete set of distances has been written
-        if dists.shape[0] <= args.dists_n_rows:
-
-            # Stop iterating
-            break
-
-        # Otherwise
-        else:
-
-            # Remove the written chunk from the overall dists table
-            dists = dists.iloc[args.dists_n_rows:]
-
-    logger.info(f"Done writing distances")
-
-    # Store the list of keys which were used for the chunks
-    r.set(
-        "distances_keys",
-        dists_keys
-    )
+        # Save the distance matrix in chunks, adding a suffix for the marker gene
+        save_dm_to_redis(marker_dists[marker_name], f" {marker_name}")
 
     # Write out all of the genome clustering information
     for k, v in genome_clustering.items():

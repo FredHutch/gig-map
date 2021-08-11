@@ -551,11 +551,16 @@ workflow {
         // for all markers, at each ANI threshold
         clustered_genomes_by_marker = cluster_genomes_by_marker.out.toSortedList()
 
+        // Set up a handle for the output of all the genome distances
+        // for all markers
+        genome_distances_by_marker = combine_markers.out[0].toSortedList()
+
     } else {
         // If no marker genes were provided
 
         // Set up an empty handle to take the place of marker gene output
         clustered_genomes_by_marker = Channel.of([[]])
+        genome_distances_by_marker = Channel.of([[]])
     }
 
     // Group together all results into a single HDF5 file object
@@ -565,7 +570,8 @@ workflow {
         genome_distances_csv,
         generate_gene_map.out,
         cluster_genomes.out.toSortedList(),
-        clustered_genomes_by_marker
+        clustered_genomes_by_marker,
+        genome_distances_by_marker
     )
 
 }

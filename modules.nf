@@ -802,6 +802,7 @@ process aggregate_results {
     file tsne_coords_csv_gz
     file "genome_clusters/*"
     file "marker_clusters/*"
+    file "marker_distances/*"
 
     output:
     file "${params.output_prefix}.rdb"
