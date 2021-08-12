@@ -2,7 +2,7 @@
 container__pandas = "quay.io/fhcrc-microbiome/python-pandas:7e911f9"
 container__mashtree = "quay.io/hdc-workflows/mashtree:1.2.0"
 container__blast = "quay.io/biocontainers/blast:2.11.0--pl526he19e7b1_0"
-container__diamond = "quay.io/fhcrc-microbiome/docker-diamond:v2.0.6-biopython"
+container__diamond = "quay.io/biocontainers/diamond:2.0.11--hdcc8f71_0"
 container__cdhit = "quay.io/biocontainers/cd-hit:4.8.1--h2e03b76_5"
 container__clustal = "biocontainers/clustal-omega:1.2.1-1"
 container__emboss = "biocontainers/emboss:v6.6.0dfsg-7b1-deb_cv1"
