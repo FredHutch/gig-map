@@ -229,14 +229,16 @@ marker_dists = dict()
 # Iterate over any marker gene distance matrices that are provided
 for fp in os.listdir("marker_distances"):
 
-    msg = f"Input file does not conform to expected pattern: {fp}"
-    assert fp.endswith(".markers.fasta.gz.distmat"), msg
-    marker_name = fp.replace(".markers.fasta.gz.distmat", "")
+    # If the file has the expected extension
+    if fp.endswith(".markers.fasta.gz.distmat"):
 
-    # Read in the distances
-    marker_dists[marker_name] = read_distmat(
-        os.path.join("marker_distances", fp)
-    )
+        # Parse the marker name from the file name
+        marker_name = fp.replace(".markers.fasta.gz.distmat", "")
+
+        # Read in the distances
+        marker_dists[marker_name] = read_distmat(
+            os.path.join("marker_distances", fp)
+        )
 
 ###################
 # GENOME CLUSTERS #
