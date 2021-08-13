@@ -17,8 +17,7 @@ params.aligner = 'diamond'
 params.ftp_threads = 25
 params.query_gencode = 11
 params.max_evalue = 0.001
-params.culling_limit = 5
-params.max_target_seqs = 100000
+params.max_overlap = 50
 params.annotate_geneshot = false
 params.abundances_geneshot = false
 params.max_n_genes_train_pca = 20000
@@ -46,6 +45,9 @@ include {
     align_blast;
     align_blast as align_markers;
     align_diamond;
+    filter_alignments as filter_diamond_alignments;
+    filter_alignments as filter_blast_alignments;
+    filter_alignments as filter_marker_alignments;
     makedb_diamond;
     add_genome_name;
     concatenate_alignments;
@@ -70,8 +72,7 @@ include {
     ftp_threads: params.ftp_threads,
     query_gencode: params.query_gencode,
     max_evalue: params.max_evalue,
-    culling_limit: params.culling_limit,
-    max_target_seqs: params.max_target_seqs,
+    max_overlap: params.max_overlap,
     max_n_genes_train_pca: params.max_n_genes_train_pca,
     max_pcs_tsne: params.max_pcs_tsne,
     sketch_size: params.sketch_size,
@@ -109,9 +110,9 @@ def helpMessage() {
       --ftp_threads         Number of FTP downloads to execute concurrently (default: 25)
       --query_gencode       Genetic code to use for conceptual translation (default: 11)
       --max_evalue          Maximum E-value for any alignment (default: 0.001)
-      --culling_limit       If the query range of a hit is enveloped by that of at least
-                            this many higher-scoring hits, delete the hit (default: 5, for BLAST)
-      --max_target_seqs     Maximum number of alignments to keep, per genome (default: 100000)
+      --max_overlap         Remove alignments which align to a region which overlaps
+                            a higher-scoring alignment by at least this percentage
+                            (default: 50, max: 100, min: 0)
       --annotate_geneshot   Optionally format annotations from the geneshot pipeline in a format
                             which can be easily loaded into the gig-map visualization app.
                             This flag does not require the use of --abundances_geneshot (below).
@@ -410,8 +411,13 @@ workflow {
             all_genomes
         )
 
+        // Filter any overlapping alignments
+        filter_diamond_alignments(
+            align_diamond.out
+        )
+
         // Channel with all alignment results
-        alignments_output = align_diamond.out
+        alignments_output = filter_diamond_alignments.out
     }
 
     // If the user has selected BLAST for alignment
@@ -428,8 +434,13 @@ workflow {
             all_genomes
         )
 
+        // Filter any overlapping alignments
+        filter_blast_alignments(
+            align_blast.out
+        )
+
         // Channel with all alignment results
-        alignments_output = align_blast.out
+        alignments_output = filter_blast_alignments.out
     }
 
     // Add the name of the query genome to the alignments file
@@ -512,9 +523,14 @@ workflow {
             all_genomes
         )
 
+        // Filter any overlapping alignments
+        filter_marker_alignments(
+            align_markers.out
+        )
+
         // Extract the aligned regions for each marker
         extract_markers(
-            align_markers.out.join(
+            filter_marker_alignments.out.join(
                 all_genomes.map({
                     it -> [it.name, it]
                 })

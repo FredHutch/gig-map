@@ -16,8 +16,7 @@ params.min_identity = 50
 params.ftp_threads = 25
 params.query_gencode = 11
 params.max_evalue = 0.001
-params.culling_limit = 5
-params.max_target_seqs = 100000
+params.max_overlap = 50
 params.aln_fmt = "qseqid sseqid pident length qstart qend qlen sstart send slen"
 params.max_n_genes_train_pca = 10000
 params.max_pcs_tsne = 50
@@ -365,8 +364,6 @@ blastx \
     -query_gencode ${params.query_gencode} \
     -evalue ${params.max_evalue} \
     -outfmt '6 delim=, ${params.aln_fmt}' \
-    -culling_limit ${params.culling_limit} \
-    -max_target_seqs ${params.max_target_seqs} \
     -num_threads ${task.cpus} \
     | tr ',' '\\t' \
     | gzip -c \
@@ -399,15 +396,13 @@ diamond \
     --outfmt 6 ${params.aln_fmt} \
     --query ${query_fasta} \
     --unal 0 \
-    --max-target-seqs ${params.max_target_seqs} \
+    --max-target-seqs 100000 \
     --evalue ${params.max_evalue} \
     --id ${params.min_identity} \
     --subject-cover ${params.min_coverage} \
     --compress 1 \
     --more-sensitive \
     --query-gencode ${params.query_gencode} \
-    --range-culling \
-    -F 1 \
     --block-size ${task.memory.toMega() / (1024 * 6 * task.attempt)}
 
     """
@@ -481,6 +476,30 @@ extract_markers.py \
     "${genome}" \
     "${params.aln_fmt}" \
     "${params.min_marker_coverage}"
+"""
+}
+
+
+// Filter the alignments
+process filter_alignments {
+    container "${container__pandas}"
+    label "io_limited"
+
+    input:
+        tuple val(query_name), file("unfiltered.alignments.gz")
+
+    output:
+        tuple val("${query_name}"), file("alignments.gz")
+
+"""#!/bin/bash
+
+set -e
+
+filter_alignments.py \
+    --input unfiltered.alignments.gz \
+    --output alignments.gz \
+    --max-overlap "${params.max_overlap}" \
+    --aln-fmt "${params.aln_fmt}"
 """
 }
 
