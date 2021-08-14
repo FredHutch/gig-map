@@ -6,6 +6,22 @@ import os
 import pandas as pd
 import sys
 
+##################
+# SET UP LOGGING #
+##################
+
+# Set the level of the logger to INFO
+logFormatter = logging.Formatter(
+    '%(asctime)s %(levelname)-8s [extract_markers.py] %(message)s'
+)
+logger = logging.getLogger('gig-map')
+logger.setLevel(logging.INFO)
+
+# Write to STDOUT
+consoleHandler = logging.StreamHandler()
+consoleHandler.setFormatter(logFormatter)
+logger.addHandler(consoleHandler)
+
 # Input arguments are <alignments> and <genome_fasta>
 alignments_fp = sys.argv[1]
 genome_fp = sys.argv[2]
@@ -18,7 +34,7 @@ assert os.path.exists(genome_fp)
 def read_fasta(handle):
 
     header = None
-    seq = ""
+    seq = []
 
     genome = dict()
 
@@ -28,16 +44,16 @@ def read_fasta(handle):
         if line[0] == ">":
 
             if header is not None:
-                genome[header] = seq
+                genome[header] = ''.join(seq)
 
             header = line[1:].split(" ", 1)[0]
-            seq = ""
+            seq = []
 
         else:
 
-            seq = f"{seq}{line}"
+            seq.append(line)
 
-    genome[header] = seq
+    genome[header] = ''.join(seq)
 
     return genome
 
@@ -80,14 +96,14 @@ def get_aligned_region(aln_r, genome):
 
 
 # Read in the alignments
-logging.info(f"Reading in {alignments_fp}")
+logger.info(f"Reading in {alignments_fp}")
 aln = pd.read_csv(
     alignments_fp,
     sep="\t",
     header=None,
     names=header_string.split(" ")
 )
-logging.info(f"Read in {aln.shape[0]:,} alignments")
+logger.info(f"Read in {aln.shape[0]:,} alignments")
 
 # Read in the genome
 
@@ -105,7 +121,7 @@ else:
 
 genome = read_fasta(handle)
 handle.close()
-logging.info(f"Read in {len(genome):,} genome records")
+logger.info(f"Read in {len(genome):,} genome records")
 
 # If there are alignments
 if aln.shape[0] > 0:
@@ -117,7 +133,7 @@ if aln.shape[0] > 0:
         f"coverage >= {min_coverage}"
     )
     
-    logging.info(f"{aln.shape[0]:,} alignments pass the coverage threshold of {min_coverage}")
+    logger.info(f"{aln.shape[0]:,} alignments pass the coverage threshold of {min_coverage}")
 
     # If there are alignments which pass that threshold
     if aln.shape[0] > 0:
