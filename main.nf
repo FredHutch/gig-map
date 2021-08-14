@@ -29,6 +29,7 @@ params.cluster_similarity = 0.9
 params.cluster_coverage = 0.9
 params.marker_genes = false
 params.min_marker_coverage = 90
+params.pick_marker_genes = 10
 
 
 // Import the processes to run in this workflow
@@ -56,6 +57,8 @@ include {
     generate_gene_map;
     annotate_genes;
     annotate_genes_with_abundances;
+    select_markers;
+    subset_alignments_by_genes as filter_by_selected_markers;
     extract_markers;
     reorganize_markers;
     combine_markers;
@@ -69,6 +72,7 @@ include {
     min_identity: params.min_identity,
     min_coverage: params.min_coverage,
     min_marker_coverage: params.min_marker_coverage,
+    pick_marker_genes: params.pick_marker_genes,
     ftp_threads: params.ftp_threads,
     query_gencode: params.query_gencode,
     max_evalue: params.max_evalue,
@@ -98,10 +102,19 @@ def helpMessage() {
       --output_prefix       Prefix to use for output file names
 
     Optional Arguments:
-      --marker_genes       Optionally provide marker genes in FASTA format which will be used
+      --marker_genes        Optionally provide marker genes in FASTA format which will be used
                             in addition to ANI to estimate a phylogeny for the provided genomes.
                             More than one FASTA file can be specified with comma delimiters.
                             Genes should be provided in amino acid sequence.
+      --pick_marker_genes   The workflow will select a small number of marker genes from the
+                            input genes which:
+                                - are found across the largest proportion of genomes,
+                                - have the highest average nucleotide identity alignments to genomes, and
+                                - have the longest sequence length
+                            Use this flag to specify the maximum number of marker genes which
+                            should be identified with these criteria (default: 10).
+                            Note: these marker genes will be analyzed in addition to any sequences
+                            provided explicitly with --marker_genes.
       --min_marker_coverage Minimum percent coverage required to use the aligned marker sequence
                             from a particular genome (default: 50)
       --aligner             Alignment algorithm to use (options: diamond, blast; default: diamond)
@@ -453,6 +466,18 @@ workflow {
         add_genome_name.out.toSortedList()
     )
 
+    // Select a set of marker genes from the provided alignments
+    select_markers(
+        concatenate_alignments.out
+    )
+
+    // Filter the genome alignments to just those selected marker genes
+    filter_by_selected_markers(
+        alignments_output.combine(
+            select_markers.out
+        )
+    )
+
     // Order the genes based on the genomes they align to
     order_genes(
         concatenate_alignments.out
@@ -528,56 +553,68 @@ workflow {
             align_markers.out
         )
 
-        // Extract the aligned regions for each marker
-        extract_markers(
-            filter_marker_alignments.out.join(
+        // Set up an output object for the filtered alignments
+        // of the user-specified markers against the genomes
+        alignments_from_user_markers = filter_marker_alignments.out
+
+    } else {
+
+        // If --marker-genes was not set, set up a dummy channel
+        // which can take the place of that output
+        alignments_from_user_markers = Channel.empty()
+
+    }
+
+    // Extract the aligned regions for each marker,
+    // combining the markers provided by the user with the 
+    // markers which were discovered from the input data
+    extract_markers(
+        filter_by_selected_markers.out.join(
+            all_genomes.map({
+                it -> [it.name, it]
+            })
+        ).mix(
+            alignments_from_user_markers.join(
                 all_genomes.map({
                     it -> [it.name, it]
                 })
             )
         )
+    )
 
-        // The output of extract_markers has one file per genome, with the
-        // FASTA headers indicating the marker of origin
+    // The output of extract_markers has one file per genome, with the
+    // FASTA headers indicating the marker of origin
 
-        // Next we will reformat the markers to have one file per marker,
-        // with the FASTA headers indicating the genome of origin
-        reorganize_markers(
-            extract_markers.out.toSortedList()
-        )
+    // Next we will reformat the markers to have one file per marker,
+    // with the FASTA headers indicating the genome of origin
+    reorganize_markers(
+        extract_markers.out.toSortedList()
+    )
 
-        // Run the MSA
-        combine_markers(
-            reorganize_markers.out.flatten()
-        )
+    // Run the MSA
+    combine_markers(
+        reorganize_markers.out.flatten()
+    )
 
-        // Make genome groups based on the percent identity
-        // in the region of the marker genes
-        cluster_genomes_by_marker(
-            concatenate_alignments.out.combine(
-                combine_markers.out[0]
-            ).combine(
-                Channel.of(
-                    params.ani_thresholds.split(/,/)
-                )
+    // Make genome groups based on the percent identity
+    // in the region of the marker genes
+    cluster_genomes_by_marker(
+        concatenate_alignments.out.combine(
+            combine_markers.out[0]
+        ).combine(
+            Channel.of(
+                params.ani_thresholds.split(/,/)
             )
         )
+    )
 
-        // Set up a handle for the output of all of the genome clusters
-        // for all markers, at each ANI threshold
-        clustered_genomes_by_marker = cluster_genomes_by_marker.out.toSortedList()
+    // Set up a handle for the output of all of the genome clusters
+    // for all markers, at each ANI threshold
+    clustered_genomes_by_marker = cluster_genomes_by_marker.out.toSortedList()
 
-        // Set up a handle for the output of all the genome distances
-        // for all markers
-        genome_distances_by_marker = combine_markers.out[0].toSortedList()
-
-    } else {
-        // If no marker genes were provided
-
-        // Set up an empty handle to take the place of marker gene output
-        clustered_genomes_by_marker = Channel.of([[]])
-        genome_distances_by_marker = Channel.of([[]])
-    }
+    // Set up a handle for the output of all the genome distances
+    // for all markers
+    genome_distances_by_marker = combine_markers.out[0].toSortedList()
 
     // Group together all results into a single HDF5 file object
     aggregate_results(

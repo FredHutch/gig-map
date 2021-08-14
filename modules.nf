@@ -12,6 +12,7 @@ params.output_folder = 'output'
 params.output_prefix = 'output'
 params.min_coverage = 50
 params.min_marker_coverage = 50
+params.pick_marker_genes = 10
 params.min_identity = 50
 params.ftp_threads = 25
 params.query_gencode = 11
@@ -504,6 +505,56 @@ filter_alignments.py \
 }
 
 
+// Select a set of marker genes
+process select_markers {
+    container "${container__pandas}"
+    label "io_limited"
+
+    input:
+        file "alignments.gz"
+
+    output:
+        file "markers.txt"
+
+"""#!/bin/bash
+
+set -e
+
+select_markers.py \
+    --input alignments.gz \
+    --output markers.txt \
+    --max-n "${params.pick_marker_genes}" \
+    --min-coverage "${params.min_marker_coverage}" \
+    --aln-fmt "${params.aln_fmt}"
+"""
+}
+
+
+// Subset a set of alignments to a particular set of genes
+process subset_alignments_by_genes {
+    container "${container__pandas}"
+    label "io_limited"
+
+    input:
+        tuple val(query_name), file(alignments_tsv_gz), file(gene_list_txt)
+
+    output:
+        tuple val("${query_name}"), file("${alignments_tsv_gz}.subset.tsv.gz")
+
+"""#!/bin/bash
+
+set -e
+
+subset_alignments_by_genes.py \
+    --input "${alignments_tsv_gz}" \
+    --query-list "${gene_list_txt}" \
+    --output "${alignments_tsv_gz}.subset.tsv.gz" \
+    --aln-fmt "${params.aln_fmt}"
+
+"""
+}
+
+
 // Go from nucleotide sequences to amino acid
 // CURRENTLY UNUSED
 process translate_markers {
@@ -560,7 +611,7 @@ reorganize_markers.py
 // Make the multiple sequence alignment
 process combine_markers {
     container "${container__clustal}"
-    label "io_limited"
+    label "mem_medium"
     publishDir "${params.output_folder}/markers/", mode: 'copy', overwrite: true
 
     input:
