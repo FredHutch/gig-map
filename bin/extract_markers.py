@@ -25,8 +25,9 @@ logger.addHandler(consoleHandler)
 # Input arguments are <alignments> and <genome_fasta>
 alignments_fp = sys.argv[1]
 genome_fp = sys.argv[2]
-header_string = sys.argv[3]
-min_coverage = float(sys.argv[4])
+genome_name = sys.argv[3]
+header_string = sys.argv[4]
+min_coverage = float(sys.argv[5])
 assert os.path.exists(alignments_fp)
 assert os.path.exists(genome_fp)
 
@@ -160,4 +161,4 @@ if aln.shape[0] > 0:
         # Write out to a file
         with gzip.open(f"{genome_fp}.markers.fasta.gz", "wt") as handle:
             for marker_name, marker_sequence in marker_sequences.items():
-                handle.write(f">{marker_name}\n{marker_sequence}\n")
+                handle.write(f">{marker_name}::{genome_name}\n{marker_sequence}\n")

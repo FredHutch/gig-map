@@ -242,22 +242,37 @@ if __name__ == "__main__":
     # FILTER #
     ##########
 
-    # Filter the alignments
-    logger.info(f"Filtering alignments with max overlap {args.max_overlap}")
-    filtered_alignments = filter_alignments(
-        alignments,
-        args.max_overlap
-    )
+    # If there are any inputs
+    if alignments.shape[0] > 0:
+
+        # Filter the alignments
+        logger.info(f"Filtering alignments with max overlap {args.max_overlap}")
+        filtered_alignments = filter_alignments(
+            alignments,
+            args.max_overlap
+        )
+
+    else:
+
+        logger.info("No inputs found, stopping")
+        filtered_alignments = None
 
     ##########
     # OUTPUT #
     ##########
 
-    # Write out to a file
-    logger.info(f"Writing out to {args.output}")
-    filtered_alignments.to_csv(
-        args.output,
-        index=None,
-        header=None,
-        sep="\t"
-    )
+    # If there are any outputs
+    if filtered_alignments is not None and filtered_alignments.shape[0] > 0:
+
+        # Write out to a file
+        logger.info(f"Writing out to {args.output}")
+        filtered_alignments.to_csv(
+            args.output,
+            index=None,
+            header=None,
+            sep="\t"
+        )
+
+    else:
+
+        logger.info("No outputs found, stopping")

@@ -51,15 +51,21 @@ for input_fp in os.listdir(input_folder):
     # Each file must have the suffix .markers.fasta.gz
     assert input_fp.endswith(input_file_ending)
 
-    # Get the genome name from the file name
-    genome_name = input_fp.replace(input_file_ending, "")
-
     # Read in the sequence for each marker
-    for marker_name, marker_sequence in read_fasta(
+    # The header for each record is:
+    #     >{marker_name}::{genome_name}
+    for marker_header, marker_sequence in read_fasta(
         os.path.join(
             input_folder, input_fp
         )
     ):
+
+        # Make sure that the appropriate delimiter is found
+        msg = f"Expected to find '::' in '{marker_header}'"
+        assert "::" in marker_header, msg
+
+        # Parse the marker name and genome name from the header
+        marker_name, genome_name = marker_header.split("::", 1)
 
         # Add it to the output
         output.append(
@@ -76,6 +82,11 @@ df = pd.DataFrame(output)
 # Iterate over the markers
 for marker_name, marker_df in df.groupby("marker_name"):
 
+    # Make sure that we only write out a single sequence for each genome
+    # This should only be an edge case that comes up when the user provides
+    # a marker gene which is also the one selected automatically
+    written_genomes = set()
+
     # Open a file path for the output
     with gzip.open(
         os.path.join(output_folder, f"{marker_name}{output_file_ending}"),
@@ -85,5 +96,17 @@ for marker_name, marker_df in df.groupby("marker_name"):
         # Iterate over the sequences for each genome
         for _, r in marker_df.iterrows():
 
-            # Write out the sequence
-            handle.write(f">{r.genome_name}\n{r.marker_sequence}\n")
+            # If we have already written out this genome
+            if r.genome_name in written_genomes:
+
+                # Skip it
+                continue
+
+            # If we have not yet written this genome
+            else:
+
+                # Write out the sequence
+                handle.write(f">{r.genome_name}\n{r.marker_sequence}\n")
+
+                # Note that we've written out this genome
+                written_genomes.add(r.genome_name)

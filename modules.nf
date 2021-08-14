@@ -475,6 +475,7 @@ set -e
 extract_markers.py \
     "${alignments}" \
     "${genome}" \
+    "${genome_name}" \
     "${params.aln_fmt}" \
     "${params.min_marker_coverage}"
 """
@@ -490,7 +491,7 @@ process filter_alignments {
         tuple val(query_name), file("unfiltered.alignments.gz")
 
     output:
-        tuple val("${query_name}"), file("alignments.gz")
+        tuple val("${query_name}"), file("alignments.gz") optional true
 
 """#!/bin/bash
 
@@ -593,7 +594,7 @@ process reorganize_markers {
     label "io_limited"
 
     input:
-        file "fastas_by_genome/*"
+        file "fastas_by_genome/*.markers.fasta.gz"
 
     output:
         file "fastas_by_marker/*"
