@@ -925,7 +925,7 @@ menus = [
                     )
                 ],
                 # Default value
-                value=80.,
+                value="None",
                 # Suffix to display
                 suffix="%",
                 # Label displayed along this menu item
@@ -955,7 +955,7 @@ menus = [
                 # Label displayed along this menu item
                 label="Maximum Number of Genomes to Display",
                 # Default value
-                value=20,
+                value=200,
             ),
             # Filter alignments by a minimum percent identity (similarity)
             dict(
@@ -989,6 +989,14 @@ menus = [
                 input_type="number",
                 label="Minimum Number of Genes to Display Genome",
                 value=10,
+            ),
+            # Filter genes by a minimum number of genomes aligned
+            dict(
+                elem_id="minimum-genomes-per-gene",
+                type="input",
+                input_type="number",
+                label="Minimum Number of Genomes to Display Gene",
+                value=2,
             ),
             # Allow the user to color the genes by the
             # coverage or identity of the alignment, as well
@@ -1128,7 +1136,8 @@ def filter_alignments(
     max_n_genomes,
     min_pctid,
     min_cov,
-    min_genes_per_genome
+    min_genes_per_genome,
+    min_genomes_per_gene,
 ):
     """
     Filter the alignments for genomes in the selected group
@@ -1144,6 +1153,7 @@ def filter_alignments(
     logger.info(f"Minimum Percent Identity: {min_pctid}")
     logger.info(f"Minimum Coverage: {min_cov}")
     logger.info(f"Minimum Genes per Genome: {min_genes_per_genome}")
+    logger.info(f"Minimum Genomes per Gene: {min_genomes_per_gene}")
 
     # If no ANI grouping has been selected
     if ani_threshold == "None":
@@ -1224,6 +1234,26 @@ def filter_alignments(
         filtered_alignments.genome_ix.isin(genomes_passing_filter)
     ]
     logger.info(f"Filtered by final genome set - {filtered_alignments.shape[0]:,} lines")
+
+    # If the user has decided to filter the genes displayed
+    if min_genomes_per_gene > 1:
+
+        # Count up the number of genomes per gene
+        genomes_per_gene = filtered_alignments.gene_ix.value_counts()
+
+        # Apply the minimum threshold of the number of genes per genome
+        genes_passing_filter = set(genomes_per_gene.index.values[
+            genomes_per_gene >= min_genomes_per_gene
+        ])
+        genes_passing_filter = set(list(genes_passing_filter))
+
+        logger.info(f"{len(genes_passing_filter):,} genes")
+
+        # Filter the alignments to only include those genes which pass the filter
+        filtered_alignments = filtered_alignments.loc[
+            filtered_alignments.gene_ix.isin(genes_passing_filter)
+        ]
+        logger.info(f"Filtered by final gene set - {filtered_alignments.shape[0]:,} lines")
 
     return filtered_alignments
 
@@ -1445,7 +1475,8 @@ def plot_gig_map_heatmap(selected_group, selections):
         selections["max-n-genomes"],
         selections["minimum-pctid"],
         selections["minimum-coverage"],
-        selections["minimum-genes-per-genome"]
+        selections["minimum-genes-per-genome"],
+        selections["minimum-genomes-per-gene"]
     )
 
     # If the user wants to color by gene annotation
