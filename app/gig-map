@@ -1436,9 +1436,9 @@ def plot_genome_group_overview(_, selections):
 
     # Set up the label which will be used underneath the tree
     if clustering_method == "ani":
-        tree_xaxis_label = "Genome Distance (ANI)"
+        tree_xaxis_label = "Genome Distance<br>(ANI)"
     else:
-        tree_xaxis_label = f"Genome Distance ({clustering_method})"
+        tree_xaxis_label = f"Marker Distance<br>({clustering_method})"
 
     # Set up the layout
     logger.info("Updating layout")
@@ -1600,9 +1600,9 @@ def plot_gig_map_heatmap(selected_group, selections):
 
     # Set up the label which will be used underneath the tree
     if selections["clustering-method"] == "ani":
-        tree_xaxis_label = "Genome Distance (ANI)"
+        tree_xaxis_label = "Genome Distance<br>(ANI)"
     else:
-        tree_xaxis_label = f"Genome Distance ({selections['clustering-method']})"
+        tree_xaxis_label = f"Marker Distance<br>({selections['clustering-method']})"
 
     # Set up the plot title
     if selections["ani-threshold"] == "None":
@@ -1723,9 +1723,9 @@ def add_callbacks(app):
             assert(clickData["points"][0]["text"] is not None)
 
             # Parse the group which they clicked on
-            selected_group = int(
+            selected_group = int(float(
                 clickData["points"][0]["text"]
-            )
+            ))
             logger.info(f"Selected group: {selected_group}")
 
             # If this is the same group which was previously selected
