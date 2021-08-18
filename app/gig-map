@@ -872,6 +872,73 @@ args = parser.parse_args()
 data = read_data(args.__dict__)
 
 # Define the menu items to be presented to the user
+
+# The `header_menu` object is a list which defines the
+# menu items which will be presented immediately above
+# the displayed figure (instead of being hidden in a menu)
+header_menu = [
+    # Use either ANI or a marker gene to group genomes
+    dict(
+        # ID used to access the value of this menu item
+        elem_id="clustering-method",
+        # Define the type of menu item
+        type="dropdown",
+        # Define the options in the dropdown
+        options=[
+            dict(
+                value="ani",
+                label="Whole-Genome Average Nucleotide Identity (ANI)",
+            )
+        ] + [
+            dict(
+                value=marker_gene,
+                label=marker_gene
+            )
+            for marker_gene in data["marker_genes"]
+        ],
+        # Default value
+        value="ani",
+        # Label displayed along this menu item
+        label="Cluster Genomes By"
+    ),
+    # The distance threshold used to group genomes
+    dict(
+        # ID used to access the value of this menu item
+        elem_id="ani-threshold",
+        # Define the type of menu item
+        type="dropdown",
+        # Define the options in the dropdown
+        options=[
+            dict(
+                value=v,
+                label=f"{int(v)}% Identity",
+            )
+            for v in data["genome_group_thresholds"]
+        ] + [
+            dict(
+                value='None',
+                label="No Grouping"
+            )
+        ],
+        # Default value
+        value="None",
+        # Suffix to display
+        suffix="%",
+        # Label displayed along this menu item
+        label="Genome Group Clustering Threshold",
+    ),
+    # Allow the user to color the genes by the
+    # coverage or identity of the alignment, as well
+    # as any additional user-provided metadata
+    dict(
+        elem_id="color-genes-by",
+        label="Color Genes By",
+        type="dropdown",
+        options=data['available_gene_annotations'],
+        value="pident",
+    ),
+]
+
 # The `menus` object is a list, which organizes the menus into tabs
 menus = [
     # Second level is a dict, which defines the content of each menu tab
@@ -881,56 +948,6 @@ menus = [
         # Label to be displayed at the top of the tab
         label="Customize Display",
         params=[
-            # Use either ANI or a marker gene to group genomes
-            dict(
-                # ID used to access the value of this menu item
-                elem_id="clustering-method",
-                # Define the type of menu item
-                type="dropdown",
-                # Define the options in the dropdown
-                options=[
-                    dict(
-                        value="ani",
-                        label="Whole-Genome Average Nucleotide Identity (ANI)",
-                    )
-                ] + [
-                    dict(
-                        value=marker_gene,
-                        label=marker_gene
-                    )
-                    for marker_gene in data["marker_genes"]
-                ],
-                # Default value
-                value="ani",
-                # Label displayed along this menu item
-                label="Cluster Genomes By"
-            ),
-            # The distance threshold used to group genomes
-            dict(
-                # ID used to access the value of this menu item
-                elem_id="ani-threshold",
-                # Define the type of menu item
-                type="dropdown",
-                # Define the options in the dropdown
-                options=[
-                    dict(
-                        value=v,
-                        label=f"{int(v)}% Identity",
-                    )
-                    for v in data["genome_group_thresholds"]
-                ] + [
-                    dict(
-                        value='None',
-                        label="No Grouping"
-                    )
-                ],
-                # Default value
-                value="None",
-                # Suffix to display
-                suffix="%",
-                # Label displayed along this menu item
-                label="Genome Group Clustering Threshold",
-            ),
             # The maximum number of genome groups to display
             dict(
                 # ID used to access the value of this menu item
@@ -997,16 +1014,6 @@ menus = [
                 input_type="number",
                 label="Minimum Number of Genomes to Display Gene",
                 value=2,
-            ),
-            # Allow the user to color the genes by the
-            # coverage or identity of the alignment, as well
-            # as any additional user-provided metadata
-            dict(
-                elem_id="color-genes-by",
-                label="Color Genes By",
-                type="dropdown",
-                options=data['available_gene_annotations'],
-                value="pident",
             ),
             # Set up the labels for each gene
             dict(
@@ -1597,11 +1604,17 @@ def plot_gig_map_heatmap(selected_group, selections):
     else:
         tree_xaxis_label = f"Genome Distance ({selections['clustering-method']})"
 
+    # Set up the plot title
+    if selections["ani-threshold"] == "None":
+        plot_title=""
+    else:
+        plot_title=f"Genome Group {selected_group}"
+
     # Set up the layout
     logger.info("Updating layout")
     fig.update_layout(
         # Set up the title of the plot
-        title=f"Genome Group {selected_group}",
+        title=plot_title,
         # Set up the primary x-axis (with the tree)
         xaxis=dict(
             title_text=tree_xaxis_label,
@@ -1744,7 +1757,8 @@ def add_callbacks(app):
         [
             Output("gig-heatmap", "figure"),
             Output(f"gig-heatmap-toast", "is_open"),
-            Output(f"gig-heatmap-toast", "children")
+            Output(f"gig-heatmap-toast", "children"),
+            Output("plotted-settings", "children")
         ],
         [
             Input("selected_group", "children"),
@@ -1752,6 +1766,9 @@ def add_callbacks(app):
             Input({"menu": ALL, "elem": "close-button"}, "n_clicks"),
             Input({"menu": ALL, "elem": "open-button"}, "n_clicks"),
             Input("current-settings", "children"),
+        ],
+        [
+            State("plotted-settings", "children")
         ]
     )
     def heatmap_callback(
@@ -1759,7 +1776,8 @@ def add_callbacks(app):
         redraw_clicks,
         close_clicks,
         open_clicks,
-        selected_params
+        selected_params,
+        previously_selected_params
     ):
 
         # If no group has been selected
@@ -1778,19 +1796,22 @@ def add_callbacks(app):
         logger.info(f"Selected group for heatmap: {selected_group}")
         logger.info(f"Selected ANI threshold for heatmap: {ani_threshold}")
 
-        # If the open buttons have never been pressed
-        if all([v is None for v in open_clicks]):
+        # Get the element which triggered the callback
+        trigger = ctx.triggered[0]['prop_id']
+
+        logger.info(f"Trigger: {trigger}")
+
+        # If no plot has been made before
+        if previously_selected_params is None:
 
             # Then let's go ahead and redraw the figure, since this
             # callback must have been triggered by the default
             # parameters loading
+            logger.info("Initial load -- plotting")
             pass
 
         # Otherwise
         else:
-
-            # Get the element which triggered the callback
-            trigger = ctx.triggered[0]['prop_id']
 
             # If this was triggered by the user clicking "Close and Redraw",
             #  or if a new group was selected
@@ -1803,6 +1824,7 @@ def add_callbacks(app):
             else:
 
                 # Do not redraw the figure
+                logger.info("No redraw button was pressed -- preventing callback")
                 raise PreventUpdate
 
         # Parse the parameters from the serialized JSON
@@ -1820,7 +1842,7 @@ def add_callbacks(app):
             fig = plot_gig_map_heatmap(selected_group, selected_params)
 
             # If everything went well, just show the figure
-            return fig, False, None
+            return fig, False, None, json.dumps(selected_params)
 
         # If there was an error
         except Exception as e:
@@ -1831,7 +1853,7 @@ def add_callbacks(app):
             logger.info(traceback.format_exc())
 
             # Show an empty figure, and open the notification
-            return empty_plot(), True, msg
+            return empty_plot(), True, msg, json.dumps(selected_params)
 
 # If the user provided initial settings
 if args.settings is not None:
@@ -1860,11 +1882,13 @@ if args.color_genes_by is not None:
 mdf = MenuDrivenFigure(
     data=data,
     menus=menus,
+    header_menu=header_menu,
+    param_menu_ncols=3,
     function=plot_genome_group_overview,
     # Set up two distinct plots
     figures=["genome-group-tree", "gig-heatmap"],
     # Add a hidden Div for the selected genome group
-    state_variables=["selected_group"],
+    state_variables=["selected_group", "plotted-settings"],
     title="Genes in Genomes Map",
     initial_settings=initial_settings
 )
