@@ -36,8 +36,12 @@ def select_markers(
         ascending=False
     )
 
-    # Select the top N genes
-    marker_genes = gene_df.head(max_n).index.values
+    # Select the top N genes which are found in at least 3 genomes
+    marker_genes = gene_df.query(
+        "n_genomes >= 3"
+    ).head(
+        max_n
+    ).index.values
 
     return marker_genes
 
