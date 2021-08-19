@@ -42,6 +42,13 @@ def read_fasta(handle):
     for line in handle:
 
         line = line.rstrip('\n')
+
+        # If the line is empty
+        if len(line) == 0:
+
+            # Skip it
+            continue
+
         if line[0] == ">":
 
             if header is not None:
