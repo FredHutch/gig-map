@@ -7,6 +7,9 @@ import argparse
 from dash import callback_context as ctx
 from dash.exceptions import PreventUpdate
 from dash.dependencies import Input, Output, State, ALL
+import dash_bootstrap_components as dbc
+import dash_core_components as dcc
+from datetime import datetime
 from direct_redis import DirectRedis
 from functools import lru_cache
 import json
@@ -1855,6 +1858,88 @@ def add_callbacks(app):
             # Show an empty figure, and open the notification
             return empty_plot(), True, msg, json.dumps(selected_params)
 
+    @app.callback(
+        [
+            Output("download-html", "data"),
+            Output("download-html-toast", "is_open"),
+            Output("download-html-toast", "children"),
+            Output("download-html-button", "style"),
+        ],
+        [
+            Input("download-html-button", "n_clicks")
+        ],
+        [
+            State("selected_group", "children"),
+            State("current-settings", "children"),
+        ]
+    )
+    def download_html(n_clicks, selected_group, selected_params):
+        # If the button has not been clicked
+        if n_clicks is None:
+
+            # Take no action
+            raise PreventUpdate
+
+        # Otherwise
+        # If no group has been selected
+        if selected_group is None:
+
+            # Do not render the plot
+            logger.info("Cannot render heatmap, stopping")
+            raise PreventUpdate
+
+        # Otherwise, a group has been selected
+
+        # Parse both the ANI and selected group from the inputs
+        clustering_method, ani_threshold, selected_group = selected_group
+
+        logger.info(f"Selected clustering method: {clustering_method}")
+        logger.info(f"Selected group for heatmap: {selected_group}")
+        logger.info(f"Selected ANI threshold for heatmap: {ani_threshold}")
+
+        # Get the element which triggered the callback
+        trigger = ctx.triggered[0]['prop_id']
+
+        logger.info(f"Trigger: {trigger}")
+
+        # Parse the parameters from the serialized JSON
+        selected_params = json.loads(selected_params)
+
+        # Overwrite the ANI threshold using the value from the browser
+        # This is intended to prevent race conditions from other callbacks
+        selected_params["clustering-method"] = clustering_method
+        selected_params["ani-threshold"] = ani_threshold
+
+        # Try to render the figure
+        try:
+
+            # Generate a figure object
+            fig = plot_gig_map_heatmap(selected_group, selected_params)
+
+        # If there was an error
+        except Exception as e:
+
+            # Format a message to display
+            msg = f"Unable to render -- {e}"
+            logger.info(f"Encountered error: {e}")
+            logger.info(traceback.format_exc())
+
+            # Show an empty figure, and open the notification
+            return dict(content=traceback.format_exc(), filename="error.txt"), True, msg, {}
+
+        # At this point, the figure has been rendered
+
+        # Format the filename
+        now = datetime.now() # current date and time
+        filename = now.strftime("gig-map-%Y-%m-%d-%H-%M-%S.html")
+
+        # Save it to HTML
+        fig.write_html(filename, include_plotlyjs="cdn")
+
+        # Download the file
+        return dcc.send_file(filename), False, "", {}
+
+
 # If the user provided initial settings
 if args.settings is not None:
 
@@ -1878,6 +1963,32 @@ if args.color_genes_by is not None:
     # Add that to the initial settings
     initial_settings["color-genes-by"] = args.color_genes_by
 
+# Define a button which can be used to download HTML
+download_html_button = [
+    dbc.Spinner(
+        dbc.Button(
+            "Render HMTL",
+            id="download-html-button"
+        )
+    ),
+    dcc.Download(
+        id="download-html"
+    ),
+    dbc.Toast(
+        header="Download HTML",
+        id="download-html-toast",
+        dismissable=True,
+        is_open=False,
+        style=dict(
+            position="fixed",
+            top=100,
+            right=10,
+            width=350,
+            zIndex=10,
+        )
+    )
+]
+
 # Instantiate the MenuDrivenFigure object
 mdf = MenuDrivenFigure(
     data=data,
@@ -1890,7 +2001,8 @@ mdf = MenuDrivenFigure(
     # Add a hidden Div for the selected genome group
     state_variables=["selected_group", "plotted-settings"],
     title="Genes in Genomes Map",
-    initial_settings=initial_settings
+    initial_settings=initial_settings,
+    footer_div=download_html_button
 )
 
 # Decorate additional callbacks
