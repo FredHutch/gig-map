@@ -9,6 +9,7 @@ from dash.exceptions import PreventUpdate
 from dash.dependencies import Input, Output, State, ALL
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
+import dash_html_components as html
 from datetime import datetime
 from direct_redis import DirectRedis
 from functools import lru_cache
@@ -1939,6 +1940,25 @@ def add_callbacks(app):
         # Download the file
         return dcc.send_file(filename), False, "", {}
 
+    @app.callback(
+        Output("gene-annot-display", "children"),
+        [
+            Input("select-gene-annot-display", "value")
+        ]
+    )
+    def display_gene_annot(gene_id):
+        if gene_id is None:
+            return ""
+        elif data["gene_annotations"] is None:
+            return ""
+        elif gene_id not in data["gene_annotations"].index.values:
+            return "Annotation not found"
+        else:
+            return "\n".join([
+                f" - {k}: {v}"
+                for k, v in data["gene_annotations"].loc[gene_id].items()
+            ])
+
 
 # If the user provided initial settings
 if args.settings is not None:
@@ -1964,10 +1984,10 @@ if args.color_genes_by is not None:
     initial_settings["color-genes-by"] = args.color_genes_by
 
 # Define a button which can be used to download HTML
-download_html_button = [
+gigmap_footer = [
     dbc.Spinner(
         dbc.Button(
-            "Render HMTL",
+            "Render HTML",
             id="download-html-button"
         )
     ),
@@ -1986,6 +2006,21 @@ download_html_button = [
             width=350,
             zIndex=10,
         )
+    ),
+    html.Br(),
+    dcc.Dropdown(
+        id="select-gene-annot-display",
+        options=[
+            dict(
+                label=data["gene_ix"][gene_id],
+                value=data["gene_ix"][gene_id]
+            )
+            for gene_id in data["alignments"].gene_ix.unique()
+        ]
+    ),
+    html.Br(),
+    dcc.Markdown(
+        id="gene-annot-display"
     )
 ]
 
@@ -2002,7 +2037,7 @@ mdf = MenuDrivenFigure(
     state_variables=["selected_group", "plotted-settings"],
     title="Genes in Genomes Map",
     initial_settings=initial_settings,
-    footer_div=download_html_button
+    footer_div=gigmap_footer
 )
 
 # Decorate additional callbacks
