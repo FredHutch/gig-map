@@ -140,6 +140,11 @@ if aln.shape[0] > 0:
     ).query(
         f"coverage >= {min_coverage}"
     )
+
+    # In case there are any contigs named with numerals, convert to a string to match the FASTA
+    aln = aln.assign(
+        qseqid = aln.qseqid.apply(str)
+    )
     
     logger.info(f"{aln.shape[0]:,} alignments pass the coverage threshold of {min_coverage}")
 
