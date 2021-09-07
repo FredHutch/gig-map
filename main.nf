@@ -35,6 +35,7 @@ params.pick_marker_genes = 10
 // Import the processes to run in this workflow
 include {
     parse_genome_csv;
+    clean_genomes;
     fetchFTP;
     extract_dmnd;
     mash_sketch;
@@ -321,6 +322,11 @@ workflow {
 
     }
 
+    // Remove any trailing whitespace or carriage returns from genome files
+    clean_genomes(
+        all_genomes
+    )
+
     // If a file with all pairwise distances were provided by the user
     if (params.genome_distances){
 
@@ -334,7 +340,7 @@ workflow {
 
         // Compute compressed genome representations (sketches) with mash
         mash_sketch(
-            all_genomes
+            clean_genomes.out
         )
 
         // Combine all of the sketches
@@ -421,7 +427,7 @@ workflow {
         // Align the query genes against the genomes
         align_diamond(
             makedb_diamond.out,
-            all_genomes
+            clean_genomes.out
         )
 
         // Filter any overlapping alignments
@@ -444,7 +450,7 @@ workflow {
         // Align the query genes against the genomes
         align_blast(
             makedb_blast.out,
-            all_genomes
+            clean_genomes.out
         )
 
         // Filter any overlapping alignments
@@ -545,7 +551,7 @@ workflow {
         // Align the genomes against those markers
         align_markers(
             makedb_markers.out,
-            all_genomes
+            clean_genomes.out
         )
 
         // Filter any overlapping alignments
@@ -570,12 +576,12 @@ workflow {
     // markers which were discovered from the input data
     extract_markers(
         filter_by_selected_markers.out.join(
-            all_genomes.map({
+            clean_genomes.out.map({
                 it -> [it.name, it]
             })
         ).mix(
             alignments_from_user_markers.join(
-                all_genomes.map({
+                clean_genomes.out.map({
                     it -> [it.name, it]
                 })
             )

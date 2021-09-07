@@ -140,6 +140,44 @@ pd.DataFrame(annotation_list).set_index("genome_id").to_csv(
 }
 
 
+// Remove any trailing whitespaces from genome FASTAs
+process clean_genomes {
+    container "${container__pandas}"
+    label "io_limited"
+
+    input:
+        path genome_fasta
+    
+    output:
+        path "${genome_fasta}"
+    
+"""#!/bin/bash
+
+set -Eeuo pipefail
+
+# Function to clean input genomes
+clean_genome(){
+    tr -d '\\r' | sed 's/[ \\t]*\$//'
+}
+
+# If the genome is gzip-compressed
+if gzip -t "${genome_fasta}"; then
+    gunzip -c "${genome_fasta}" | clean_genome | gzip -c > TEMP
+else
+    # Otherwise, the file is not compressed
+    cat "${genome_fasta}" | clean_genome > TEMP
+fi
+
+# Delete the input file
+rm "${genome_fasta}"
+
+# Replace with the cleaned output
+mv TEMP "${genome_fasta}"
+
+"""
+}
+
+
 // Fetch a file via FTP
 process fetchFTP {
     container "${container__pandas}"
