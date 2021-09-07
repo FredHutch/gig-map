@@ -626,14 +626,16 @@ process combine_markers {
 
 set -e
 
+# Make a local copy of the decompressed FASTA
+gunzip -c ${unaligned_fasta} > input.fasta
 
-gunzip -c ${unaligned_fasta} \
-| clustalo \
-    --in - \
+# Run Clustal-Omega
+clustalo \
+    --in input.fasta \
     -t DNA \
     --full \
-    --distmat-out=${unaligned_fasta}.distmat \
-    --out=${unaligned_fasta}.msa \
+    --distmat-out="${unaligned_fasta.name}.distmat" \
+    --out="${unaligned_fasta.name}.msa" \
     --threads ${task.cpus} \
     --verbose \
     --outfmt=clustal
