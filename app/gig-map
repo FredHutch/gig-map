@@ -1043,7 +1043,7 @@ menus = [
                 label="Label Genomes By",
                 type="dropdown",
                 options=data['available_genome_labels'],
-                value="Formatted Name" if "Formatted Name" in data["genome_annotations"].columns.values else "",
+                value="Formatted Name" if (data["genome_annotations"] is not None and "Formatted Name" in data["genome_annotations"].columns.values) else "",
             ),
             # Limit the length of each genome label
             dict(
