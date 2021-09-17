@@ -1,9 +1,91 @@
 #!/usr/bin/env python3
 """Standalone script to render a gig-map as static files."""
 import argparse
+import logging
+import os
+from time import sleep
+
+from helpers import read_data
+
+def start_redis_server(rdb_fp, port=6379, host="127.0.0.1"):
+    """Start a redis server in the background which loads data from an RDB file."""
+    logger = logging.getLogger('gig-map')
+
+    # If the path to the RDB is not provided as an absoluate path
+    if not os.path.isabs(rdb_fp):
+
+        # Add the current working directory to make the relative path an absolute path
+        rdb_fp = os.path.join(os.getcwd(), rdb_fp)
+    
+    assert os.path.exists(rdb_fp), f"Could not find file {rdb_fp}"
+
+    # Get the name of the file separate from the name of the folder containing it
+    folder, filename = os.path.split(rdb_fp)
+
+    # Make sure that we've parsed the full file path correctly
+    assert os.path.exists(os.path.join(folder, filename)), f"Resolved filename incorrectly ({os.path.join(folder, filename)})"
+
+    cmd = f"redis-server --port {port} --bind {host} --dbfilename '{filename}' --dir {folder} &"
+    logger.info(f"Running command: {cmd}")
+    os.system(cmd)
+
+    # Wait for the server to start (20 seconds at the maximum)
+    for _ in range(20):
+        if os.system("redis-cli ping") == 0:
+            break
+        sleep(1)
+
+def stop_redis_server():
+    cmd = "redis-cli shutdown nosave"
+    logger.info(f"Running command: {cmd}")
+    os.system(cmd)
+
+
+def render_display(
+    rdb=None,
+    output_folder=os.getcwd(),
+    gene_annotations=None,
+    genome_annotations=None,
+    color_genes_by=None,
+    query=None,
+    host="127.0.0.1",
+    port=6379,
+):
+    """Main function for rendering the gig-map display as a static file."""
+    logger = logging.getLogger('gig-map')
+    
+    # Read and format the data
+    logger.info("Reading input data")
+    data = read_data(
+        dict(
+            host=host,
+            port=port,
+            gene_annotations=gene_annotations,
+            genome_annotations=genome_annotations
+        )
+    )
+
+    assert False
+
 
 if __name__ == "__main__":
-    
+
+    ##################
+    # SET UP LOGGING #
+    ##################
+
+    # Set the level of the logger to INFO
+    logFormatter = logging.Formatter(
+        '%(asctime)s %(levelname)-8s [gig-map] %(message)s'
+    )
+    logger = logging.getLogger('gig-map')
+    logger.setLevel(logging.INFO)
+
+    # Write to STDOUT
+    consoleHandler = logging.StreamHandler()
+    consoleHandler.setFormatter(logFormatter)
+    logger.addHandler(consoleHandler)
+
     ###################
     # PARSE ARGUMENTS #
     ###################
@@ -19,6 +101,12 @@ if __name__ == "__main__":
         type=str,
         default=None,
         help='Data file containing the output of the gig-map analysis pipeline'
+    )
+    parser.add_argument(
+        '--output-folder',
+        type=str,
+        required=True,
+        help='Folder used to write output files'
     )
     parser.add_argument(
         '--gene-annotations',
@@ -49,7 +137,31 @@ if __name__ == "__main__":
         in the `length` column is >= 100.
         """
     )
+    parser.add_argument(
+        '--host',
+        type=str,
+        default="127.0.0.1",
+        help='(optional) IP used to host redis server used to read alignment data'
+    )
+    parser.add_argument(
+        '--port',
+        type=int,
+        default=6379,
+        help='(optional) port used to host redis server used to read alignment data'
+    )
 
     # Parse the arguments
     args = parser.parse_args()
 
+    # Start the redis server
+    start_redis_server(args.rdb, host=args.host, port=args.port)
+
+    # Render the display
+    try:
+        render_display(**args.__dict__)
+
+    # Whenever we've stopped, either due to an error or otherwise
+    finally:
+
+        # Shut down the redis server
+        stop_redis_server()
