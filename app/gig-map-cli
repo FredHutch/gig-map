@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""Standalone script to render a gig-map as static files."""
+import argparse
+
+if __name__ == "__main__":
+    
+    ###################
+    # PARSE ARGUMENTS #
+    ###################
+
+    # Create the parser
+    parser = argparse.ArgumentParser(
+        description='Render a display showing the distribution of annotated genes across microbial genomes'
+    )
+
+    # Add the arguments
+    parser.add_argument(
+        '--rdb',
+        type=str,
+        default=None,
+        help='Data file containing the output of the gig-map analysis pipeline'
+    )
+    parser.add_argument(
+        '--gene-annotations',
+        type=str,
+        default=None,
+        help='(optional) Annotations for genes to use for plotting (must contain a column named `gene_id`)'
+    )
+    parser.add_argument(
+        '--genome-annotations',
+        type=str,
+        default=None,
+        help='(optional) Annotations for genomes to use for plotting (must contain a column named `genome_id`)'
+    )
+    parser.add_argument(
+        '--color-genes-by',
+        type=str,
+        default=None,
+        help='(optional) Indicate a column from the gene annotation table to use for coloring genes'
+    )
+    parser.add_argument(
+        '--query',
+        type=str,
+        default=None,
+        help="""
+        (optional) Filter the genes for display based on a string containing boolean logic to be applied to gene annotations.
+        For example, if the gene annotation file contains a column of numeric values with a header of `length`, then the query string
+        "length >= 100" would limit the set of genes which are ultimately displayed to only those genes for which the value
+        in the `length` column is >= 100.
+        """
+    )
+
+    # Parse the arguments
+    args = parser.parse_args()
+
