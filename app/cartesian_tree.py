@@ -1,4 +1,6 @@
 import pandas as pd
+from skbio import DistanceMatrix, TreeNode
+from skbio.tree import nj
 
 class CartesianTree:
 
