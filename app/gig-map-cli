@@ -9,7 +9,7 @@ from time import sleep
 from helpers import filter_alignments
 from helpers import read_data
 from helpers import render_gig_map_heatmap
-from helpers import order_genes
+from helpers import order_genes_nested
 from helpers import set_figure_height
 
 def start_redis_server(rdb_fp, port=6379, host="127.0.0.1"):
@@ -109,7 +109,7 @@ def render_display(
     if not skip_gene_resort:
 
         # Sort the genes by linkage clustering
-        data, plot_df = order_genes(data, plot_df)
+        data, plot_df = order_genes_nested(data, plot_df)
 
     # Set the figure height
     figure_height = set_figure_height(plot_df, figure_height)

@@ -1,3 +1,4 @@
+from nested_linkage_sorting import NestedLinkageSorting
 from cartesian_tree import make_nj_tree
 from direct_redis import DirectRedis
 import logging
@@ -7,8 +8,8 @@ import plotly.graph_objects as go
 from redis.exceptions import BusyLoadingError
 from scipy.cluster import hierarchy
 from scipy.spatial.distance import pdist
+from sklearn.decomposition import PCA
 from time import sleep
-
 
 ####################
 # HELPER FUNCTIONS #
@@ -478,7 +479,17 @@ def get_gene_annot_values(data, selections):
     return value_dict
 
 
-def order_genes(data, plot_df, method="ward", metric="euclidean"):
+def order_genes(
+    data,
+    plot_df,
+    method="average",
+    metric="braycurtis",
+    use_bool=False,
+    use_pca=False,
+    max_pcs=100,
+    max_n_genes_train_pca=1000,
+    reorder_hierarchy=True
+):
     """Reorder the genes based on linkage clustering."""
 
     # Get the logger
@@ -500,23 +511,74 @@ def order_genes(data, plot_df, method="ward", metric="euclidean"):
 
     logger.info(f"Sorting {pident_df.shape[0]:,} genes using data from {pident_df.shape[1]:,} genomes")
 
-    # Calculate the pairwise distances between genes
-    dists = pdist(pident_df.values, metric)
+    # If the distance metric is boolean
+    if use_bool:
+
+        # Transform pident to presence / absence
+        logger.info("Generating boolean presence/absence matrix")
+        pident_df = (pident_df > 0)
+
+    if use_pca:
+
+        # Initialize the PCA object
+        pca = PCA(
+            n_components=min(
+                pident_df.shape[1],
+                max_pcs
+            )
+        )
+
+        # Fit with a subset of the genes
+        logger.info("Training PCA")
+        pca.fit(
+            pident_df.sample(
+                min(
+                    pident_df.shape[0],
+                    max_n_genes_train_pca
+                )
+            )
+        )
+
+        # Get the PCA coordinates for the full set of genes
+        logger.info("Fitting PCA")
+        pca_coords = pca.transform(
+            pident_df.values
+        )
+
+        # Calculate the pairwise distances between genes
+        logger.info("Calculating pairwise distances")
+        dists = pdist(pca_coords, metric)
+
+    else:
+
+        # Calculate the pairwise distances between genes
+        logger.info(f"Calculating pairwise distances ({metric})")
+        dists = pdist(pident_df.values, metric)
 
     # Perform linkage clustering
+    logger.info(f"Performing linkage clustering ({method})")
     Z = hierarchy.linkage(
         dists,
         method=method
     )
 
-    # Order the tree so that adjacent leaves are more similar
-    Z_ordered = hierarchy.optimal_leaf_ordering(
-        Z,
-        dists
-    )
+    if reorder_hierarchy:
+        # Order the tree so that adjacent leaves are more similar
+        logger.info("Reordering hierarchy")
+        Z_ordered = hierarchy.optimal_leaf_ordering(
+            Z,
+            dists
+        )
 
-    # Get the ordered list of leaves
-    leaves_list = hierarchy.leaves_list(Z_ordered)
+        # Get the ordered list of leaves
+        logger.info("Remapping gene positional index")
+        leaves_list = hierarchy.leaves_list(Z_ordered)
+
+    else:
+
+        # Get the ordered list of leaves
+        logger.info("Remapping gene positional index")
+        leaves_list = hierarchy.leaves_list(Z)
 
     # Map the previous `gene_ix` to the new `gene_ix`
     gene_map = {
@@ -536,6 +598,256 @@ def order_genes(data, plot_df, method="ward", metric="euclidean"):
     ]
 
     return data, plot_df
+
+
+def order_genes_nested(
+    data,
+    plot_df,
+    method="average",
+    metric="braycurtis",
+):
+    """Reorder the genes based on nested linkage clustering."""
+
+    # Get the logger
+    logger = logging.getLogger("gig-map")
+
+    logger.info("Clustering genes by genome assignment")
+
+    # Make a rectangular matrix of gene pident across genomes
+    pident_df = plot_df.pivot(
+        index="gene_ix",
+        columns="genome_name",
+        values="pident"
+    ).fillna(
+        0
+    ).sort_index(
+        # Sort on the existing `gene_ix`
+        axis=0
+    )
+
+    logger.info(f"Sorting {pident_df.shape[0]:,} genes using data from {pident_df.shape[1]:,} genomes")
+
+    # Initialize a NestedLinkageSorting object
+    nest_sort = NestedLinkageSorting(
+        data_frame=pident_df,
+        method=method,
+        metric=metric,
+    )
+
+    # Sort the DataFrame
+    nest_sort.sort()
+
+    # Map the previous `gene_ix` to the new `gene_ix`
+    gene_map = {
+        old_ix: new_ix
+        for new_ix, old_ix in enumerate(
+            nest_sort.data_frame.index.values
+        )
+    }
+
+    # Replace the `gene_ix` values in `plot_df`
+    plot_df = plot_df.assign(
+        gene_ix=plot_df.gene_ix.apply(gene_map.get)
+    )
+
+    # Replace the `gene_ix` values in `data`
+    data["gene_ix"] = [
+        data["gene_ix"][i]
+        for i in nest_sort.data_frame.index.values
+    ]
+
+    return data, plot_df
+
+
+# def order_genes_umap(
+#     data,
+#     plot_df,
+#     metric="euclidean",
+#     n_neighbors=1000,
+#     min_dist=0.1,
+#     use_pca=True,
+#     max_pcs=20,
+#     max_n_genes_train_pca=10000,
+# ):
+#     """Reorder the genes using UMAP."""
+
+#     # Get the logger
+#     logger = logging.getLogger("gig-map")
+
+#     logger.info("Clustering genes by UMAP")
+
+#     # Make a rectangular matrix of gene pident across genomes
+#     pident_df = plot_df.pivot(
+#         index="gene_ix",
+#         columns="genome_name",
+#         values="pident"
+#     ).fillna(
+#         0
+#     )
+    
+#     logger.info(f"Arranging {pident_df.shape[0]:,} genes using data from {pident_df.shape[1]:,} genomes")
+
+#     # Initialize the UMAP
+#     logger.info("Initializing UMAP")
+#     logger.info(f"UMAP: metric={metric}")
+#     logger.info(f"UMAP: n_neighbors={n_neighbors}")
+#     logger.info(f"UMAP: min_dist={min_dist}")
+#     umap_model = umap.UMAP(
+#         n_components=1,
+#         metric=metric,
+#         n_neighbors=n_neighbors,
+#         min_dist=min_dist
+#     )
+
+#     if use_pca:
+
+#         # Initialize the PCA object
+#         pca = PCA(
+#             n_components=min(
+#                 pident_df.shape[1],
+#                 max_pcs
+#             )
+#         )
+
+#         # Fit with a subset of the genes
+#         logger.info("Training PCA")
+#         pca.fit(
+#             pident_df.sample(
+#                 min(
+#                     pident_df.shape[0],
+#                     max_n_genes_train_pca
+#                 )
+#             )
+#         )
+
+#         # Get the PCA coordinates for the full set of genes
+#         logger.info("Fitting PCA")
+#         pca_coords = pca.transform(
+#             pident_df.values
+#         )
+
+#         # Fit the PCA data
+#         logger.info("Running UMAP on PCA data")
+#         umap_coords = umap_model.fit_transform(
+#             pca_coords,
+#         )
+
+#     else:
+
+#         # Fit the total data
+#         logger.info("Running UMAP")
+#         umap_coords = umap_model.fit_transform(
+#             pident_df.values,
+#         )
+
+#     # Assign each gene to the UMAP space
+#     logger.info("Done running UMAP")
+#     gene_assignments = pd.Series(
+#         {
+#             gene_id: umap_coords[i][0]
+#             for i, gene_id in enumerate(pident_df.index.values)
+#         }
+#     )
+
+#     # Order the genes by the SOM
+#     gene_assignments = gene_assignments.sort_values()
+
+#     # Map the previous `gene_ix` to the new `gene_ix`
+#     gene_map = {
+#         j: i
+#         for i, j in enumerate(gene_assignments.index.values)
+#     }
+
+#     # Replace the `gene_ix` values in `plot_df`
+#     plot_df = plot_df.assign(
+#         gene_ix=plot_df.gene_ix.apply(gene_map.get)
+#     )
+
+#     # Replace the `gene_ix` values in `data`
+#     data["gene_ix"] = [
+#         data["gene_ix"][i]
+#         for i in gene_assignments.index.values
+#     ]
+
+#     return data, plot_df
+
+
+# def order_genes_som(
+#     data,
+#     plot_df,
+#     sigma=0.3,
+#     learning_rate=0.5,
+#     n_iter_training=10000
+# ):
+#     """Reorder the genes using a self-organizing map."""
+
+#     # Get the logger
+#     logger = logging.getLogger("gig-map")
+
+#     logger.info("Clustering genes by SOM")
+
+#     # Make a rectangular matrix of gene pident across genomes
+#     pident_df = plot_df.pivot(
+#         index="gene_ix",
+#         columns="genome_name",
+#         values="pident"
+#     ).fillna(
+#         0
+#     ).sort_index(
+#         # Sort on the existing `gene_ix`
+#         axis=0
+#     )
+
+#     logger.info(f"Sorting {pident_df.shape[0]:,} genes using data from {pident_df.shape[1]:,} genomes")
+
+#     # Use 10*sqrt(N) neurons
+#     n_neurons = int(10 * np.sqrt(pident_df.shape[0]))
+#     logger.info(f"Using {n_neurons:,} neurons in the SOM")
+
+#     # Initialize the SOM
+#     som = MiniSom(
+#         n_neurons,
+#         1,
+#         pident_df.shape[1],
+#         sigma=sigma,
+#         learning_rate=learning_rate
+#     )
+#     logger.info(f"Training with {n_iter_training:,} iterations")
+#     som.train_random(
+#         pident_df.values,
+#         n_iter_training
+#     )
+
+#     # Get the assigned neuron for each gene
+#     logger.info("Picking winners for each gene")
+#     gene_assignments = pd.Series(
+#         {
+#             i: som.winner(v.values)[0]
+#             for i, v in pident_df.iterrows()
+#         }
+#     )
+
+#     # Order the genes by the SOM
+#     gene_assignments = gene_assignments.sort_values()
+
+#     # Map the previous `gene_ix` to the new `gene_ix`
+#     gene_map = {
+#         j: i
+#         for i, j in enumerate(gene_assignments.index.values)
+#     }
+
+#     # Replace the `gene_ix` values in `plot_df`
+#     plot_df = plot_df.assign(
+#         gene_ix=plot_df.gene_ix.apply(gene_map.get)
+#     )
+
+#     # Replace the `gene_ix` values in `data`
+#     data["gene_ix"] = [
+#         data["gene_ix"][i]
+#         for i in gene_assignments.index.values
+#     ]
+
+#     return data, plot_df
 
 def set_figure_height(plot_df, figure_height, height_frac=20, height_padding=200):
     """Dynamically set the figure height based on the number of genomes."""
