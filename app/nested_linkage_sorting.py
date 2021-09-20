@@ -26,9 +26,9 @@ class NestedLinkageSorting:
         # Distance metric used for 
         metric:str="braycurtis",
         # The number of clusters to generate at each level
-        k:int=100,
+        k:int=20,
         # Only perform clustering for datasets with sufficient rows
-        min_cluster_threshold:int=100,
+        min_cluster_threshold:int=500,
         # Function to use when aggregating members of groups
         agg_func=np.mean
     ):
@@ -88,23 +88,23 @@ class NestedLinkageSorting:
             columns=self.data_frame.index,
         )
         elapsed = time() - t
-        self.logger.info(f"Calculated pairwise distances in {elapsed:.2E} seconds")
+        self.logger.info(f"Calculated pairwise distances in {elapsed:.2} seconds")
 
-        # Initialize the PCA object
-        self.pca = PCA(
-            n_components=self.dists.shape[0]
-        )
+        # # Initialize the PCA object
+        # self.pca = PCA(
+        #     n_components=self.dists.shape[0]
+        # )
 
-        # Fit with PCA
-        t = time()
-        self.pca_df = pd.DataFrame(
-            self.pca.fit_transform(
-                self.dists
-            ),
-            index=self.dists.index
-        )
-        elapsed = time() - t
-        self.logger.info(f"Ran PCA in {elapsed:.2E} seconds")
+        # # Fit with PCA
+        # t = time()
+        # self.pca_df = pd.DataFrame(
+        #     self.pca.fit_transform(
+        #         self.dists
+        #     ),
+        #     index=self.dists.index
+        # )
+        # elapsed = time() - t
+        # self.logger.info(f"Ran PCA in {elapsed:.2E} seconds")
 
     def sort(self):
         """
@@ -162,10 +162,13 @@ class NestedLinkageSorting:
         )
 
         # Fit to the data and predict labels for each row
+        t = time()
         labels = model.fit_predict(
-            self.pca_df,
-            sample_weight=self.pca.explained_variance_ratio_
+            self.dists,
+            # sample_weight=self.pca.explained_variance_ratio_
         )
+        elapsed = time() - t
+        self.logger.info(f"Performed K-means clustering in {elapsed:.2} seconds")
 
         # Make a list of lists with the members of each cluster
         self.groups = defaultdict(list)
@@ -193,17 +196,18 @@ class NestedLinkageSorting:
             for i in self.group_data_frame.index.values
         ]
 
-    def order_groups(self):
-        """Order the groups based on linkage clustering."""
+    def cluster_by_linkage(self, df):
+        """Reusable function to perform linkage clustering."""
 
         # If there are not at least 3 groups
-        if len(self.groups) < 3:
+        if df.shape[0] < 3:
 
             # No need to perform clustering
-            return
+            return df
 
         # Calculate pairwise distances
-        dists = pdist(self.group_data_frame, self.metric)
+        t = time()
+        dists = pdist(df, self.metric)
 
         # Perform linkage clustering
         Z = hierarchy.linkage(
@@ -216,17 +220,37 @@ class NestedLinkageSorting:
             Z,
             dists
         )
+        elapsed = time() - t
+        self.logger.info(f"Performed linkage clustering of {df.shape[0]:,} rows in {elapsed:.2} seconds")
 
         # Get the ordered list of leaves
         leaves_list = hierarchy.leaves_list(Z_ordered)
 
         # Reorder the group_data_frame
-        self.group_data_frame = self.group_data_frame.iloc[leaves_list]
+        df = df.iloc[leaves_list]
+
+        return df
+
+    def order_groups(self):
+        """Order the groups based on linkage clustering."""
+
+        # Keep track of the previous order of the groups
+        input_group_order = {
+            group_id: group_ix
+            for group_ix, group_id in enumerate(
+                self.group_data_frame.index.values
+            )
+        }
+
+        # Use linkage clustering to sort the group-level DataFrame
+        self.group_data_frame = self.cluster_by_linkage(
+            self.group_data_frame
+        )
 
         # Reorder the group membership list
         self.groups = [
-            self.groups[i]
-            for i in leaves_list
+            self.groups[input_group_order[i]]
+            for i in self.group_data_frame.index.values
         ]
 
     def concatenate_groups(self):
@@ -255,17 +279,30 @@ class NestedLinkageSorting:
         """For a subset of the input data, sort and return the sorted DataFrame."""
 
         # Make a NestedLinkageSorting object for this group
-        subgroup = NestedLinkageSorting(
-            self.data_frame.reindex(index=group_members).copy(),
-            method=self.method,
-            metric=self.metric,
-            k=self.k,
-            min_cluster_threshold=self.min_cluster_threshold,
-            agg_func=self.agg_func
-        )
+        try:
+            subgroup = NestedLinkageSorting(
+                self.data_frame.reindex(
+                    index=group_members
+                ).copy(),
+                method=self.method,
+                metric=self.metric,
+                k=self.k,
+                min_cluster_threshold=self.min_cluster_threshold,
+                agg_func=self.agg_func
+            )
 
-        # Sort it
-        subgroup.sort()
+            # Sort it
+            subgroup.sort()
 
-        # Return the sorted values
-        return subgroup.data_frame
+            # Return the sorted values
+            return subgroup.data_frame
+
+        # If we have reached the maximum recursion depth
+        except RecursionError:
+
+            # Then just sort by linkage clustering
+            return self.cluster_by_linkage(
+                self.data_frame.reindex(
+                    index=group_members
+                ).copy()
+            )
