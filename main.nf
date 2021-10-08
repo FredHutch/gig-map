@@ -61,7 +61,7 @@ include {
     select_markers;
     subset_alignments_by_genes as filter_by_selected_markers;
     extract_markers;
-    reorganize_markers;
+    extract_markers as extract_all_genes;
     combine_markers;
     cluster_genomes;
     cluster_genomes as cluster_genomes_by_marker;
@@ -84,6 +84,18 @@ include {
     ani_thresholds: params.ani_thresholds,
     parse_genome_csv_suffix: "_genomic.fna.gz",
     publishFTP: 'false'
+)
+
+// Reorganize the markers, but don't publish any output files
+include { reorganize_markers } from './modules' params(
+    publishGenes: false,
+    output_folder: params.output_folder
+)
+
+// Reorganize the genes, and also publish the output files
+include { reorganize_markers as reorganize_genes } from './modules' params(
+    publishGenes: true,
+    output_folder: params.output_folder
 )
 
 // Function which prints help message text
@@ -570,6 +582,21 @@ workflow {
         alignments_from_user_markers = Channel.empty()
 
     }
+
+    // Extract the aligned regions for all genes
+    extract_all_genes(
+        alignments_output.out.join(
+            clean_genomes.out.map({
+                it -> [it.name, it]
+            })
+        )
+    )
+
+    // Next we will reformat the genes to have one file per gene,
+    // with the FASTA headers indicating the genome of origin
+    reorganize_genes(
+        extract_all_genes.out.toSortedList()
+    )
 
     // Extract the aligned regions for each marker,
     // combining the markers provided by the user with the 
