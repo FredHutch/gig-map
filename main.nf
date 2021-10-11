@@ -61,7 +61,6 @@ include {
     select_markers;
     subset_alignments_by_genes as filter_by_selected_markers;
     extract_markers;
-    extract_markers as extract_all_genes;
     combine_markers;
     cluster_genomes;
     cluster_genomes as cluster_genomes_by_marker;
@@ -93,8 +92,13 @@ include { reorganize_markers } from './modules' params(
 )
 
 // Reorganize the genes, and also publish the output files
-include { reorganize_markers as reorganize_genes } from './modules' params(
+include { 
+    reorganize_markers as reorganize_genes;
+    extract_markers as extract_all_genes;
+ } from './modules' params(
     publishGenes: true,
+    aln_fmt: params.aln_fmt,
+    min_marker_coverage: 0,
     output_folder: params.output_folder
 )
 
