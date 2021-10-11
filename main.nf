@@ -585,7 +585,7 @@ workflow {
 
     // Extract the aligned regions for all genes
     extract_all_genes(
-        alignments_output.out.join(
+        alignments_output.join(
             clean_genomes.out.map({
                 it -> [it.name, it]
             })
