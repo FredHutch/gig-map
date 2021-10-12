@@ -51,6 +51,8 @@ for input_fp in os.listdir(input_folder):
     # Each file must have the suffix .markers.fasta.gz
     assert input_fp.endswith(input_file_ending)
 
+    print(f"Reading in {input_fp}")
+
     # Read in the sequence for each marker
     # The header for each record is:
     #     >{marker_name}::{genome_name}
@@ -78,9 +80,12 @@ for input_fp in os.listdir(input_folder):
 
 # Format as a DataFrame
 df = pd.DataFrame(output)
+print(f"Read in {df.shape[0]:,} records in total")
 
 # Iterate over the markers
 for marker_name, marker_df in df.groupby("marker_name"):
+
+    print(f"Reorganizing genes for {marker_name}")
 
     # Make sure that we only write out a single sequence for each genome
     # This should only be an edge case that comes up when the user provides
@@ -88,10 +93,9 @@ for marker_name, marker_df in df.groupby("marker_name"):
     written_genomes = set()
 
     # Open a file path for the output
-    with gzip.open(
-        os.path.join(output_folder, f"{marker_name}{output_file_ending}"),
-        "wt"
-    ) as handle:
+    fpo = os.path.join(output_folder, f"{marker_name}{output_file_ending}")
+    print(f"Writing out to {fpo}")
+    with gzip.open(fpo, "wt") as handle:
 
         # Iterate over the sequences for each genome
         for _, r in marker_df.iterrows():
@@ -110,3 +114,4 @@ for marker_name, marker_df in df.groupby("marker_name"):
 
                 # Note that we've written out this genome
                 written_genomes.add(r.genome_name)
+print("DONE")
