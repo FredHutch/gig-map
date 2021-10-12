@@ -97,7 +97,6 @@ include {
     extract_markers as extract_all_genes;
  } from './modules' params(
     publishGenes: true,
-    aln_fmt: params.aln_fmt,
     min_marker_coverage: 0,
     output_folder: params.output_folder
 )
