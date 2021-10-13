@@ -636,7 +636,7 @@ process reorganize_markers {
         file "fastas_by_genome/*.markers.fasta.gz"
 
     output:
-        file "fastas_by_marker/*"
+        file "fastas_by_marker/*.markers.fasta.gz"
 
 """#!/bin/bash
 
