@@ -1,6 +1,8 @@
 # GiG-map (Genes in Genomes - Map)
 Build a map of genes present across a set of microbial genomes
 
+[![Docker Repository on Quay](https://quay.io/repository/hdc-workflows/gig-map/status "Docker Repository on Quay")](https://quay.io/repository/hdc-workflows/gig-map)
+
 # Background
 
 When trying to understand the biological context of a set of microbial protein-coding
