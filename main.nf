@@ -324,7 +324,10 @@ workflow {
 
     // Remove any trailing whitespace or carriage returns from genome files
     clean_genomes(
-        all_genomes
+        // Pass in the file name as well as the file itself
+        all_genomes.map {
+            [it.name, it]
+        }
     )
 
     // If a file with all pairwise distances were provided by the user

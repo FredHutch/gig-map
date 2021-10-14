@@ -146,10 +146,10 @@ process clean_genomes {
     label "io_limited"
 
     input:
-        path genome_fasta
+        tuple val(output_file_name), path("INPUT.${output_file_name}")
     
     output:
-        path "${genome_fasta}"
+        path "${output_file_name}"
     
 """#!/bin/bash
 
@@ -161,18 +161,12 @@ clean_genome(){
 }
 
 # If the genome is gzip-compressed
-if gzip -t "${genome_fasta}"; then
-    gunzip -c "${genome_fasta}" | clean_genome | gzip -c > TEMP
+if gzip -t "INPUT.${output_file_name}"; then
+    gunzip -c "INPUT.${output_file_name}" | clean_genome | gzip -c > "${output_file_name}"
 else
     # Otherwise, the file is not compressed
-    cat "${genome_fasta}" | clean_genome > TEMP
+    cat "INPUT.${output_file_name}" | clean_genome > "${output_file_name}"
 fi
-
-# Delete the input file
-rm "${genome_fasta}"
-
-# Replace with the cleaned output
-mv TEMP "${genome_fasta}"
 
 """
 }
