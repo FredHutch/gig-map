@@ -36,7 +36,8 @@ RUN /usr/bin/env python3 -m pip install \
     git+https://github.com/FredHutch/menu-driven-figure.git@e29bef4
 ADD app/ /usr/bin/local/
 RUN ln -s /usr/bin/local/gig-map /usr/local/bin/ && \
-    gig-map --help \
+    ln -s /usr/bin/local/gig-map-cli /usr/local/bin/ && \
+    gig-map --help && \
     gig-map-cli --help
 RUN mkdir /work
 WORKDIR /work
