@@ -54,7 +54,7 @@ def helpMessage() {
 process render {
     container "${params.container__gigmap}"
     memory "${params.mem_gbs}.GB"
-    publishDir "${params.output}"
+    publishDir "${params.output_folder}"
 
     input:
     path RDB
@@ -77,7 +77,7 @@ gig-map-cli \
 process render_genes_genomes {
     container "${params.container__gigmap}"
     memory "${params.mem_gbs}.GB"
-    publishDir "${params.output}"
+    publishDir "${params.output_folder}"
 
     input:
     path RDB
@@ -104,7 +104,7 @@ gig-map-cli \
 process render_genes {
     container "${params.container__gigmap}"
     memory "${params.mem_gbs}.GB"
-    publishDir "${params.output}"
+    publishDir "${params.output_folder}"
 
     input:
     path RDB
@@ -130,7 +130,7 @@ gig-map-cli \
 process render_genomes {
     container "${params.container__gigmap}"
     memory "${params.mem_gbs}.GB"
-    publishDir "${params.output}"
+    publishDir "${params.output_folder}"
 
     input:
     path RDB
