@@ -53,8 +53,8 @@ def helpMessage() {
 // Define the process for rendering an HTML file from an RDB input
 process render {
     container "${params.container__gigmap}"
-    memory "${param.mem_gbs}.GB"
-    publishDir
+    memory "${params.mem_gbs}.GB"
+    publishDir "${params.output}"
 
     input:
     path RDB
@@ -75,8 +75,8 @@ gig-map-cli \
 
 process render_genes_genomes {
     container "${params.container__gigmap}"
-    memory "${param.mem_gbs}.GB"
-    publishDir
+    memory "${params.mem_gbs}.GB"
+    publishDir "${params.output}"
 
     input:
     path RDB
@@ -101,8 +101,8 @@ gig-map-cli \
 
 process render_genes {
     container "${params.container__gigmap}"
-    memory "${param.mem_gbs}.GB"
-    publishDir
+    memory "${params.mem_gbs}.GB"
+    publishDir "${params.output}"
 
     input:
     path RDB
@@ -126,8 +126,8 @@ gig-map-cli \
 
 process render_genomes {
     container "${params.container__gigmap}"
-    memory "${param.mem_gbs}.GB"
-    publishDir
+    memory "${params.mem_gbs}.GB"
+    publishDir "${params.output}"
 
     input:
     path RDB
@@ -187,7 +187,7 @@ workflow {
             )
         }
         if (!params.gene_annotations && !params.genome_annotations){
-            render_genomes(
+            render(
                 file(params.rdb)
             )
         }
