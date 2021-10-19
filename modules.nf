@@ -340,7 +340,16 @@ def parse_fasta(handle):
     print(f"Read in a total of {counter:,} FASTA records")
 
 
-if input_fp.endswith(".gz"):
+def is_gzip_compressed(fp):
+    with gzip.open(fp, 'rt') as handle:
+        try:
+            handle.read(1)
+            return True
+        except:
+            return False
+
+
+if is_gzip_compressed(input_fp):
     input_handle = gzip.open(input_fp, "rt")
 else:
     input_handle = open(input_fp, "r")
