@@ -11,6 +11,7 @@ params.genomes = false
 params.genes_fasta = false
 params.genes_dmnd = false
 params.genome_tables = false
+params.min_gene_length = false
 params.min_coverage = 90
 params.min_identity = 90
 params.aligner = 'diamond'
@@ -41,6 +42,7 @@ include {
     mash_sketch;
     mash_join;
     mash_dist;
+    filter_genes;
     aggregate_distances;
     makedb_blast;
     makedb_blast as makedb_markers;
@@ -70,6 +72,7 @@ include {
     output_folder: params.output_folder,
     ftp_output_folder: "${params.output_folder}/genomes",
     output_prefix: params.output_prefix,
+    min_gene_length: params.min_gene_length,
     min_identity: params.min_identity,
     min_coverage: params.min_coverage,
     min_marker_coverage: params.min_marker_coverage,
@@ -119,6 +122,7 @@ def helpMessage() {
       --min_marker_coverage Minimum percent coverage required to use the aligned marker sequence
                             from a particular genome (default: 50)
       --aligner             Alignment algorithm to use (options: diamond, blast; default: diamond)
+      --min_gene_length     If specified, filter out any gene shorter than this number of amino acids
       --min_identity        Percent identity threshold used for alignment (default: 90)
       --min_coverage        Percent coverage threshold used for alignment (default: 90)
       --ftp_threads         Number of FTP downloads to execute concurrently (default: 25)
@@ -419,12 +423,24 @@ workflow {
             combined_genes_ch
         }
 
+    // If the user specified a minimum gene length
+    if ( params.min_gene_length ){
+
+        // Filter each FASTA by a minimum length
+        filter_genes(
+            combined_genes_ch
+        )
+        filtered_genes_ch = filter_genes.out
+    } else {
+        filtered_genes_ch = combined_genes_ch
+    }
+
     // If the user has selected DIAMOND for alignment
     if (params.aligner == "diamond"){
 
         // Make a DIAMOND database for the input genes
         makedb_diamond(
-            combined_genes_ch.toSortedList()
+            filtered_genes_ch.toSortedList()
         )
 
         // Align the query genes against the genomes
@@ -447,7 +463,7 @@ workflow {
 
         // Make a BLAST database for the input genes
         makedb_blast(
-            combined_genes_ch.toSortedList()
+            filtered_genes_ch.toSortedList()
         )
 
         // Align the query genes against the genomes
