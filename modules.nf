@@ -6,6 +6,7 @@ container__diamond = "quay.io/biocontainers/diamond:2.0.11--hdcc8f71_0"
 container__cdhit = "quay.io/biocontainers/cd-hit:4.8.1--h2e03b76_5"
 container__clustal = "quay.io/hdc-workflows/clustalo:main"
 container__emboss = "biocontainers/emboss:v6.6.0dfsg-7b1-deb_cv1"
+container__raxml = "quay.io/biocontainers/raxml-ng:1.0.3--h32fcf60_0"
 
 // Default values for parameters
 params.output_folder = 'output'
@@ -728,11 +729,11 @@ process combine_markers {
     publishDir "${params.output_folder}/markers/", mode: 'copy', overwrite: true
 
     input:
-        file unaligned_fasta
+        path unaligned_fasta
 
     output:
-        file "${unaligned_fasta}.distmat"
-        file "${unaligned_fasta}.msa"
+        path "${unaligned_fasta}.distmat", emit: distmat
+        path "${unaligned_fasta}.msa", emit: msa
 
 """#!/bin/bash
 
@@ -750,9 +751,27 @@ clustalo \
     --out="${unaligned_fasta.name}.msa" \
     --threads ${task.cpus} \
     --verbose \
-    --outfmt=clustal
+    --outfmt=fasta
 
 """
+}
+
+// Build an ML tree from the MSA
+process raxml {
+    container "${container__raxml}"
+    label 'mem_veryhigh'
+    publishDir "${params.output_folder}/markers/", mode: 'copy', overwrite: true
+
+    input:
+        path aln_fasta
+    
+    output:
+        path "${aln_fasta.name}.raxml.bestTree"
+        path "${aln_fasta.name}.raxml.bestModel"
+        path "${aln_fasta.name}.raxml.log"
+    
+    script:
+    template 'raxml.sh'
 }
 
 

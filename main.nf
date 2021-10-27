@@ -31,6 +31,9 @@ params.cluster_coverage = 0.9
 params.marker_genes = false
 params.min_marker_coverage = 90
 params.pick_marker_genes = 10
+params.raxml_model = "LG+G8+F"
+params.raxml_starting_trees = 10
+params.raxml_bs_trees = 200
 
 
 // Import the processes to run in this workflow
@@ -65,6 +68,7 @@ include {
     extract_markers;
     reorganize_markers;
     combine_markers;
+    raxml;
     cluster_genomes;
     cluster_genomes as cluster_genomes_by_marker;
     aggregate_results;
@@ -86,7 +90,10 @@ include {
     sketch_size: params.sketch_size,
     ani_thresholds: params.ani_thresholds,
     parse_genome_csv_suffix: "_genomic.fna.gz",
-    publishFTP: 'false'
+    publishFTP: 'false',
+    raxml_model: params.raxml_model,
+    raxml_starting_trees: params.raxml_starting_trees,
+    raxml_bs_trees: params.raxml_bs_trees
 )
 
 // Function which prints help message text
@@ -625,7 +632,7 @@ workflow {
     // in the region of the marker genes
     cluster_genomes_by_marker(
         concatenate_alignments.out.combine(
-            combine_markers.out[0]
+            combine_markers.out.distmat
         ).combine(
             Channel.of(
                 params.ani_thresholds.split(/,/)
@@ -639,7 +646,10 @@ workflow {
 
     // Set up a handle for the output of all the genome distances
     // for all markers
-    genome_distances_by_marker = combine_markers.out[0].toSortedList()
+    genome_distances_by_marker = combine_markers.out.distmat.toSortedList()
+
+    // Generate phylogenetic trees for each marker gene
+    raxml(combine_markers.out.msa)
 
     // Group together all results into a single HDF5 file object
     aggregate_results(
