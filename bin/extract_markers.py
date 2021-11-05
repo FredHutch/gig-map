@@ -136,7 +136,7 @@ if aln.shape[0] > 0:
 
     # Filter by the minimum coverage threshold
     aln = aln.assign(
-        coverage = 100. * aln.length / aln.slen
+        coverage = 100. * aln['length'] / aln['slen']
     ).query(
         f"coverage >= {min_coverage}"
     )
@@ -153,7 +153,7 @@ if aln.shape[0] > 0:
 
         # Assign a score based on alignment length and sequence identity
         aln = aln.assign(
-            score = aln.pident * aln.length
+            score = aln.pident * aln['length']
         )
 
         # Make a dict with the aligned sequence for each marker

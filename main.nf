@@ -66,7 +66,6 @@ include {
     select_markers;
     subset_alignments_by_genes as filter_by_selected_markers;
     extract_markers;
-    reorganize_markers;
     combine_markers;
     raxml;
     cluster_genomes;
@@ -94,6 +93,22 @@ include {
     raxml_model: params.raxml_model,
     raxml_starting_trees: params.raxml_starting_trees,
     raxml_bs_trees: params.raxml_bs_trees
+)
+
+// Reorganize the markers, but don't publish any output files
+include { reorganize_markers } from './modules' params(
+    publishGenes: false,
+    output_folder: params.output_folder
+)
+
+// Reorganize the genes, and also publish the output files
+include { 
+    reorganize_markers as reorganize_genes;
+    extract_markers as extract_all_genes;
+ } from './modules' params(
+    publishGenes: true,
+    min_marker_coverage: 0,
+    output_folder: params.output_folder
 )
 
 // Function which prints help message text
@@ -596,6 +611,21 @@ workflow {
         alignments_from_user_markers = Channel.empty()
 
     }
+
+    // Extract the aligned regions for all genes
+    extract_all_genes(
+        alignments_output.join(
+            clean_genomes.out.map({
+                it -> [it.name, it]
+            })
+        )
+    )
+
+    // Next we will reformat the genes to have one file per gene,
+    // with the FASTA headers indicating the genome of origin
+    reorganize_genes(
+        extract_all_genes.out.toSortedList()
+    )
 
     // Extract the aligned regions for each marker,
     // combining the markers provided by the user with the 

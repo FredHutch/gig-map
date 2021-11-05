@@ -705,12 +705,13 @@ gzip \$OUTPUT_PATH
 process reorganize_markers {
     container "${container__pandas}"
     label "io_limited"
+    publishDir "${params.output_folder}/genes/", mode: 'copy', overwrite: true, enabled: "${params.publishGenes}" == "true"
 
     input:
         file "fastas_by_genome/*.markers.fasta.gz"
 
     output:
-        file "fastas_by_marker/*"
+        file "fastas_by_marker/*.markers.fasta.gz"
 
 """#!/bin/bash
 
