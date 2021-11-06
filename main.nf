@@ -33,7 +33,7 @@ params.min_marker_coverage = 90
 params.pick_marker_genes = 10
 params.raxml_model = "LG+G8+F"
 params.raxml_starting_trees = 10
-params.raxml_bs_trees = 200
+params.raxml_bs_trees = 10
 
 
 // Import the processes to run in this workflow
