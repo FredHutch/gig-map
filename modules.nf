@@ -39,105 +39,10 @@ process parse_genome_csv {
     output:
         path "url_list.txt"
         path "genome_annotations.csv.gz"
-    
-"""
-#!/usr/bin/env python3
 
-import pandas as pd
-import re
+    script:
+    template "parse_genome_csv.py"
 
-df = pd.read_csv("input.csv")
-
-# Make a list of URLs to download
-url_list = []
-
-# Function to format the path to the genome FASTA
-def format_ftp(ftp_prefix):
-
-    assert isinstance(ftp_prefix, str)
-    assert ftp_prefix.startswith("ftp://")
-    assert "/" in ftp_prefix
-    assert not ftp_prefix.endswith("/")
-
-    # The ID of the assembly is the final directory name
-    id_str = ftp_prefix.rsplit("/", 1)[-1]
-
-    # Return the path to the genome FASTA
-    return f"{ftp_prefix}/{id_str}${params.parse_genome_csv_suffix}"
-
-# Populate a list with formatted annotations for each file
-# which will be downloaded from NCBI
-annotation_list = []
-
-# Function to format the annotation for each row
-def format_annotation(r):
-
-    # Get the name of the file which will be downloaded
-    annots = dict(
-        genome_id=r["GenBank FTP"].rsplit("/", 1)[-1] + "${params.parse_genome_csv_suffix}"
-    )
-
-    # Rename fields
-    for k, n in [
-        ("#Organism Name", "Organism"),
-        ("Strain", "Strain"),
-        ("BioSample", "BioSample"),
-        ("BioProject", "BioProject"),
-        ("Assembly", "Assembly"),
-        ("Size(Mb)", "Size_Mb"),
-        ("GC%", "GC_percent"),
-        ("CDS", "CDS")
-    ]:
-        annots[n] = r[k]
-
-    # Format a combined name
-    combined_name = annots["Organism"]
-    if isinstance(annots["Strain"], str):
-        combined_name = combined_name + "(" + annots["Strain"] + ")"
-    annots["Formatted Name"] = combined_name + "[" + annots["Assembly"] + "]"
-
-    return annots
-
-# Iterate over each row in the table
-for _, r in df.iterrows():
-    
-    # If there is no value in the 'GenBank FTP' column
-    if pd.isnull(r['GenBank FTP']):
-    
-        # Skip it
-        continue
-    
-    # If the 'GenBank FTP' column doesn't start with 'ftp://'
-    elif not r['GenBank FTP'].startswith('ftp://'):
-    
-        # Skip it
-        continue
-
-    # Otherwise
-    else:
-
-        # Format the path to the genome in that folder
-        url_list.append(
-            format_ftp(r['GenBank FTP'])
-        )
-
-        # Format the annotations
-        annotation_list.append(
-            format_annotation(r)
-        )
-
-# Write the list to a file
-with open("url_list.txt", "w") as handle:
-
-    # Each URL on its own line
-    handle.write("\\n".join(url_list))
-
-# Write the annotations to a CSV
-pd.DataFrame(annotation_list).set_index("genome_id").to_csv(
-    "genome_annotations.csv.gz"
-)
-
-"""
 }
 
 
@@ -151,25 +56,10 @@ process clean_genomes {
     
     output:
         path "${output_file_name}"
+
+    script:
+    template "clean_genomes.sh"
     
-"""#!/bin/bash
-
-set -Eeuo pipefail
-
-# Function to clean input genomes
-clean_genome(){
-    tr -d '\\r' | sed 's/[ \\t]*\$//'
-}
-
-# If the genome is gzip-compressed
-if gzip -t "INPUT.${output_file_name}"; then
-    gunzip -c "INPUT.${output_file_name}" | clean_genome | gzip -c > "${output_file_name}"
-else
-    # Otherwise, the file is not compressed
-    cat "INPUT.${output_file_name}" | clean_genome > "${output_file_name}"
-fi
-
-"""
 }
 
 
@@ -186,38 +76,10 @@ process fetchFTP {
     
     output:
         file "*" optional params.skip_missing_ftp == "true"
+
+    script:
+    template "fetchFTP.py"
     
-"""#!/usr/bin/env python3
-
-import shutil
-import urllib.request as request
-from urllib.error import URLError
-from contextlib import closing
-
-
-remote_path = "${ftp_url}"
-local_path = remote_path.rsplit("/", 1)[-1]
-print(f"Downloading from {remote_path}")
-print(f"Local path is {local_path}")
-
-try:
-    with closing(
-        request.urlopen(
-            remote_path,
-            timeout=60
-        )
-    ) as r:
-        with open(local_path, 'wb') as f:
-            shutil.copyfileobj(r, f)
-except URLError as e:
-    print("The URL appears to not be valid")
-    if "${params.skip_missing_ftp}" == "true":
-        print("Missing FTP paths will be ignored")
-    else:
-        print("Raising error")
-        raise e
-
-"""
 }
 
 
@@ -303,74 +165,9 @@ process filter_genes {
     output:
         path "${input_fasta.name}.filtered.fasta"
     
-"""#!/usr/bin/env python3
+    script:
+    template "filter_genes.py"
 
-import gzip
-import os
-
-input_fp = "${input_fasta}"
-assert os.path.exists(input_fp)
-output_fp = "${input_fasta.name}.filtered.fasta"
-print(f"Reading in {input_fp}, writing to {output_fp}")
-
-min_gene_len = ${params.min_gene_length}
-assert isinstance(min_gene_len, int), min_gene_len
-print(f"Removing all genes shorter than {min_gene_len}aa")
-
-def parse_fasta(handle):
-
-    header = None
-    seq = []
-    counter = 0
-    
-    for line in handle:
-        if line[0] == ">":
-            if header is not None and len(seq) > 0:
-                yield header, "".join(seq)
-                counter += 1
-            header = line[1:].split(" ")[0].rstrip("\\n")
-            seq = []
-        else:
-            if len(line) > 1:
-                seq.append(line.rstrip("\\n"))
-                    
-    if header is not None and len(seq) > 0:
-        yield header, "".join(seq)
-        counter += 1
-
-    print(f"Read in a total of {counter:,} FASTA records")
-
-
-def is_gzip_compressed(fp):
-    with gzip.open(fp, 'rt') as handle:
-        try:
-            handle.read(1)
-            return True
-        except:
-            return False
-
-
-if is_gzip_compressed(input_fp):
-    input_handle = gzip.open(input_fp, "rt")
-else:
-    input_handle = open(input_fp, "r")
-
-counter = 0
-with open(output_fp, 'w') as output_handle:
-
-    for header, seq in parse_fasta(input_handle):
-
-        if len(seq) >= min_gene_len:
-
-            output_handle.write(f">{header}\\n{seq}\\n")
-            counter += 1
-
-print(f"Wrote out {counter:,} sequences")
-
-input_handle.close()
-print("DONE")
-
-"""
 }
 
 process aggregate_distances {
@@ -1012,39 +809,8 @@ process aggregate_results {
     output:
     file "${params.output_prefix}.rdb"
 
-"""#!/bin/bash
-
-set -Eeuo pipefail
-
-# Start a redis server in the background
-redis-server \
-    --port 6379 \
-    --bind 127.0.0.1 \
-    --rdbcompression yes \
-    --dbfilename "${params.output_prefix}.rdb" \
-    --save "" \
-    --dir \$PWD &
-
-aggregate_results.py \
-    --alignments "${alignments_csv_gz}" \
-    --gene-order "${gene_order_txt_gz}" \
-    --dists "${dists_csv_gz}" \
-    --tnse-coords "${tsne_coords_csv_gz}" \
-    --port 6379 \
-    --host 127.0.0.1 || \
-    redis-cli shutdown  # In case of failure
-
-# Save the redis store
-echo "Saving the redis store"
-redis-cli save
-
-# Shutdown the redis server
-echo "Shutting down the redis server"
-redis-cli shutdown
-
-echo "Done"
-
-"""
+    script:
+    template "aggregate_results.sh"
 
 }
 
@@ -1062,55 +828,8 @@ process cdhit {
     file "clustered.genes.fasta.gz"
     file "clustered.membership.csv.gz"
     
-"""
-#!/bin/bash
-
-set -e
-
-# Combine all of the files
-
-# Iterate over each of the input files
-for f in input.genes.*.fasta.gz; do
-    
-    # Make sure the input file exits
-    if [[ -s \$f ]]; then
-
-        # If the file is compressed
-        if gzip -t \$f; then
-
-            # Decompress it to a stream
-            gunzip -c \$f
-
-        else
-
-            # Cat to a stream
-            cat \$f
-
-        fi
-
-    fi
-
-# Write the stream to a file
-done \
-    > input.genes.fasta
-
-
-# Cluster the inputs
-cd-hit \
-    -i input.genes.fasta \
-    -o clustered.genes.fasta \
-    -c ${params.cluster_similarity} \
-    -aS ${params.cluster_coverage} \
-    -T ${task.cpus} \
-    -M ${task.memory.toMega()} \
-    -p 1 \
-    -d 0 \
-
-# Compress the outputs
-gzip clustered.genes.fasta
-gzip clustered.genes.fasta.clstr
-mv clustered.genes.fasta.clstr.gz clustered.membership.csv.gz
-"""
+    script:
+    template "cdhit.sh"
 }
 
 // Generate a simple annotation file for each centroid
@@ -1125,36 +844,6 @@ process annotate_centroids {
     output:
     file "clustered.genes.csv.gz"
     
-"""#!/usr/bin/env python3
-
-import gzip
-
-fpi = "clustered.genes.fasta.gz"
-fpo = "clustered.genes.csv.gz"
-
-# Open both file paths, input and output
-with gzip.open(fpi, "rt") as i, gzip.open(fpo, "wt") as o:
-
-    # Write a header line
-    o.write("gene_id,combined_name\\n")
-
-    # Write to the output
-    o.write(
-        # A newline delimited list
-        "\\n".join(
-            [
-                # Where each value is formatted from a line of the input
-                # The formatting will 
-                    # - remove the leading '>' character
-                    # - replace the first ' ' with ','
-                    # - and remove the trailing newline, if any
-                line[1:].rstrip("\\n").replace(",", " ").replace(" ", ",", 1)
-                # Parsed from each line of the input
-                for line in i
-                # For that subset of lines which start with '>' and which contain a space
-                if line[0] == '>' and ' ' in line
-            ]
-        )
-    )
-"""
+    script:
+    template "annotate_centroids.py"
 }
