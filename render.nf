@@ -27,6 +27,8 @@ def helpMessage() {
       --output_folder       Folder for output file (default: ${params.output_folder})
       --gene_annotations    Optional CSV containing gene annotations
       --genome_annotations  Optional CSV containing genome annotations
+      --mem_gbs             Amount of memory (in GBs) to use for rendering plots (default: ${params.mem_gbs})
+      --container__gigmap   Docker container used for rendering plots (default: ${params.container__gigmap})
 
       --options             Any additional options which should be provided when rendering the static gig-map output
                             The format of this parameter will seem very odd, because it is actually a string
