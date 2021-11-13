@@ -7,4 +7,5 @@ raxml-ng \
     --model ${params.raxml_model} \
     --tree pars{${params.raxml_starting_trees}} \
     --bs-trees ${params.raxml_bs_trees} \
-    --threads ${task.cpus}
+    --threads ${task.cpus} \
+    --force perf_threads
