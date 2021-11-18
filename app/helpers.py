@@ -218,7 +218,7 @@ def read_data(args):
     else:
         # Read in the table
         logger.info(f"Reading from {args['gene_annotations']}")
-        output["gene_annotations"] = pd.read_csv(args['gene_annotations'])
+        output["gene_annotations"] = pd.read_csv(args['gene_annotations'], on_bad_lines='warn')
 
         # Make sure that there is a column named "gene_id"
         msg = "Gene annotation CSV must contain a column named 'gene_id'"
@@ -358,7 +358,7 @@ def filter_alignments(
     logger.info(f"Filtered by alignment quality - {filtered_alignments.shape[0]:,} lines")
 
     # If the user has provided a `query` string to filter genes based on their annotations
-    if query is not None:
+    if query is not None and len(query) > 0:
 
         # Get the set of gene indices which pass the filter
         genes_passing_query_filter = filter_genes_by_query(data, query)
@@ -926,16 +926,28 @@ def plot_heatmap(data, plot_df, node_positions, selections, xaxis='x', yaxis='y'
                 columns=format_gene_id
             )
 
-    return go.Heatmap(
-        x=list(tables["values"].columns.values),
-        z=tables["values"].values,
-        text=tables["text"].values,
-        xaxis=xaxis,
-        yaxis=yaxis,
-        colorscale=selections["heatmap-colorscale"],
-        showscale=False,
-        hovertemplate="%{text}<extra></extra>",
-    )
+    # If the user has elected to include hovertext
+    if selections.get("hovertext", True):
+        return go.Heatmap(
+            x=list(tables["values"].columns.values),
+            z=tables["values"].values,
+            text=tables["text"].values,
+            xaxis=xaxis,
+            yaxis=yaxis,
+            colorscale=selections["heatmap-colorscale"],
+            showscale=False,
+            hovertemplate="%{text}<extra></extra>",
+        )
+    # If the user has elected to forego hovertext
+    else:
+        return go.Heatmap(
+            x=list(tables["values"].columns.values),
+            z=tables["values"].values,
+            xaxis=xaxis,
+            yaxis=yaxis,
+            colorscale=selections["heatmap-colorscale"],
+            showscale=False
+        )
 
 
 def plot_tree(data, node_positions, selections, xaxis='x', yaxis='y', try_relabel=True):

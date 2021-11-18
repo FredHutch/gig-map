@@ -71,6 +71,7 @@ def render_display(
     figure_height=1200,
     figure_width=1200,
     skip_gene_resort=False,
+    hovertext=False,
 ):
     """Main function for rendering the gig-map display as a static file."""
     logger = logging.getLogger('gig-map')
@@ -130,6 +131,7 @@ def render_display(
             "figure-width": figure_width,
             "max-genome-label-len": max_genome_label_len,
             "max-gene-label-len": max_gene_label_len,
+            "hovertext": hovertext
         },
         0
     )
@@ -325,6 +327,12 @@ if __name__ == "__main__":
         '--skip-gene-resort',
         action="store_true",
         help='If specified, use the prespecified gene order. This will prevent the time-consuming recalculation of linkage clustering.'
+    )
+    parser.add_argument(
+        '--show_hovertext',
+        action="store_true",
+        dest="hovertext",
+        help='If specified, include hovertext in the HTML display.'
     )
 
     # Parse the arguments
