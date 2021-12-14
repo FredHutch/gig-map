@@ -20,6 +20,10 @@ of genes against a set of genomes (e.g. BLAST), calculate the similarity of thos
 to each other (e.g. [mashtree](https://github.com/lskatz/mashtree)), and visualize the
 results alongside annotations of the genes and/or genomes.
 
+# Documentation
+
+For a more complete set of documentation, please [visit the Wiki](https://github.com/FredHutch/gig-map/wiki)
+
 # Implementation
 
 The execution of the analysis encoded by this repository is roughly grouped into two
