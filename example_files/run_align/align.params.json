@@ -1,0 +1,6 @@
+{
+    "genomes": "downloaded_genomes/*",
+    "genes_fasta": "downloaded_genes/clustered.genes.fasta.gz",
+    "output_folder": "alignments",
+    "output_prefix": "alignments"
+}

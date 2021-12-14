@@ -1,0 +1,4 @@
+{
+    "genome_tables": "prokaryotes.csv",
+    "output_folder": "downloaded_genomes"
+}
