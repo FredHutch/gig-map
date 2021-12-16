@@ -114,4 +114,8 @@ for marker_name, marker_df in df.groupby("marker_name"):
 
                 # Note that we've written out this genome
                 written_genomes.add(r.genome_name)
+
+    # Make sure that the file was created
+    assert os.path.exists(fpo), f"Error writing to file {fpo} -- path not found"
+
 print("DONE")
