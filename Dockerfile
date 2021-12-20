@@ -13,7 +13,7 @@ RUN /usr/bin/env python3 -m pip install --upgrade pip && \
     direct-redis \
     matplotlib \
     numpy==1.19.5 \
-    pandas \
+    pandas>=1.3.0 \
     plotly \
     plotnine>=0.8.0 \
     psutil \
