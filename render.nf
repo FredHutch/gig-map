@@ -72,7 +72,8 @@ set -e
 gig-map-cli \
     --rdb "${RDB}" \
     --output-prefix ${params.output_prefix} \
-    --output-folder ./
+    --output-folder ./ \
+    ${params.options}
     """
 }
 
@@ -99,7 +100,8 @@ gig-map-cli \
     --gene-annotations "${GENE_ANNOTATIONS}" \
     --genome-annotations "${GENOME_ANNOTATIONS}" \
     --output-prefix ${params.output_prefix} \
-    --output-folder ./
+    --output-folder ./ \
+    ${params.options}
     """
 }
 
@@ -125,7 +127,8 @@ gig-map-cli \
     --rdb "${RDB}" \
     --gene-annotations "${GENE_ANNOTATIONS}" \
     --output-prefix ${params.output_prefix} \
-    --output-folder ./
+    --output-folder ./ \
+    ${params.options}
     """
 }
 
@@ -150,7 +153,8 @@ gig-map-cli \
     --rdb "${RDB}" \
     --genome-annotations "${GENOME_ANNOTATIONS}" \
     --output-prefix ${params.output_prefix} \
-    --output-folder ./
+    --output-folder ./ \
+    ${params.options}
     """
 }
 
