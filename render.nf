@@ -5,7 +5,7 @@ nextflow.enable.dsl=2
 
 // Set default parameters
 params.help = false
-params.container__gigmap = "quay.io/hdc-workflows/gig-map:85706fc"
+params.container__gigmap = "quay.io/hdc-workflows/gig-map:ae67966"
 params.mem_gbs = 4
 params.rdb = false
 params.output_folder = "output"
