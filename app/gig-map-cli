@@ -332,11 +332,18 @@ if __name__ == "__main__":
         '--show_hovertext',
         action="store_true",
         dest="hovertext",
+        default=False,
         help='If specified, include hovertext in the HTML display.'
     )
 
     # Parse the arguments
     args = parser.parse_args()
+
+    # Log the arguments
+    logger.info("Input Arguments:")
+    for arg_key, arg_val in args.__dict__.items():
+        logger.info(f"{arg_key}: {arg_val}")
+    logger.info("End Input Arguments")
 
     # Start the redis server
     start_redis_server(args.rdb, host=args.host, port=args.port)
