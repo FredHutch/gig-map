@@ -75,7 +75,7 @@ process fetchFTP {
         val ftp_url
     
     output:
-        file "*" optional params.skip_missing_ftp == "true"
+        path "*" optional params.skip_missing_ftp == "true"
 
     script:
     template "fetchFTP.py"
@@ -88,10 +88,10 @@ process mash_sketch {
     label 'io_limited'
     
     input:
-        file fasta
+        path fasta
     
     output:
-        file "${fasta.name}.msh"
+        path "${fasta.name}.msh"
     
 """
 #!/bin/bash
@@ -111,10 +111,10 @@ process mash_join {
     label 'io_limited'
     
     input:
-        file "inputs/*"
+        path "inputs/*"
     
     output:
-        file "combined.msh"
+        path "combined.msh"
     
 """
 #!/bin/bash
@@ -134,10 +134,10 @@ process mash_dist {
     label 'io_limited'
     
     input:
-        tuple file(query_msh), file(combined_msh)
+        tuple path(query_msh), path(combined_msh)
     
     output:
-        file "${query_msh.name.replaceAll(/.msh/, '.tsv.gz')}"
+        path "${query_msh.name.replaceAll(/.msh/, '.tsv.gz')}"
     
 """
 #!/bin/bash
@@ -177,10 +177,10 @@ process aggregate_distances {
 
     
     input:
-        file "inputs/*"
+        path "inputs/*"
     
     output:
-        file "distances.csv.gz"
+        path "distances.csv.gz"
     
 """
 #!/usr/bin/env python3
@@ -217,10 +217,10 @@ process makedb_blast {
     label 'io_limited'
 
     input:
-        file "inputs/*"
+        path "inputs/*"
 
     output:
-        file "database.tar"
+        path "database.tar"
 
     script:
     """#!/bin/bash
@@ -256,11 +256,11 @@ process align_blast {
     label "mem_medium"
 
     input:
-        file database_tar
-        file query_fasta
+        path database_tar
+        path query_fasta
 
     output:
-        tuple val("${query_fasta.name}"), file("alignments.gz")
+        tuple val("${query_fasta.name}"), path("alignments.gz")
 
 """#!/bin/bash
 
@@ -289,11 +289,11 @@ process align_diamond {
     label 'mem_medium'
     
     input:
-    file refdb
-    file query_fasta
+    path refdb
+    path query_fasta
     
     output:
-    tuple val("${query_fasta.name}"), file("alignments.gz")
+    tuple val("${query_fasta.name}"), path("alignments.gz")
 
 """#!/bin/bash
 
@@ -325,10 +325,10 @@ process extract_dmnd {
     label 'io_limited'
     
     input:
-        file dmnd
+        path dmnd
     
     output:
-        file "${dmnd}.fasta.gz"
+        path "${dmnd}.fasta.gz"
 
 """#!/bin/bash
 
@@ -350,10 +350,10 @@ process makedb_diamond {
     label 'mem_medium'
     
     input:
-    file fasta
+    path fasta
 
     output:
-    file "database.dmnd"
+    path "database.dmnd"
 
     """
     set -e
@@ -373,10 +373,10 @@ process extract_markers {
     label "io_limited"
 
     input:
-        tuple val(genome_name), file(alignments), file(genome)
+        tuple val(genome_name), path(alignments), path(genome)
 
     output:
-        file "*.markers.fasta.gz" optional true
+        path "*.markers.fasta.gz" optional true
 
 """#!/bin/bash
 
@@ -398,10 +398,10 @@ process filter_alignments {
     label "io_limited"
 
     input:
-        tuple val(query_name), file("unfiltered.alignments.gz")
+        tuple val(query_name), path("unfiltered.alignments.gz")
 
     output:
-        tuple val("${query_name}"), file("alignments.gz") optional true
+        tuple val("${query_name}"), path("alignments.gz") optional true
 
 """#!/bin/bash
 
@@ -422,10 +422,10 @@ process select_markers {
     label "io_limited"
 
     input:
-        file "alignments.gz"
+        path "alignments.gz"
 
     output:
-        file "markers.txt"
+        path "markers.txt"
 
 """#!/bin/bash
 
@@ -447,10 +447,10 @@ process subset_alignments_by_genes {
     label "io_limited"
 
     input:
-        tuple val(query_name), file(alignments_tsv_gz), file(gene_list_txt)
+        tuple val(query_name), path(alignments_tsv_gz), path(gene_list_txt)
 
     output:
-        tuple val("${query_name}"), file("${alignments_tsv_gz}.subset.tsv.gz")
+        tuple val("${query_name}"), path("${alignments_tsv_gz}.subset.tsv.gz")
 
 """#!/bin/bash
 
@@ -473,10 +473,10 @@ process translate_markers {
     label "io_limited"
 
     input:
-        file input_fasta
+        path input_fasta
 
     output:
-        file "*.gz"
+        path "*.gz"
 
 """#!/bin/bash
 
@@ -505,10 +505,10 @@ process reorganize_markers {
     publishDir "${params.output_folder}/genes/", mode: 'copy', overwrite: true, enabled: "${params.publishGenes}" == "true"
 
     input:
-        file "fastas_by_genome/*.markers.fasta.gz"
+        path "fastas_by_genome/*.markers.fasta.gz"
 
     output:
-        file "fastas_by_marker/*.markers.fasta.gz"
+        path "fastas_by_marker/*.markers.fasta.gz"
 
 """#!/bin/bash
 
@@ -579,10 +579,10 @@ process add_genome_name {
     label 'io_limited'
     
     input:
-    tuple val(genome_name), file(alignments_gz)
+    tuple val(genome_name), path(alignments_gz)
 
     output:
-    file "alignments.named.gz"
+    path "alignments.named.gz"
 
 """#!/bin/bash
 
@@ -604,10 +604,10 @@ process concatenate_alignments {
     publishDir "${params.output_folder}", mode: 'copy', overwrite: true
    
     input:
-    file "inputs/*.tsv.gz"
+    path "inputs/*.tsv.gz"
 
     output:
-    file "${params.output_prefix}.csv.gz"
+    path "${params.output_prefix}.csv.gz"
 
 """#!/bin/bash
 
@@ -632,10 +632,10 @@ process concatenate_annotations {
     publishDir "${params.output_folder}", mode: 'copy', overwrite: true
    
     input:
-    file "annotations/*.csv.gz"
+    path "annotations/*.csv.gz"
 
     output:
-    file "${params.output_prefix}.genome.annotations.csv.gz"
+    path "${params.output_prefix}.genome.annotations.csv.gz"
 
 """#!/usr/bin/env python3
 import pandas as pd
@@ -667,10 +667,10 @@ process order_genes {
     publishDir "${params.output_folder}", mode: 'copy', overwrite: true
    
     input:
-    file alignments_csv_gz
+    path alignments_csv_gz
 
     output:
-    file "${params.output_prefix}.gene_order.txt.gz"
+    path "${params.output_prefix}.gene_order.txt.gz"
 
 """#!/bin/bash
 
@@ -695,10 +695,10 @@ process generate_gene_map {
     publishDir "${params.output_folder}", mode: 'copy', overwrite: true
    
     input:
-    file alignments_feather
+    path alignments_feather
 
     output:
-    file "${params.output_prefix}.tsne.coords.csv.gz"
+    path "${params.output_prefix}.tsne.coords.csv.gz"
 
 """#!/bin/bash
 
@@ -723,10 +723,10 @@ process annotate_genes {
     publishDir "${params.output_folder}", mode: 'copy', overwrite: true
    
     input:
-    file geneshot_results_hdf
+    path geneshot_results_hdf
 
     output:
-    file "${params.output_prefix}.gene_annotations.csv.gz"
+    path "${params.output_prefix}.gene_annotations.csv.gz"
 
 """#!/bin/bash
 
@@ -747,11 +747,11 @@ process annotate_genes_with_abundances {
     publishDir "${params.output_folder}", mode: 'copy', overwrite: true
    
     input:
-    file geneshot_results_hdf
-    file geneshot_details_hdf
+    path geneshot_results_hdf
+    path geneshot_details_hdf
 
     output:
-    file "${params.output_prefix}.gene_annotations.csv.gz"
+    path "${params.output_prefix}.gene_annotations.csv.gz"
 
 """#!/bin/bash
 
@@ -773,10 +773,10 @@ process cluster_genomes {
     label 'mem_medium'
    
     input:
-    tuple file(alignments_csv_gz), file(dists_csv_gz), val(ani_threshold)
+    tuple path(alignments_csv_gz), path(dists_csv_gz), val(ani_threshold)
 
     output:
-    file "*.hdf5"
+    path "*.hdf5"
 
 """#!/bin/bash
 
@@ -791,23 +791,23 @@ cluster_genomes.py \
 
 }
 
-// Group together all results into a single HDF5 file object
+// Group together all results into a single HDF5 path object
 process aggregate_results {
     container "${container__pandas}"
     label 'mem_medium'
     publishDir "${params.output_folder}", mode: 'copy', overwrite: true
    
     input:
-    file alignments_csv_gz
-    file gene_order_txt_gz
-    file dists_csv_gz
-    file tsne_coords_csv_gz
-    file "genome_clusters/*"
-    file "marker_clusters/*"
-    file "marker_distances/*"
+    path alignments_csv_gz
+    path gene_order_txt_gz
+    path dists_csv_gz
+    path tsne_coords_csv_gz
+    path "genome_clusters/*"
+    path "marker_clusters/*"
+    path "marker_distances/*"
 
     output:
-    file "${params.output_prefix}.rdb"
+    path "${params.output_prefix}.rdb"
 
     script:
     template "aggregate_results.sh"
@@ -822,27 +822,27 @@ process cdhit {
     publishDir "${params.output_folder}", mode: 'copy', overwrite: true
    
     input:
-    file "input.genes.*.fasta.gz"
+    path "input.genes.*.fasta.gz"
     
     output:
-    file "clustered.genes.fasta.gz"
-    file "clustered.membership.csv.gz"
+    path "clustered.genes.fasta.gz"
+    path "clustered.membership.csv.gz"
     
     script:
     template "cdhit.sh"
 }
 
-// Generate a simple annotation file for each centroid
+// Generate a simple annotation path for each centroid
 process annotate_centroids {
     container "${container__pandas}"
     label 'io_limited'
     publishDir "${params.output_folder}", mode: 'copy', overwrite: true
    
     input:
-    file "clustered.genes.fasta.gz"
+    path "clustered.genes.fasta.gz"
     
     output:
-    file "clustered.genes.csv.gz"
+    path "clustered.genes.csv.gz"
     
     script:
     template "annotate_centroids.py"
