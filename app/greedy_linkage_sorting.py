@@ -3,30 +3,63 @@
 import logging
 import numpy as np
 import pandas as pd
-from random import choice
-from scipy.spatial.distance import cdist, squareform
+from scipy.cluster import hierarchy
+from scipy.spatial import distance
 from time import time
 from uuid import uuid4
 
+
+class Timer:
+    """Keep track of an interval of time."""
+
+    def __init__(self, logger=None):
+
+        # Start the timer
+        self.start_time = time()
+
+        # Attach the logger, if any
+        self.logger = logger
+
+    def report(self, msg):
+
+        # Track the amount of time since the timer was started
+        elapsed_time = time() - self.start_time
+
+        # If a logger was provided
+        if self.logger is not None:
+
+            # Print the message to the logger
+            self.logger.info(msg.format(elapsed_time))
+
+        # If no logger was provided
+        else:
+
+            # Print the message
+            print(msg.format(elapsed_time))
+
+
 class GreedyLinkageSorting:
     """
-    Sort one axis of a DataFrame using a greedy linkage clustering approach.
+    Sort the rows of a DataFrame using a greedy linkage clustering approach.
     """
 
     def __init__(
         self,
         # Input data
-        data_frame:pd.DataFrame,
-        # Axis to sort
-        axis:int=0,
+        df:pd.DataFrame,
         # Distance metric used for comparing items
-        metric:str="euclidean",
-        # Print logging message
-        verbose:bool=True,
+        metric='braycurtis',
+        # Method used for linkage clustering
+        method='average',
+        # Maximum distance value used to group initial clusters
+        threshold=0.75,
         # Number of seconds between status messages
         logging_interval:int=2,
+        # Print logging message
+        verbose:bool=True,
     ):
-
+        """Save the input data to the object and order the rows."""
+        
         ##################
         # SET UP LOGGING #
         ##################
@@ -47,51 +80,38 @@ class GreedyLinkageSorting:
         # ATTACH DATA #
         ###############
 
-        # Attach all provided data objects
-        assert isinstance(data_frame, pd.DataFrame)
-        if axis == 0:
-            self.values = data_frame.values
-        else:
-            assert axis == 1, "axis must be 0 or 1"
-            self.values = data_frame.T.values
+        # Save the values
+        self.df = df
 
-        # Keep track of the number of elements which were input
-        self.input_size = self.values.shape[0]
-
+        # Save the parameters
         self.metric = metric
-
-        # After sorting, this object will be populated with a list of
-        # sorted index positions
-        self.row_order = None
-
-        # Set up a cache for the best hits
-        self.best_hit_cache = dict()
-
-        self.verbose = verbose
+        self.logger.info(f"metric: {metric}")
+        self.method = method
+        self.logger.info(f"method: {method}")
+        self.threshold = threshold
+        self.logger.info(f"threshold: {threshold}")
         self.logging_interval = logging_interval
-
+        self.verbose = verbose
+        
         #############
         # SORT DATA #
         #############
-        self.sort()
 
-    def sort(self):
-        """Sort the rows of self.data_frame, populating row_order."""
+        # Get the order of the rows
+        self.row_order = self.calc_row_order()
+        
+    def calc_row_order(self):
+        """Calculate the optimal order of rows."""
+        
+        msg = f"Sorting {self.df.shape[0]:,} features using data from {self.df.shape[1]:,} observations"
+        self.logger.info(msg)
 
-        # Start the clock
+        # Set up the clusters that each row will be assigned to
+        self.clusters = []
+        
+        # Track the amount of time needed to build clusters
         self.start_time = time()
 
-        # Initialize the clusters with each row in its own cluster
-        # self.clusters is a list where each item is a nested list
-        # containing the ordered index positions from the original
-        # table which are contained within it.
-        # The average value of each feature for this cluster can be
-        # found in self.values. Any changes to either must be kept
-        # in sync with the other.
-        self.clusters = [ [i] for i in range(self.values.shape[0]) ]
-
-        self.logger.info(f"Sorting {self.values.shape[0]:,} features using data from {self.values.shape[1]:,} observations")
-        
         # Keep track of how long it has been since the last status
         # message was printed (if verbose=True).
         status_time = time()
@@ -99,18 +119,24 @@ class GreedyLinkageSorting:
         # Keep track of the time it took to join each set of pairs
         time_to_join = []
 
-        # Keep joining groups until there is only one cluster left
-        while len(self.clusters) > 1:
+        # Keep track of the total number of rows which have been added
+        n_added = 0
 
+        # Iterate over each row in the table
+        for row_name, row_vals in self.df.iterrows():
+            
             # Keep track of how long it takes to join each new pair
             t = time()
 
-            # Join the first pair of clusters we can find which are mutual best hits
-            self.join_mutual_best_hit()
-            
+            # Add the row to the first cluster which it matches
+            self.add_row_to_cluster([row_name], row_vals.values)
+
+            # Increment the counter
+            n_added += 1
+
             # Keep track of how long it takes to join each new pair
             time_to_join.append(time() - t)
-
+            
             # If logging was turned on
             if self.verbose:
 
@@ -119,141 +145,241 @@ class GreedyLinkageSorting:
 
                     # Calculate the mean amount of time it took to join each pair
                     mean_time_to_join = np.mean(time_to_join)
+
                     # Log the message
-                    self.logger.info(f"Clusters remaining: {len(self.clusters) - 1:,} - Iteration time (s): {mean_time_to_join:.2E}")
+                    self.logger.info(f"Rows added: {len(time_to_join):,} ({n_added:,} total) - Iteration time (s): {mean_time_to_join:.2E}")
+                    
                     # Reset the time
                     status_time = time()
+                    
                     # Reset the list
                     time_to_join = []
 
+        # Calculate the amount of time it took to build each cluster
         elapsed = time() - self.start_time
-        self.logger.info(f"Sorted all rows in {round(elapsed, 2):,} seconds")
+        self.logger.info(f"Added {n_added:,} rows to {len(self.clusters):,} clusters in {round(elapsed, 2):,} seconds")
 
-        # Save the list of ordered index positions
-        self.row_order = self.clusters[0]
+        # Order the clusters by linkage clustering
+        self.order_clusters()
 
-        # Make sure that the final ordered list contains all of the inputs
-        assert len(self.row_order) == self.input_size, (len(self.row_order), self.input_size)
+        # Build the row order as a list
+        row_order = []
 
-    def find_size(self, ix):
-        """Return the number of items in a particular cluster."""
-        return len(self.clusters[ix])
+        # Keep track of the amount of time needed to sort the rows within each cluster
+        timer = Timer(logger=self.logger)
+        
+        # Iterate over the clusters, which have been ordered by linkage clustering
+        for cluster in self.clusters:
+            
+            # Add the rows in that cluster to the overall list
+            row_order.extend(self.order_rows_in_cluster(cluster))
 
-    def join_mutual_best_hit(self):
-        """Find a pair of clusters which are mutual best hits and join them."""
+        # Report the time elapsed
+        timer.report("Rows sorted within each cluster - {:,} seconds")
+            
+        # Return the overall list of rows
+        return row_order
+        
+    def add_row_to_cluster(self, row_name_list, row_vals):
+        """Add a single row to the cluster that it is most similar to."""
 
-        # Find a mutual best hit from self.values
-        seed_ix, match_ix = self.find_mutual_best_hit()
+        # If there are no existing clusters
+        if len(self.clusters) == 0:
 
-        # Get the size of each cluster
-        seed_ix_n = self.find_size(seed_ix)
-        match_ix_n = self.find_size(match_ix)
+            # Make a new cluster containing this row
+            self.clusters.append(
+                RowCluster(
+                    row_names=row_name_list,
+                    row_values=row_vals
+                )
+            )
 
-        # Calculate the weights of each cluster based on their weights
-        seed_ix_weight = seed_ix_n / (seed_ix_n + match_ix_n)
-        match_ix_weight = match_ix_n / (seed_ix_n + match_ix_n)
+        # If there are already >0 clusters created
+        else:
 
-        # Calculate the values which are the weighted average of the two clusters
-        combined_row = np.mean(
-            self.values[[seed_ix, match_ix]].T * np.array([seed_ix_weight, match_ix_weight]),
-            axis=1
+            # Calculate the distance to each cluster
+            cluster_dist = self.distance_to_clusters(row_vals)
+
+            # If any cluster is below the threshold
+            if cluster_dist.min() <= self.threshold:
+
+                # Reference the best cluster
+                best_cluster_ix = cluster_dist.idxmin()
+                best_cluster = self.clusters[best_cluster_ix]
+
+                # Add the row to the cluster
+                best_cluster.add_row(row_name_list, row_vals)
+
+                # Since the cluster has been modified, we now need to
+                # check and see if it should be merged with another cluster
+
+                # Remove this cluster from the list of clusters
+                self.clusters.pop(best_cluster_ix)
+
+                # Recursively add this cluster back to the batch
+                self.add_row_to_cluster(
+                    best_cluster.row_names,
+                    best_cluster.avg_values
+                )
+
+            # Otherwise, if no cluster is below the threshold
+            else:
+                
+                # Make a new cluster containing this row
+                self.clusters.append(
+                    RowCluster(
+                        row_names=row_name_list,
+                        row_values=row_vals
+                    )
+                )
+
+    def distance_to_clusters(self, row_vals):
+        """Return a Series with the distance of a vector to all clusters."""
+
+        cluster_dist = pd.Series(
+            distance.cdist(
+                np.array([row_vals]),
+                np.array([
+                    cluster.avg_values
+                    for cluster in self.clusters
+                ])
+            )[0]
         )
 
-        # Calculate the average value for each of the two clusters
-        seed_ix_avg_value = np.mean(self.values[seed_ix])
-        match_ix_avg_value = np.mean(self.values[match_ix])
+        # The number of distances must equal the number of clusters
+        assert cluster_dist.shape[0] == len(self.clusters)
 
-        # Remove the two clusters and add the new cluster at the end
-        # From the values
-        self.values = np.insert(
-            np.delete(
-                self.values,
-                [seed_ix, match_ix],
-                axis=0
-            ),
-            self.values.shape[0] - 2,
-            [combined_row],
-            axis=0
+        return cluster_dist
+
+    def order_clusters(self):
+        """Sort the clusters by linkage clustering."""
+
+        # Keep track of the time needed to sort the clusters
+        timer = Timer(logger=self.logger)
+
+        # Make a matrix with the average values across all clusters
+        cluster_mat = np.array(
+            [
+                cluster.avg_values
+                for cluster in self.clusters
+            ]
         )
 
-        # First add to the list of clusters
+        # Make sure that there are no NaN values
+        assert not np.isnan(cluster_mat).any(), f"Error: matrix contains NaN values ({cluster_mat.shape})"
 
-        # If the seed cluster has a higher average value,
-        if seed_ix_avg_value > match_ix_avg_value:
-            # place it first in the new cluster
-            self.clusters.append(self.clusters[seed_ix] + self.clusters[match_ix])
-        # Otherwise
-        else:
-            # Place the other cluster first
-            self.clusters.append(self.clusters[match_ix] + self.clusters[seed_ix])
+        # Get the list of sorted index positions using exhaustive linkage clustering
+        ix_list = self.sort_by_linkage_clustering(cluster_mat)
 
-        # And then remove the clusters which were merged
-        # Starting with the higher index value
-        if seed_ix > match_ix:
-            del self.clusters[seed_ix]
-            del self.clusters[match_ix]
-        else:
-            del self.clusters[match_ix]
-            del self.clusters[seed_ix]
+        # Reorder the self.clusters object
+        self.clusters = [self.clusters[ix] for ix in ix_list]
 
-        # Clear the cache of best hits
-        self.best_hit_cache = dict()
+        # Report the time elapsed
+        timer.report("Ordered all clusters in {:,} seconds")
 
-    def check_cluster_size(self, checkpoint):
-        """Make sure that the total number of clusters matches the input."""
-        n_tot = sum(map(len, self.clusters))
+    def order_rows_in_cluster(self, cluster):
+        """Return the sorted list of row names for a cluster."""
 
-        assert n_tot == self.input_size, f"{checkpoint}: Found {n_tot:,} clusters, expected {self.input_size:,}"
+        # If there are < 3 rows in this cluster
+        if cluster.size < 3:
 
-    def find_mutual_best_hit(self, seed_ix=None):
-        """
-        Find a pair of rows in self.values which are mutual best hits.
-        Return the tuple of the index positions of each.
-        """
+            # Sorting is not required
+            return cluster.row_names
 
-        # If no seed was specified
-        if seed_ix is None:
+        # First, make a matrix with the values for each of the rows in this cluster
+        row_mat = self.df.reindex(cluster.row_names).values
 
-            # Start by picking a random row
-            seed_ix = choice(range(self.values.shape[0]))
+        # Get the sorted list of index positions
+        ix_list = self.sort_by_linkage_clustering(row_mat)
 
-        # Find the list of most similar rows
-        for match_ix in self.find_best_hit(seed_ix):
+        # Return the sorted list of row names
+        return [
+            cluster.row_names[i]
+            for i in ix_list
+        ]            
 
-            # If seed_ix is also the closest match to match_ix
-            if seed_ix in self.find_best_hit(match_ix):
+    def sort_by_linkage_clustering(self, mat):
+        """Return the sorted list of index positions for a numpy array."""
 
-                # Then return the pair
-                return seed_ix, match_ix
-
-        # If no match was found, start the search again by daisy-chaining from the best hit
-        return self.find_mutual_best_hit(seed_ix=match_ix)
-
-    def find_best_hit(self, ix):
-        """Return the list of index positions for rows which are most similar to this one."""
-
-        # If there is a cached value
-        if self.best_hit_cache.get(ix) is not None:
-
-            # Return it
-            return self.best_hit_cache.get(ix)
-
-        # Calculate the distnaces of all rows to this one
-        dists = cdist(
-            self.values[[ix]],
-            self.values,
+        # Calculate the pairwise distances
+        dists = distance.pdist(
+            mat,
             metric=self.metric
-        )[0]
+        )
 
-        # Find the lowest distance to any other row
-        lowest_value = np.min([d for other_ix, d in enumerate(dists) if other_ix != ix])
+        # If there are any NaNs
+        if np.isnan(dists).any():
 
-        # Find the index positions of the rows which are the closest match
-        best_hits = [other_ix for other_ix, d in enumerate(dists) if other_ix != ix and d == lowest_value]
+            # Replace them with 0
+            np.nan_to_num(
+                dists,
+                copy=False,
+                nan=0.0,
+                posinf=1.0,
+                neginf=0.0
+            )
 
-        assert len(best_hits) > 0
+        try:
+            return hierarchy.leaves_list(
+                hierarchy.linkage(
+                    dists,
+                    method=self.method,
+                    optimal_ordering=True
+                )
+            )
 
-        # Cache the hit
-        self.best_hit_cache[ix] = best_hits
+        except Exception as e:
+            self.logger.info(f"Error clustering matrix ({mat.shape})")
+            self.logger.info(f"Distances ({dists})")
+            self.logger.info(mat)
+            raise e
+    
+            
+class RowCluster:
+    """Collection of rows which have been grouped together based on similarity."""
+    
+    def __init__(
+        self,
+        row_names:list=[],
+        row_values:np.array=np.array([])
+    ):
+        """The RowCluster must be initialized with a group of rows."""
+        
+        assert len(row_names) > 0, "RowCluster must contain > 0 rows"
+        assert row_values.shape[0] > 0, "RowCluster must contain > 0 values"
+        
+        # Save the row names
+        self.row_names = row_names
 
-        return best_hits
+        # Save the number of rows        
+        self.size = len(row_names)
+        
+        # Save the values
+        self.avg_values = row_values
+
+        # Make sure that there are no NaN values
+        assert not np.isnan(self.avg_values).any(), f"Error: matrix contains NaN values"
+
+    def add_row(self, row_name_list, row_vals):
+        """Add a row to this cluster."""
+        
+        # Make sure that the input has the right number of columns
+        assert row_vals.shape[0] == self.avg_values.shape[0], (row_vals.shape[0], self.avg_values.shape[0])
+        
+        # Compute a new weighted average of the values
+        self.avg_values = np.array(
+            [
+                self.avg_values * self.size,
+                row_vals * len(row_name_list)
+            ]
+        ).sum(axis=0) / (self.size + len(row_name_list))
+        
+        # Make sure that there are no NaN values
+        assert not np.isnan(self.avg_values).any(), f"Error: matrix contains NaN values"
+
+        # Add the row name to the list
+        self.row_names.extend(row_name_list)
+        
+        # Increment the size counter
+        self.size += len(row_name_list)
+        

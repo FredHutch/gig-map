@@ -481,14 +481,15 @@ def get_gene_annot_values(data, selections):
 def order_genes(
     data,
     plot_df,
-    metric="braycurtis"
+    metric="braycurtis",
+    method="average"
 ):
     """Reorder the genes based on greedy linkage clustering."""
 
     # Get the logger
     logger = logging.getLogger("gig-map")
 
-    logger.info("Clustering genes by genome assignment")
+    logger.info(f"Clustering genes by genome assignment ({metric} - {method})")
 
     # Make a rectangular matrix of gene pident across genomes
     pident_df = plot_df.pivot(
@@ -497,20 +498,23 @@ def order_genes(
         values="pident"
     ).fillna(
         0
-    )
+    ).sort_index()
 
     logger.info(f"Sorting {pident_df.shape[0]:,} genes using data from {pident_df.shape[1]:,} genomes")
 
-    # Sort the genes (rows)
-    gls = GreedyLinkageSorting(pident_df, metric=metric)
-
-    # Get the new order of the gene indices
-    reordered_gene_ix = gls.row_order
+    # Refine the order of the genes based on the
+    # euclidean distance between adjacent rows
+    reordered_gene_ix = GreedyLinkageSorting(
+        # Covert the percent identity to a proportion
+        pident_df.applymap(lambda v: v / 100.),
+        metric=metric,
+        method=method
+    ).row_order
 
     # Map the previous `gene_ix` to the new `gene_ix`
     gene_map = {
-        pident_df.index.values[new_i]: old_i
-        for old_i, new_i in enumerate(reordered_gene_ix)
+        old_i: new_i
+        for new_i, old_i in enumerate(reordered_gene_ix)
     }
 
     # Replace the `gene_ix` values in `plot_df`
@@ -519,10 +523,7 @@ def order_genes(
     )
 
     # Replace the `gene_ix` values in `data`
-    data["gene_ix"] = [
-        data["gene_ix"][pident_df.index.values[i]]
-        for i in reordered_gene_ix
-    ]
+    data["gene_ix"] = reordered_gene_ix
 
     return data, plot_df
 
