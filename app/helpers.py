@@ -370,6 +370,12 @@ def filter_alignments(
         ]
         logger.info(f"Filtered alignments by query string - {filtered_alignments.shape[0]:,} lines")
 
+    # Only keep a single alignment per gene / genome
+    filtered_alignments = filtered_alignments.groupby(
+        ["genome_ix", "gene_ix"]
+    ).head(1)
+    logger.info(f"Deduplicated alignments - {filtered_alignments.shape[0]:,} lines")
+
     # If the user has decided to filter the genes displayed
     if min_genomes_per_gene > 1:
 
@@ -380,21 +386,14 @@ def filter_alignments(
         genes_passing_filter = set(genomes_per_gene.index.values[
             genomes_per_gene >= min_genomes_per_gene
         ])
-        genes_passing_filter = set(list(genes_passing_filter))
 
-        logger.info(f"{len(genes_passing_filter):,} genes")
+        logger.info(f"{len(genes_passing_filter):,} / {len(genomes_per_gene):,} genes pass filter")
 
         # Filter the alignments to only include those genes which pass the filter
         filtered_alignments = filtered_alignments.loc[
             filtered_alignments.gene_ix.isin(genes_passing_filter)
         ]
         logger.info(f"Filtered by final gene set - {filtered_alignments.shape[0]:,} lines")
-
-    # Only keep a single alignment per gene / genome
-    filtered_alignments = filtered_alignments.groupby(
-        ["genome_ix", "gene_ix"]
-    ).head(1)
-    logger.info(f"Deduplicated alignments - {filtered_alignments.shape[0]:,} lines")
 
     # Count up the number of genes per genome
     genes_per_genome = filtered_alignments.genome_ix.value_counts()
@@ -409,9 +408,8 @@ def filter_alignments(
     genomes_passing_filter = set(genes_per_genome.index.values[
         genes_per_genome >= min_genes_per_genome
     ])
-    genomes_passing_filter = set(list(genomes_passing_filter))
 
-    logger.info(f"{len(genomes_passing_filter):,} genomes")
+    logger.info(f"{len(genomes_passing_filter):,} / {len(genes_per_genome):,} genomes pass filter")
 
     # Filter the alignments to only include those genomes which pass the filter
     filtered_alignments = filtered_alignments.loc[
