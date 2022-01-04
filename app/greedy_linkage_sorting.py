@@ -255,6 +255,17 @@ class GreedyLinkageSorting:
     def order_clusters(self):
         """Sort the clusters by linkage clustering."""
 
+        # If there are fewer than 3 clusters
+        if len(self.clusters) < 3:
+
+            # There is no need to do any sorting
+            self.logger.info(f"There is no need to sort {len(self.clusters)} clusters")
+
+            # Take no further action
+            return
+
+        # Otherwise, if there are >=3 clusters
+
         # Keep track of the time needed to sort the clusters
         timer = Timer(logger=self.logger)
 
@@ -383,4 +394,3 @@ class RowCluster:
         
         # Increment the size counter
         self.size += len(row_name_list)
-        
