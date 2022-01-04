@@ -505,8 +505,8 @@ def order_genes(
     # Refine the order of the genes based on the
     # euclidean distance between adjacent rows
     reordered_gene_ix = GreedyLinkageSorting(
-        # Covert the percent identity to a proportion
-        pident_df.applymap(lambda v: v / 100.),
+        # Make sure that each row adds up to 1 (so that the distance metric is appropriate)
+        pident_df.apply(lambda r: r / r.sum(), axis=1),
         metric=metric,
         method=method
     ).row_order

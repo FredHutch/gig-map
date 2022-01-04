@@ -52,7 +52,7 @@ class GreedyLinkageSorting:
         # Method used for linkage clustering
         method='average',
         # Maximum distance value used to group initial clusters
-        threshold=0.75,
+        threshold=0.25,
         # Number of seconds between status messages
         logging_interval:int=2,
         # Print logging message
