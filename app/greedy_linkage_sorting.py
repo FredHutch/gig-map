@@ -242,7 +242,8 @@ class GreedyLinkageSorting:
                 np.array([
                     cluster.avg_values
                     for cluster in self.clusters
-                ])
+                ]),
+                metric=self.metric
             )[0]
         )
 
