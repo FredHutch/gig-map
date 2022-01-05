@@ -678,10 +678,7 @@ set -Eeuo pipefail
 
 order_genes.py \
     "${alignments_csv_gz}" \
-    ${params.max_n_genes_train_pca} \
-    ${params.max_pcs_tsne} \
-    "${params.output_prefix}.gene_order.txt.gz" \
-    ${task.cpus}
+    "${params.output_prefix}.gene_order.txt.gz"
 
 """
 
