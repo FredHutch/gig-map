@@ -11,7 +11,6 @@ from time import sleep
 from helpers import filter_alignments
 from helpers import read_data
 from helpers import render_gig_map_heatmap
-from helpers import order_genes
 from helpers import set_figure_height
 
 def start_redis_server(rdb_fp, port=6379, host="127.0.0.1"):
@@ -107,12 +106,6 @@ def render_display(
         ani_threshold="None",
         selected_group=0,
     )
-
-    # If the user has not prevented gene resorting
-    if not skip_gene_resort:
-
-        # Sort the genes by linkage clustering
-        data, plot_df = order_genes(data, plot_df)
 
     # Set the figure height
     figure_height = set_figure_height(plot_df, figure_height)
@@ -331,11 +324,6 @@ if __name__ == "__main__":
         type=int,
         default=6379,
         help='Port used to host redis server used to read alignment data (default: 6379_'
-    )
-    parser.add_argument(
-        '--skip-gene-resort',
-        action="store_true",
-        help='If specified, use the prespecified gene order. This will prevent the time-consuming recalculation of linkage clustering.'
     )
     parser.add_argument(
         '--show_hovertext',

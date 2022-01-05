@@ -1,20 +1,45 @@
-from greedy_linkage_sorting import GreedyLinkageSorting
 from cartesian_tree import make_nj_tree
 from direct_redis import DirectRedis
 import logging
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-from random import shuffle
 from redis.exceptions import BusyLoadingError
-from scipy.cluster import hierarchy
-from scipy.spatial.distance import pdist
-from sklearn.decomposition import PCA
-from time import sleep
+from time import sleep, time
 
 ####################
 # HELPER FUNCTIONS #
 ####################
+
+
+class Timer:
+    """Keep track of an interval of time."""
+
+    def __init__(self, logger=None):
+
+        # Start the timer
+        self.start_time = time()
+
+        # Attach the logger, if any
+        self.logger = logger
+
+    def report(self, msg):
+
+        # Track the amount of time since the timer was started
+        elapsed_time = time() - self.start_time
+
+        # If a logger was provided
+        if self.logger is not None:
+
+            # Print the message to the logger
+            self.logger.info(msg.format(elapsed_time))
+
+        # If no logger was provided
+        else:
+
+            # Print the message
+            print(msg.format(elapsed_time))
+
 
 def remove_genome_file_ext(fp):
     for ext in ['.gz', '.fna', '.fasta', '.fa']:
@@ -478,57 +503,6 @@ def get_gene_annot_values(data, selections):
     return value_dict
 
 
-def order_genes(
-    data,
-    plot_df,
-    metric="braycurtis",
-    method="average"
-):
-    """Reorder the genes based on greedy linkage clustering."""
-
-    # Get the logger
-    logger = logging.getLogger("gig-map")
-
-    logger.info(f"Clustering genes by genome assignment ({metric} - {method})")
-
-    # Make a rectangular matrix of gene pident across genomes
-    pident_df = plot_df.pivot(
-        index="gene_ix",
-        columns="genome_name",
-        values="pident"
-    ).fillna(
-        0
-    ).sort_index()
-
-    logger.info(f"Sorting {pident_df.shape[0]:,} genes using data from {pident_df.shape[1]:,} genomes")
-
-    # Refine the order of the genes based on the
-    # euclidean distance between adjacent rows
-    reordered_gene_ix = GreedyLinkageSorting(
-        # Make sure that each row adds up to 1 (so that the distance metric is appropriate)
-        pident_df.apply(lambda r: r / r.sum(), axis=1),
-        metric=metric,
-        method=method
-    ).row_order
-
-    # Map the previous `gene_ix` to the new `gene_ix`
-    gene_map = {
-        old_i: new_i
-        for new_i, old_i in enumerate(reordered_gene_ix)
-    }
-
-    # Replace the `gene_ix` values in `plot_df`
-    plot_df = plot_df.assign(
-        gene_ix=plot_df.gene_ix.apply(gene_map.get)
-    )
-
-    # Replace the `gene_ix` values in `data`
-    data["gene_ix"] = reordered_gene_ix
-
-    return data, plot_df
-
-
-
 def set_figure_height(plot_df, figure_height, height_frac=20, height_padding=200):
     """Dynamically set the figure height based on the number of genomes."""
 
@@ -557,7 +531,7 @@ def plot_heatmap(data, plot_df, node_positions, selections, xaxis='x', yaxis='y'
             columns="gene_ix",
             values=column_key
         ).sort_index(
-            # Sorting on the column index preserves the t-SNE order
+            # Sorting on the column index preserves the order
             axis=1
         ).reindex( 
             # Reorder the rows (genomes) to match the tree
