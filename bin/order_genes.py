@@ -183,7 +183,7 @@ if __name__ == "__main__":
 
     # Set the level of the logger to INFO
     logFormatter = logging.Formatter(
-        '%(asctime)s %(levelname)-8s [GreedyLinkageSorting] %(message)s'
+        '%(asctime)s %(levelname)-8s [Order Genes] %(message)s'
     )
     logger = logging.getLogger(str(uuid4()))
     logger.setLevel(logging.INFO)
