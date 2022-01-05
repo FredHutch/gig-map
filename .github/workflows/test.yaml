@@ -22,17 +22,9 @@ jobs:
           sudo apt clean
           docker rmi $(docker image ls -aq)
           df -h
-      - name:  DIAMOND alignment from FASTA
-        run: |
-          nextflow run main.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --genome_tables test_data/Escherichia_virus_T4.csv --genes_fasta test_data/GCA_002599665.1_ASM259966v1_protein.faa.gz --output_folder output_diamond_fasta --output_prefix output -resume
-
       - name:  DIAMOND alignment from DMND
         run: |
           nextflow run main.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --genome_tables test_data/Escherichia_virus_T4.csv --genes_dmnd test_data/GCA_002599665.1_ASM259966v1_protein.dmnd --output_folder output_diamond_dmnd --output_prefix output -resume
-
-      - name:  BLAST alignment from FASTA
-        run: |
-          nextflow run main.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --genome_tables test_data/Escherichia_virus_T4.csv --genes_fasta test_data/GCA_002599665.1_ASM259966v1_protein.faa.gz --output_folder output_blast_fasta --output_prefix output --aligner blast -resume
 
       - name:  Import previous distances
         run: |
@@ -45,10 +37,6 @@ jobs:
       - name:  Deduplication utility
         run: |
           nextflow run main.nf -entry deduplicate -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --genome_tables test_data/Escherichia_virus_T4.csv --genes_fasta test_data/GCA_002599665.1_ASM259966v1_protein.faa.gz --output_folder deduplicate_genomes -resume
-
-      - name:  Gene ordering by t-SNE
-        run: |
-          nextflow run main.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --genome_tables test_data/Escherichia_virus_T4.csv --genes_fasta test_data/GCA_002599665.1_ASM259966v1_protein.faa.gz --output_folder output_diamond_fasta --output_prefix output -resume --max_n_genes_train_pca 2000
 
       - name:  Render HTML
         run: |
