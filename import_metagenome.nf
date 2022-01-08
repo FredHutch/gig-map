@@ -110,7 +110,7 @@ gene_set = set(gene_list.qseqid.tolist())
 assert gene_list.shape[0] == len(gene_set), "Gene list was not unique"
 
 print("Reading in ${abund_json}")
-with gzip.open("${abund_json}", rt) as handle:
+with gzip.open("${abund_json}", "rt") as handle:
     abund = json.load(handle)
 
 msg = "Abundance data should be formatted as a list"
