@@ -83,7 +83,7 @@ process subset_abund {
 
     input:
     path abund_json
-    path gene_list
+    each path gene_list
 
     output:
     path "${abund_json.name}.subset.csv.gz", optional: true
@@ -180,7 +180,10 @@ workflow {
 
     // Get the list of genes which were aligned to any gene in this collection
     get_gene_list(
-        path(params.rdb)
+        Channel
+            .fromPath(
+                "${params.gigmap_csv}"
+            )
     )
 
     // Subset each individual abundance file to just that gene of interest
