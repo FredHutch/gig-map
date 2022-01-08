@@ -150,14 +150,14 @@ workflow {
         exit 0
     }
 
-    // If an RDB file is not provided
-    if (!params.rdb){
+    // If an alignment CSV file is not provided
+    if (!params.gigmap_csv){
         // Invoke the function above which prints the help message
         helpMessage()
         // Add a more specific help message
         log.info"""
 
-        ERROR: Must provide the --rdb flag
+        ERROR: Must provide the --gigmap_csv flag
 
         """
         // Exit out and do not run anything else
