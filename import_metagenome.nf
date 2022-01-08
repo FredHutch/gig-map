@@ -82,8 +82,8 @@ process subset_abund {
     label "io_limited"
 
     input:
-    path abund_json
-    each path(gene_list)
+    path gene_list
+    each path(abund_json)
 
     output:
     path "${abund_json.name}.subset.csv.gz", optional: true
