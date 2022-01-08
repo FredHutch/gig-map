@@ -83,7 +83,7 @@ process subset_abund {
 
     input:
     path abund_json
-    each path gene_list
+    each path(gene_list)
 
     output:
     path "${abund_json.name}.subset.csv.gz", optional: true
