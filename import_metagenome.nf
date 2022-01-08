@@ -188,6 +188,7 @@ workflow {
 
     // Subset each individual abundance file to just that gene of interest
     subset_abund(
+        get_gene_list.out,
         Channel
             .fromPath(
                 "${params.geneshot_abund}**json.gz"
