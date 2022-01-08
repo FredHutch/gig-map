@@ -58,7 +58,7 @@ import pandas as pd
 print("Reading in ${aln_csv}")
 
 # Only read in the first column
-df = pd.read_csv("${aln_csv}", usecols=0)
+df = pd.read_csv("${aln_csv}", usecols=[0])
 
 msg = "The first column should be named qseqid"
 assert df.columns.values[0] == 'qseqid', msg
