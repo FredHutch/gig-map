@@ -152,7 +152,7 @@ print("Done")
 
 process merge_abund {
     container "${params.container__pandas}"
-    publishDir "${params.output_folder}"
+    publishDir "${params.output_folder}", mode: 'copy', overwrite: true
     label "io_limited"
 
     input:
