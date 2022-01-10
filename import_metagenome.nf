@@ -194,6 +194,50 @@ pd.concat(
     """
 }
 
+process extract_manifest {
+    container "${params.container__pandas}"
+    publishDir "${params.output_folder}", mode: 'copy', overwrite: true
+    label "io_limited"
+
+    input:
+    path hdf
+
+    output:
+    path "${params.output_prefix}.manifest.csv"
+
+    script:
+    """#!/usr/bin/env python3
+
+import os
+import pandas as pd
+
+# Interpolate the input filepath
+hdf = "${hdf}"
+
+# Make sure that the file exists
+assert os.path.exists(hdf)
+
+# Read in the /manifest table
+manifest = pd.read_hdf(hdf, '/manifest')
+
+# For R1 and R2
+for cname in ['R1', 'R2']:
+
+    # If the column is present
+    if cname in manifest.columns.values:
+
+        # Remove it
+        manifest = manifest.drop(columns=[cname])
+
+# Drop any duplicates
+manifest = manifest.drop_duplicates()
+
+# Save to a CSV
+manifest.to_csv("${params.output_prefix}.manifest.csv", index=None)
+
+    """
+}
+
 workflow {
 
     // Show help message if the user specifies the --help flag at runtime
@@ -253,5 +297,15 @@ workflow {
     merge_abund(
         subset_abund.out.toSortedList()
     )
+
+    // If the user provided a value for the param geneshot_hdf
+    if ( params.geneshot_hdf ){
+
+        // Extract the manifest from the HDF
+        extract_manifest(
+            Channel.fromPath(params.geneshot_hdf)
+        )
+
+    }
 
 }
