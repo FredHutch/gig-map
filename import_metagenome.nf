@@ -57,11 +57,11 @@ import pandas as pd
 
 print("Reading in ${aln_csv}")
 
-# Only read in the first column
-df = pd.read_csv("${aln_csv}", usecols=[0])
+# Only read in the second column
+df = pd.read_csv("${aln_csv}", usecols=[1])
 
-msg = "The first column should be named qseqid"
-assert df.columns.values[0] == 'qseqid', msg
+msg = "The second column should be named sseqid"
+assert df.columns.values[0] == 'sseqid', msg
 
 print("Read in %d lines" % df.shape[0])
 
@@ -100,11 +100,11 @@ print("Reading in ${gene_list}")
 gene_list = pd.read_csv("${gene_list}")
 print("Read in %d gene names" % gene_list.shape[0])
 
-msg = "The first column should be named qseqid"
-assert gene_list.columns.values[0] == 'qseqid', msg
+msg = "The first column should be named sseqid"
+assert gene_list.columns.values[0] == 'sseqid', msg
 
 # Convert to a set
-gene_set = set(gene_list.qseqid.tolist())
+gene_set = set(gene_list.sseqid.tolist())
 
 # Make sure that all values were unique
 assert gene_list.shape[0] == len(gene_set), "Gene list was not unique"
