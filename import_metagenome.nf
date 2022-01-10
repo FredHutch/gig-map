@@ -86,7 +86,7 @@ process subset_abund {
     each path(abund_json)
 
     output:
-    path "${abund_json.name}.subset.csv.gz", optional: true
+    path "*.csv.gz", optional: true
 
     script:
     """#!/usr/bin/env python3
@@ -109,8 +109,15 @@ gene_set = set(gene_list.sseqid.tolist())
 # Make sure that all values were unique
 assert gene_list.shape[0] == len(gene_set), "Gene list was not unique"
 
-print("Reading in ${abund_json}")
-with gzip.open("${abund_json}", "rt") as handle:
+# Get the name of the file to read in
+fp_in = "${abund_json}"
+
+# Make sure that the extension is '.json.gz'
+assert fp_in.endswith('.json.gz')
+
+# Read it in
+print("Reading in %s" % fp_in)
+with gzip.open(fp_in, "rt") as handle:
     abund = json.load(handle)
 
 msg = "Abundance data should be formatted as a list"
@@ -130,12 +137,59 @@ print("After filtering, %d abundances remain" % len(abund))
 # Format as a DataFrame
 abund = pd.DataFrame(abund)
 
-fp_out = "${abund_json.name}.subset.csv.gz"
+# Set the output file name as '.json.gz' -> '.csv.gz'
+
+# Build the file name from the specimen name
+fp_out = fp_in.replace('.json.gz', '.csv.gz')
 
 print("Writing out to %s" % fp_out)
 
 abund.to_csv(fp_out, index=None)
 print("Done")
+
+    """
+}
+
+process merge_abund {
+    container "${params.container__pandas}"
+    publishDir "${params.output_folder}"
+    label "io_limited"
+
+    input:
+    path "*"
+
+    output:
+    path "${params.output_prefix}.csv.gz"
+
+    script:
+    """#!/usr/bin/env python3
+
+import os
+import pandas as pd
+
+# Build a dict of the data
+dat = dict()
+
+# Iterate over each file in the inputs
+for fp in os.listdir('.'):
+    if fp.endswith('.csv.gz'):
+
+        # Get the specimen name from the file name
+        specimen = fp[:len('.csv.gz')]
+
+        # Read in the table
+        dat[specimen] = pd.read_csv(fp)
+
+# Merge all CSV files in the working directory and write out
+pd.concat(
+    [
+        df.assign(specimen=specimen)
+        for specimen, df in dat.items()
+    ]
+).to_csv(
+    "${params.output_prefix}.csv.gz",
+    index=None
+)
 
     """
 }
@@ -191,10 +245,13 @@ workflow {
         get_gene_list.out,
         Channel
             .fromPath(
-                "${params.geneshot_abund}**json.gz"
+                "${params.geneshot_abund}**${}"
             )
     )
 
     // Merge each of those abundance into a single CSV
+    merge_abund(
+        subset_abund.out.toSortedList()
+    )
 
 }
