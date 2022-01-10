@@ -245,7 +245,7 @@ workflow {
         get_gene_list.out,
         Channel
             .fromPath(
-                "${params.geneshot_abund}**${}"
+                "${params.geneshot_abund}**.json.gz"
             )
     )
 
