@@ -107,19 +107,22 @@ def greedy_linearization(dm):
     
     # While there are more rows to add to the list
     while len(row_order) < dm.shape[0]:
-        
-        # Get the best match for the final row
-        best_match = dm.loc[
+
+        # Get the candidates of rows to choose from
+        candidates = dm.loc[
             row_order[-1]
         ].drop(
             index=row_order
-        ).sort_values()
+        )
+        
+        # Get the best match for the final row
+        best_match = candidates.idxmin()
         
         # Add to the score
-        total_score += best_match.values[0]
+        total_score += candidates.min()
         
         # Add to the order
-        row_order.append(best_match.index.values[0])
+        row_order.append(best_match)
     
     return total_score, row_order
 
