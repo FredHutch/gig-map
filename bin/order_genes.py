@@ -60,7 +60,7 @@ def order_rows(
     df:pd.DataFrame,
     metric="dice",
     logger=None,
-    n_iter=100,
+    n_iter=5,
 ):
     """
     Order the rows of a DataFrame by greedily selecting adjacencies.
@@ -69,7 +69,7 @@ def order_rows(
     # Compute the distance matrix
     t = Timer(logger=logger)
     dm = calc_dm(df, metric=metric)
-    t.stop("Calculated pairwise distances")
+    t.stop(f"Calculated pairwise distances for {dm.shape[0]} genes")
 
     # Keep track of the best score and the best order
     best_score, best_order = None, None
