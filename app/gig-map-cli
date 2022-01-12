@@ -71,7 +71,6 @@ def render_display(
     label_genes_by="",
     figure_height=1200,
     figure_width=1200,
-    skip_gene_resort=False,
     hovertext=False,
 ):
     """Main function for rendering the gig-map display as a static file."""

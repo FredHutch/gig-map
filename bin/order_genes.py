@@ -3,176 +3,126 @@
 # Import libraries
 import gzip
 import logging
-import numpy as np
 import pandas as pd
-from scipy.cluster import hierarchy
-from sklearn.cluster import KMeans
+from random import choice
+from scipy.spatial import distance
 import sys
 from time import time
 from uuid import uuid4
 
 
-class OrderRows:
-    """
-    Order the rows of a DataFrame with linkage clustering, breaking
-    up the rows initially into k clusters based on the total counts.
-    """
-    
-    def __init__(
-        self,
-        df:pd.DataFrame,
-        method="average",
-        metric="dice",
-        logger=None,
-        k:int=5
-    ):
+class Timer:
+    """Log the amount of time taken to perform a task."""
 
-        # Attach the data to the object
-        self.df = df
-        self.row_n = df.shape[0]
+    def __init__(self, logger=None):
 
-        # Save the parameters
-        self.method = method
-        self.metric = metric
-        self.start_time = None
-        self.k = k
-
-        # Attach the logger
-        self.logger = logger
-
-        # Break up the rows into clusters with similar counts
-        self.group_rows_kmeans()
-
-        # Assign an order within each of those clusters
-        self.order_rows_in_groups()
-
-        # Arrange each of the clusters in descending order of counts
-        self.calc_cluster_order()
-
-        # Concatenate the clusters to make the overall row order
-        self.concatenate_clusters()
-
-    def concatenate_clusters(self):
-        """Concatenate the clusters to make the overall row order."""
-
-        self.row_order = [
-            row_name
-            for cluster_ix in self.cluster_order
-            for row_name in self.grouped_row_order[cluster_ix]
-        ]
-
-    def calc_cluster_order(self):
-        """Arrange each of the clusters in descending order of counts."""
-
-        self.set_timer()
-
-        # Count up the average number of counts for each cluster
-        mean_counts = {
-            cluster_ix: cluster_df.mean().mean()
-            for cluster_ix, cluster_df in self.df.groupby(self.kmeans_labels)
-        }
-
-        # Set the order of the clusters with the highest counts first
-        self.cluster_order = pd.Series(
-            mean_counts
-        ).sort_values(
-            ascending=False
-        ).index.values
-
-        self.stop_timer("Determined cluster order")
-
-    def group_rows_kmeans(self):
-        """
-        Group rows together by k-means clustering, selecting
-        the number of clusters which results in the lowest silhouette score.
-        """
-
-        self.set_timer()
-
-        # Compute the number of genomes that each gene is found within
-        gene_counts = self.df.sum(axis=1).values
-
-        # Convert to a 2D array
-        gene_counts = np.transpose(np.array([gene_counts]))
-
-        assert gene_counts.shape[0] == self.row_n
-        assert gene_counts.shape[1] == 1
-
-        # Intialize the object
-        kmeans = KMeans(n_clusters=self.k, random_state=0)
-
-        # Fit the clusters
-        kmeans.fit(gene_counts)
-
-        # Predict the labels
-        self.kmeans_labels = kmeans.predict(gene_counts)
-
-        self.stop_timer("Performed k-means clustering")
-
-    def order_rows_in_groups(self):
-        """Assign an order for the rows within each cluster."""
-
-        self.set_timer()
-        self.grouped_row_order = {
-            group_ix: self.calc_row_order(
-                list(row_list.values)
-            )
-            for group_ix, row_list in pd.Series(
-                self.df.index.values
-            ).groupby(
-                self.kmeans_labels
-            )
-        }
-        self.stop_timer("Ordered rows within all groups")
-
-    def set_timer(self):
-        """Set the timer."""
+        # Record the time that the timer was created
         self.start_time = time()
 
-    def stop_timer(self, msg, decimals=2):
-        """Report the elapsed time."""
+        # Attach the logger, if any
+        self.logger = logger
 
-        # The timer must have been started
-        assert self.start_time is not None, "Forgot to start the timer"
+    def stop(self, msg):
+        """Report the amount of time elapsed."""
 
-        rounded_seconds = round(
-            time() - self.start_time,
-            decimals
-        )
+        # Format the message with the amount of time elapsed
+        msg = f"{msg} - {time() - self.start_time:.2E} seconds elapsed"
 
-        # Log the message
-        self.log(f"{msg} in {rounded_seconds} seconds")
+        # If there is a logger
+        if self.logger is not None:
 
-        # Unset the start time variable
-        self.start_time = None
-
-    def log(self, msg):
-        """Print a message to the logger, if provided, otherwise print."""
-        if self.logger is None:
-            print(msg)
-        else:
+            # Log the message
             self.logger.info(msg)
 
-    def calc_row_order(self, row_list):
-        """Set up the initial row order with linkage clustering."""
+        # If there is no logger
+        else:
 
-        # If there are < 3 rows
-        if len(row_list) < 3:
+            # Print the message
+            print(msg)
 
-            # No need to change things
-            return row_list
 
-        # Perform linkage clustering
-        L = hierarchy.linkage(
-            self.df.reindex(index=row_list).values,
-            metric=self.metric,
-            method=self.method,
-            optimal_ordering=False
-        )
+def calc_dm(df, metric='dice'):
+    """Return a square DataFrame of pairwise distances between rows."""
 
-        # Get the order of rows based on that list
-        # and map those indices back to the input list
-        return [row_list[i] for i in hierarchy.leaves_list(L)]
+    return pd.DataFrame(
+        distance.squareform(
+            distance.pdist(
+                df.values,
+                metric=metric
+            )
+        ),
+        index=df.index.values,
+        columns=df.index.values
+    )
+
+
+def order_rows(
+    df:pd.DataFrame,
+    metric="dice",
+    logger=None,
+    n_iter=100,
+):
+    """
+    Order the rows of a DataFrame by greedily selecting adjacencies.
+    """
+    
+    # Compute the distance matrix
+    t = Timer(logger=logger)
+    dm = calc_dm(df, metric=metric)
+    t.stop("Calculated pairwise distances")
+
+    # Keep track of the best score and the best order
+    best_score, best_order = None, None
+
+    # Iteratively sort the distance matrix
+    for iter_i in range(n_iter):
+        
+        # In each iteration, sort the rows by greedy_linearization
+        t = Timer(logger=logger)
+        new_score, new_order = greedy_linearization(dm)
+        t.stop(f"Iteration {iter_i}: Score = {new_score}")
+        
+        # If the score is better
+        if best_score is None or new_score < best_score:
+            
+            # Save it as the best
+            best_score, best_order = new_score, new_order
+
+    logger.info(f"Top score: {best_score}")
+
+    # After all iterations are done, return the best order that was found
+    return best_order
+
+
+def greedy_linearization(dm):
+    """Return the order of rows by greedily selecting adjacent rows."""
+    
+    # Make a list, starting with a random row
+    row_order = [
+        choice(dm.index.values)
+    ]
+    
+    # Keep track of the total score
+    total_score = 0
+    
+    # While there are more rows to add to the list
+    while len(row_order) < dm.shape[0]:
+        
+        # Get the best match for the final row
+        best_match = dm.loc[
+            row_order[-1]
+        ].drop(
+            index=row_order
+        ).sort_values()
+        
+        # Add to the score
+        total_score += best_match.values[0]
+        
+        # Add to the order
+        row_order.append(best_match.index.values[0])
+    
+    return total_score, row_order
+
 
 # If this is being run as a script
 if __name__ == "__main__":
@@ -214,10 +164,12 @@ if __name__ == "__main__":
     )
 
     # Get the order of rows based on linkage clustering
-    gene_order = OrderRows(
+    t = Timer(logger=logger)
+    gene_order = order_rows(
         df,
         logger=logger
-    ).row_order
+    )
+    t.stop("Overall gene ordering")
 
     logger.info(f"Writing output to {output_fp}")
 
