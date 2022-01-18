@@ -7,7 +7,7 @@ redis-server \
     --port 6379 \
     --bind 127.0.0.1 \
     --rdbcompression yes \
-    --dbfilename "gigmap_output.rdb" \
+    --dbfilename "gigmap.rdb" \
     --save "" \
     --dir \$PWD &
 
