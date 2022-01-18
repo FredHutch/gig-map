@@ -84,7 +84,7 @@ def order_rows(
     t = Timer(logger=logger)
     dists = {
         row_name: row_dists.sort_values()
-        for row_name, row_dists in df.iterrows()
+        for row_name, row_dists in dm.iterrows()
     }
     t.stop(f"Sorted distances for all rows")
 
