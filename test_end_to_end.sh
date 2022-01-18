@@ -3,7 +3,6 @@
 set -e
 
 OUTPUT_FOLDER=output_end_to_end
-OUTPUT_PREFIX=gigmap_alignment
 GENOME_TABLES=test_data/NCBI_Escherichia_coli_genomes.test_subset.csv
 
 NXF_CONFIG="-c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest -resume"
@@ -36,8 +35,7 @@ nextflow \
     main.nf \
     --genome_tables ${GENOME_TABLES} \
     --genes_fasta ${OUTPUT_FOLDER}/clustered.genes.fasta.gz \
-    --output_folder ${OUTPUT_FOLDER} \
-    --output_prefix ${OUTPUT_PREFIX}
+    --output_folder ${OUTPUT_FOLDER}
 
 # Render a plot
 NXF_VER=21.04.1 \
@@ -45,9 +43,8 @@ nextflow \
     run \
     ${NXF_CONFIG} \
     render.nf \
-    --rdb ${OUTPUT_FOLDER}/${OUTPUT_PREFIX}.rdb \
+    --rdb ${OUTPUT_FOLDER}/gigmap.rdb \
     --gene_annotations ${OUTPUT_FOLDER}/clustered.genes.csv.gz \
-    --genome_annotations ${OUTPUT_FOLDER}/downloaded.genome.annotations.csv.gz \
+    --genome_annotations ${OUTPUT_FOLDER}/genome.annotations.csv.gz \
     --output_folder ${OUTPUT_FOLDER} \
-    --output_prefix ${OUTPUT_PREFIX} \
     --mem_gbs 4

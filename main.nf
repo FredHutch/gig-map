@@ -6,7 +6,6 @@ nextflow.enable.dsl=2
 // Set default parameters
 params.help = false
 params.output_folder = false
-params.output_prefix = false
 params.genomes = false
 params.genes_fasta = false
 params.genes_dmnd = false
@@ -74,7 +73,6 @@ include {
 } from './modules' params(
     output_folder: params.output_folder,
     ftp_output_folder: "${params.output_folder}/genomes",
-    output_prefix: params.output_prefix,
     min_gene_length: params.min_gene_length,
     min_identity: params.min_identity,
     min_coverage: params.min_coverage,
@@ -125,7 +123,6 @@ def helpMessage() {
       --genes_dmnd          Amino acid sequences to search for (DIAMOND database format *.dmnd)
                             (either --genes_fasta or --genes_dmnd is required)
       --output_folder       Folder to write output files to
-      --output_prefix       Prefix to use for output file names
 
     Optional Arguments:
       --marker_genes        Optionally provide marker genes in FASTA format which will be used
@@ -238,11 +235,12 @@ workflow {
     }
 
     // The user must specify each of the required arguments
-    if (!params.output_folder || !params.output_prefix){
+    if (!params.output_folder){
         log.info"""
 
         -----------------------
         MISSING REQUIRED INPUTS
+        --output_folder
         -----------------------
 
         """.stripIndent()
@@ -258,6 +256,7 @@ workflow {
 
         -------------------
         MISSING INPUT GENES
+        --genes_dmds or --genes_fasta
         -------------------
 
         """.stripIndent()
@@ -273,6 +272,7 @@ workflow {
 
         ---------------------
         MISSING INPUT GENOMES
+        --genomes or --genome_tables
         ---------------------
 
         """.stripIndent()
@@ -700,7 +700,6 @@ include {
     fetchFTP as saveFTP;
     concatenate_annotations as join_annotations;
 } from './modules' params(
-    output_prefix: 'downloaded',
     output_folder: params.output_folder,
     ftp_output_folder: "${params.output_folder}/genomes",
     publishFTP: 'true',
@@ -824,7 +823,6 @@ include {
 } from './modules' params(
     output_folder: params.output_folder,
     ftp_output_folder: "${params.output_folder}/ncbi_genes",
-    output_prefix: params.output_prefix,
     cluster_similarity: params.cluster_similarity,
     cluster_coverage: params.cluster_coverage,
     ftp_threads: params.ftp_threads,

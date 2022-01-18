@@ -9,7 +9,6 @@ params.container__gigmap = "quay.io/hdc-workflows/gig-map:9922838"
 params.mem_gbs = 4
 params.rdb = false
 params.output_folder = "output"
-params.output_prefix = "gig-map"
 params.options = ""
 params.gene_annotations = false
 params.genome_annotations = false
@@ -23,7 +22,6 @@ def helpMessage() {
 
     Required Arguments:
       --rdb                 File contining output of the gig-map pipeline, file with the .rdb extension
-      --output_prefix       Name of the HTML output (default: ${params.output_prefix})
       --output_folder       Folder for output file (default: ${params.output_folder})
       --gene_annotations    Optional CSV containing gene annotations
       --genome_annotations  Optional CSV containing genome annotations
@@ -62,7 +60,7 @@ process render {
     path RDB
 
     output:
-    path "${params.output_prefix}.html"
+    path "gigmap.html"
 
     script:
     """#!/bin/bash
@@ -71,7 +69,7 @@ set -e
 
 gig-map-cli \
     --rdb "${RDB}" \
-    --output-prefix ${params.output_prefix} \
+    --output-prefix gigmap \
     --output-folder ./ \
     ${params.options}
     """
@@ -88,7 +86,7 @@ process render_genes_genomes {
     path GENOME_ANNOTATIONS
 
     output:
-    path "${params.output_prefix}.html"
+    path "gigmap.html"
 
     script:
     """#!/bin/bash
@@ -99,7 +97,7 @@ gig-map-cli \
     --rdb "${RDB}" \
     --gene-annotations "${GENE_ANNOTATIONS}" \
     --genome-annotations "${GENOME_ANNOTATIONS}" \
-    --output-prefix ${params.output_prefix} \
+    --output-prefix gigmap \
     --output-folder ./ \
     ${params.options}
     """
@@ -116,7 +114,7 @@ process render_genes {
     path GENOME_ANNOTATIONS
 
     output:
-    path "${params.output_prefix}.html"
+    path "gigmap.html"
 
     script:
     """#!/bin/bash
@@ -126,7 +124,7 @@ set -e
 gig-map-cli \
     --rdb "${RDB}" \
     --gene-annotations "${GENE_ANNOTATIONS}" \
-    --output-prefix ${params.output_prefix} \
+    --output-prefix gigmap \
     --output-folder ./ \
     ${params.options}
     """
@@ -142,7 +140,7 @@ process render_genomes {
     path GENOME_ANNOTATIONS
 
     output:
-    path "${params.output_prefix}.html"
+    path "gigmap.html"
 
     script:
     """#!/bin/bash
@@ -152,7 +150,7 @@ set -e
 gig-map-cli \
     --rdb "${RDB}" \
     --genome-annotations "${GENOME_ANNOTATIONS}" \
-    --output-prefix ${params.output_prefix} \
+    --output-prefix gigmap \
     --output-folder ./ \
     ${params.options}
     """

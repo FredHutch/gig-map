@@ -24,7 +24,7 @@ jobs:
           df -h
       - name:  DIAMOND alignment from DMND
         run: |
-          nextflow run main.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --genome_tables test_data/Escherichia_virus_T4.csv --genes_dmnd test_data/GCA_002599665.1_ASM259966v1_protein.dmnd --output_folder output_diamond_dmnd --output_prefix output -resume
+          nextflow run main.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --genome_tables test_data/Escherichia_virus_T4.csv --genes_dmnd test_data/GCA_002599665.1_ASM259966v1_protein.dmnd --output_folder output_diamond_dmnd -resume
 
       - name:  Download utility
         run: |
@@ -37,7 +37,3 @@ jobs:
       - name:  Render HTML
         run: |
           nextflow run render.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --mem_gbs 1 --rdb output_diamond_dmnd/output.rdb -resume
-
-      # - name:  Test marker gene
-      #   run: |
-      #     NXF_VER=21.04.1 nextflow run main.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --genome_tables test_data/NCBI_Escherichia_coli_genomes.test_subset.csv --genes_fasta test_data/GCA_002599665.1_ASM259966v1_protein.faa.gz --output_folder output_diamond_fasta --output_prefix output -resume --marker_genes test_data/cpn60.fasta.gz

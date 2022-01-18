@@ -607,19 +607,19 @@ process concatenate_alignments {
     path "inputs/*.tsv.gz"
 
     output:
-    path "${params.output_prefix}.csv.gz"
+    path "alignments.csv.gz"
 
 """#!/bin/bash
 
 set -Eeuo pipefail
 
-echo "${params.aln_fmt} genome" | tr ' ' ',' > "${params.output_prefix}.csv"
+echo "${params.aln_fmt} genome" | tr ' ' ',' > "alignments.csv"
 
 gunzip -c inputs/*.tsv.gz \
     | tr '\t' ',' \
-    >> "${params.output_prefix}.csv"
+    >> "alignments.csv"
 
-gzip "${params.output_prefix}.csv"
+gzip "alignments.csv"
 
 """
 
@@ -635,7 +635,7 @@ process concatenate_annotations {
     path "annotations/*.csv.gz"
 
     output:
-    path "${params.output_prefix}.genome.annotations.csv.gz"
+    path "genome.annotations.csv.gz"
 
 """#!/usr/bin/env python3
 import pandas as pd
@@ -652,7 +652,7 @@ df = pd.concat([
 
 # Write out the table
 df.to_csv(
-    "${params.output_prefix}.genome.annotations.csv.gz",
+    "genome.annotations.csv.gz",
     index=None
 )
 
@@ -670,7 +670,7 @@ process order_genes {
     path alignments_csv_gz
 
     output:
-    path "${params.output_prefix}.gene_order.txt.gz"
+    path "gene_order.txt.gz"
 
 """#!/bin/bash
 
@@ -678,7 +678,7 @@ set -Eeuo pipefail
 
 order_genes.py \
     "${alignments_csv_gz}" \
-    "${params.output_prefix}.gene_order.txt.gz"
+    "gene_order.txt.gz"
 
 """
 
@@ -695,7 +695,7 @@ process generate_gene_map {
     path alignments_feather
 
     output:
-    path "${params.output_prefix}.tsne.coords.csv.gz"
+    path "tsne.coords.csv.gz"
 
 """#!/bin/bash
 
@@ -705,7 +705,7 @@ generate_gene_map.py \
     "${alignments_feather}" \
     ${params.max_n_genes_train_pca} \
     ${params.max_pcs_tsne} \
-    "${params.output_prefix}.tsne.coords.csv.gz" \
+    "tsne.coords.csv.gz" \
     ${task.cpus}
 
 """
@@ -723,7 +723,7 @@ process annotate_genes {
     path geneshot_results_hdf
 
     output:
-    path "${params.output_prefix}.gene_annotations.csv.gz"
+    path "gene_annotations.csv.gz"
 
 """#!/bin/bash
 
@@ -731,7 +731,7 @@ set -Eeuo pipefail
 
 format_geneshot_annotations.py \
     --input "${geneshot_results_hdf}" \
-    --output "${params.output_prefix}.gene_annotations.csv.gz"
+    --output "gene_annotations.csv.gz"
 
 """
 
@@ -748,7 +748,7 @@ process annotate_genes_with_abundances {
     path geneshot_details_hdf
 
     output:
-    path "${params.output_prefix}.gene_annotations.csv.gz"
+    path "gene_annotations.csv.gz"
 
 """#!/bin/bash
 
@@ -757,7 +757,7 @@ set -Eeuo pipefail
 format_geneshot_annotations.py \
     --input "${geneshot_results_hdf}" \
     --details "${geneshot_details_hdf}" \
-    --output "${params.output_prefix}.gene_annotations.csv.gz"
+    --output "gene_annotations.csv.gz"
 
 """
 
@@ -804,7 +804,7 @@ process aggregate_results {
     path "marker_distances/*"
 
     output:
-    path "${params.output_prefix}.rdb"
+    path "gigmap_output.rdb"
 
     script:
     template "aggregate_results.sh"
