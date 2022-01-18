@@ -10,7 +10,6 @@ container__raxml = "quay.io/biocontainers/raxml-ng:1.0.3--h32fcf60_0"
 
 // Default values for parameters
 params.output_folder = 'output'
-params.output_prefix = 'output'
 params.min_coverage = 50
 params.min_marker_coverage = 50
 params.pick_marker_genes = 10
@@ -804,7 +803,7 @@ process aggregate_results {
     path "marker_distances/*"
 
     output:
-    path "gigmap_output.rdb"
+    path "gigmap.rdb"
 
     script:
     template "aggregate_results.sh"
