@@ -4,8 +4,7 @@
 import gzip
 import logging
 import pandas as pd
-from random import choice
-from scipy.spatial import distance
+from sklearn.metrics import pairwise_distances
 import sys
 from time import time
 from uuid import uuid4
@@ -26,7 +25,7 @@ class Timer:
         """Report the amount of time elapsed."""
 
         # Format the message with the amount of time elapsed
-        msg = f"{msg} - {time() - self.start_time:.2E} seconds elapsed"
+        msg = f"{msg} - {self.elapsed():.2E} seconds elapsed"
 
         # If there is a logger
         if self.logger is not None:
@@ -40,16 +39,20 @@ class Timer:
             # Print the message
             print(msg)
 
+    def elapsed(self):
+        """Return the number of seconds since the timer started."""
+        return time() - self.start_time
 
-def calc_dm(df, metric='dice'):
+
+def calc_dm(df, metric='cosine'):
     """Return a square DataFrame of pairwise distances between rows."""
 
     return pd.DataFrame(
-        distance.squareform(
-            distance.pdist(
-                df.values,
-                metric=metric
-            )
+        pairwise_distances(
+            df.values,
+            metric=metric,
+            # Use all available cores
+            n_jobs=-1
         ),
         index=df.index.values,
         columns=df.index.values
@@ -57,10 +60,16 @@ def calc_dm(df, metric='dice'):
 
 
 def order_rows(
+    # Table with values used to sort the rows
     df:pd.DataFrame,
-    metric="dice",
+    # Distance metric
+    metric="cosine",
+    # Logging instance
     logger=None,
-    n_iter=5,
+    # Optionally allow the user to specify a row to start the order
+    starting_row=None,
+    # Number of seconds between logging messages
+    log_interval=10
 ):
     """
     Order the rows of a DataFrame by greedily selecting adjacencies.
@@ -69,62 +78,64 @@ def order_rows(
     # Compute the distance matrix
     t = Timer(logger=logger)
     dm = calc_dm(df, metric=metric)
-    t.stop(f"Calculated pairwise distances for {dm.shape[0]} genes")
+    t.stop(f"Calculated pairwise {metric} distances for {dm.shape[0]} rows")
 
-    # Keep track of the best score and the best order
-    best_score, best_order = None, None
+    # Sort the distances for each row
+    t = Timer(logger=logger)
+    dists = {
+        row_name: row_dists.sort_values()
+        for row_name, row_dists in df.iterrows()
+    }
+    t.stop(f"Sorted distances for all rows")
 
-    # Iteratively sort the distance matrix
-    for iter_i in range(n_iter):
-        
-        # In each iteration, sort the rows by greedy_linearization
-        t = Timer(logger=logger)
-        new_score, new_order = greedy_linearization(dm)
-        t.stop(f"Iteration {iter_i}: Score = {new_score}")
-        
-        # If the score is better
-        if best_score is None or new_score < best_score:
-            
-            # Save it as the best
-            best_score, best_order = new_score, new_order
+    # If the user did not specify a starting row
+    if starting_row is None:
 
-    logger.info(f"Top score: {best_score}")
+        # Set the starting row as the one with the largest sum
+        starting_row = df.mean(axis=1).sort_values().index.values[-1]
+        logger.info(f"Order will start with row {starting_row}")
 
-    # After all iterations are done, return the best order that was found
-    return best_order
+    # If the user did specify a starting row
+    else:
 
+        # Make sure that the row is in the table
+        assert starting_row in df.index.values, f"Row {starting_row} not found"
 
-def greedy_linearization(dm):
-    """Return the order of rows by greedily selecting adjacent rows."""
+    # Set up the row order
+    row_order = [starting_row]
+    seen = set(row_order)
+
+    t = Timer(logger=logger)
     
-    # Make a list, starting with a random row
-    row_order = [
-        choice(dm.index.values)
-    ]
-    
-    # Keep track of the total score
-    total_score = 0
-    
-    # While there are more rows to add to the list
-    while len(row_order) < dm.shape[0]:
+    while len(seen) < len(dists):
 
-        # Get the candidates of rows to choose from
-        candidates = dm.loc[
-            row_order[-1]
-        ].drop(
-            index=row_order
+        # Find the next row to add to the ordered list
+        next_row = best_match(
+            row_order[-1],
+            dists,
+            seen
         )
-        
-        # Get the best match for the final row
-        best_match = candidates.idxmin()
-        
-        # Add to the score
-        total_score += candidates.min()
-        
-        # Add to the order
-        row_order.append(best_match)
+
+        # Add that row to the list
+        row_order.append(next_row)
+        seen.add(next_row)
+            
+        if t.elapsed() > log_interval:
+            t.stop(f"Ordered {len(seen):,} genes")
+            t = Timer(logger=logger)
+
+    # Return the final list
+    return row_order
+
+
+def best_match(query_row, dists, seen):
+    """Return the most similar row which has not yet been seen."""
     
-    return total_score, row_order
+    for row_name, dist in dists[query_row].items():
+        
+        if row_name not in seen:
+            
+            return row_name
 
 
 # If this is being run as a script
@@ -161,9 +172,6 @@ if __name__ == "__main__":
         values="pident"
     ).fillna(
         0
-    # Convert to a presence / absence boolean
-    ).applymap(
-        lambda v: int(v > 0)
     )
 
     # Get the order of rows based on linkage clustering
