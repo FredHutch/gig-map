@@ -36,4 +36,4 @@ jobs:
 
       - name:  Render HTML
         run: |
-          nextflow run render.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --mem_gbs 1 --rdb output_diamond_dmnd/output.rdb -resume
+          nextflow run render.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --mem_gbs 1 --rdb output_diamond_dmnd/gigmap.rdb -resume
