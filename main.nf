@@ -1,39 +1,9 @@
 #!/usr/bin/env nextflow
 
+// Default parameters are in `nextflow.config`
+
 // Using DSL-2
 nextflow.enable.dsl=2
-
-// Set default parameters
-params.help = false
-params.output_folder = false
-params.genomes = false
-params.genes_fasta = false
-params.genes_dmnd = false
-params.genome_tables = false
-params.min_gene_length = false
-params.min_coverage = 90
-params.min_identity = 90
-params.aligner = 'diamond'
-params.ftp_threads = 25
-params.query_gencode = 11
-params.max_evalue = 0.001
-params.max_overlap = 50
-params.annotate_geneshot = false
-params.abundances_geneshot = false
-params.max_n_genes_train_pca = 20000
-params.max_pcs_tsne = 50
-params.sketch_size = 10000
-params.genome_distances = false
-params.ani_thresholds = "99,95,90,80,70,60,50"
-params.cluster_similarity = 0.9
-params.cluster_coverage = 0.9
-params.marker_genes = false
-params.min_marker_coverage = 90
-params.pick_marker_genes = 10
-params.raxml_model = "LG+G8+F"
-params.raxml_starting_trees = 10
-params.raxml_bs_trees = 10
-
 
 // Import the processes to run in this workflow
 include {
