@@ -1,35 +1,12 @@
-// Docker containers reused across processes
-container__pandas = "quay.io/fhcrc-microbiome/python-pandas:4a6179f"
-container__mashtree = "quay.io/hdc-workflows/mashtree:1.2.0"
-container__blast = "quay.io/biocontainers/blast:2.11.0--pl526he19e7b1_0"
-container__diamond = "quay.io/biocontainers/diamond:2.0.11--hdcc8f71_0"
-container__cdhit = "quay.io/biocontainers/cd-hit:4.8.1--h2e03b76_5"
-container__clustal = "quay.io/hdc-workflows/clustalo:main"
-container__emboss = "biocontainers/emboss:v6.6.0dfsg-7b1-deb_cv1"
-container__raxml = "quay.io/biocontainers/raxml-ng:1.0.3--h32fcf60_0"
 
 // Default values for parameters
-params.output_folder = 'output'
-params.min_coverage = 50
-params.min_marker_coverage = 50
-params.pick_marker_genes = 10
-params.min_identity = 50
-params.ftp_threads = 25
-params.query_gencode = 11
-params.max_evalue = 0.001
-params.max_overlap = 50
-params.aln_fmt = "qseqid sseqid pident length qstart qend qlen sstart send slen"
-params.max_n_genes_train_pca = 10000
-params.max_pcs_tsne = 50
-params.sketch_size = 10000
-params.parse_genome_csv_suffix = "_genomic.fna.gz"
-params.cluster_similarity = 0.9
-params.cluster_coverage = 0.9
-params.skip_missing_ftp = "false"
+
+
+
 
 // Parse the NCBI Genome Browser CSV 
 process parse_genome_csv {
-    container "${container__pandas}"
+    container "${params.container__pandas}"
     label "io_limited"
 
     input:
@@ -47,7 +24,7 @@ process parse_genome_csv {
 
 // Remove any trailing whitespaces from genome FASTAs
 process clean_genomes {
-    container "${container__pandas}"
+    container "${params.container__pandas}"
     label "io_limited"
 
     input:
@@ -64,7 +41,7 @@ process clean_genomes {
 
 // Fetch a file via FTP
 process fetchFTP {
-    container "${container__pandas}"
+    container "${params.container__pandas}"
     label 'io_limited'
     publishDir "${params.ftp_output_folder}", mode: 'copy', overwrite: true, enabled: "${params.publishFTP}" == "true"
 
@@ -83,7 +60,7 @@ process fetchFTP {
 
 
 process mash_sketch {
-    container "${container__mashtree}"
+    container "${params.container__mashtree}"
     label 'io_limited'
     
     input:
@@ -106,7 +83,7 @@ mash \
 }
 
 process mash_join {
-    container "${container__mashtree}"
+    container "${params.container__mashtree}"
     label 'io_limited'
     
     input:
@@ -129,7 +106,7 @@ mash \
 }
 
 process mash_dist {
-    container "${container__mashtree}"
+    container "${params.container__mashtree}"
     label 'io_limited'
     
     input:
@@ -155,7 +132,7 @@ mash \
 }
 
 process filter_genes {
-    container "${container__pandas}"
+    container "${params.container__pandas}"
     label 'io_limited'
     
     input:
@@ -170,9 +147,9 @@ process filter_genes {
 }
 
 process aggregate_distances {
-    container "${container__pandas}"
+    container "${params.container__pandas}"
     label 'io_limited'
-    publishDir "${params.output_folder}", mode: 'copy', overwrite: true
+    publishDir "${params.project_folder}", mode: 'copy', overwrite: true
 
     
     input:
@@ -212,7 +189,7 @@ df = pd.concat(
 }
 
 process makedb_blast {
-    container "${container__blast}"
+    container "${params.container__blast}"
     label 'io_limited'
 
     input:
@@ -251,7 +228,7 @@ tar cvf database.tar database.fasta*
 }
 
 process align_blast {
-    container "${container__blast}"
+    container "${params.container__blast}"
     label "mem_medium"
 
     input:
@@ -284,7 +261,7 @@ blastx \
 
 
 process align_diamond {
-    container "${container__diamond}"
+    container "${params.container__diamond}"
     label 'mem_medium'
     
     input:
@@ -320,7 +297,7 @@ diamond \
 }
 
 process extract_dmnd {
-    container "${container__diamond}"
+    container "${params.container__diamond}"
     label 'io_limited'
     
     input:
@@ -345,7 +322,7 @@ diamond \
 
 // Align each sample against the reference database of genes using DIAMOND
 process makedb_diamond {
-    container "${container__diamond}"
+    container "${params.container__diamond}"
     label 'mem_medium'
     
     input:
@@ -368,7 +345,7 @@ process makedb_diamond {
 
 // Extract the marker sequence from a BLAST alignment
 process extract_markers {
-    container "${container__pandas}"
+    container "${params.container__pandas}"
     label "io_limited"
 
     input:
@@ -393,7 +370,7 @@ extract_markers.py \
 
 // Filter the alignments
 process filter_alignments {
-    container "${container__pandas}"
+    container "${params.container__pandas}"
     label "io_limited"
 
     input:
@@ -417,7 +394,7 @@ filter_alignments.py \
 
 // Select a set of marker genes
 process select_markers {
-    container "${container__pandas}"
+    container "${params.container__pandas}"
     label "io_limited"
 
     input:
@@ -442,7 +419,7 @@ select_markers.py \
 
 // Subset a set of alignments to a particular set of genes
 process subset_alignments_by_genes {
-    container "${container__pandas}"
+    container "${params.container__pandas}"
     label "io_limited"
 
     input:
@@ -468,7 +445,7 @@ subset_alignments_by_genes.py \
 // Go from nucleotide sequences to amino acid
 // CURRENTLY UNUSED
 process translate_markers {
-    container "${container__emboss}"
+    container "${params.container__emboss}"
     label "io_limited"
 
     input:
@@ -499,9 +476,9 @@ gzip \$OUTPUT_PATH
 
 // Reorganize the marker sequence
 process reorganize_markers {
-    container "${container__pandas}"
+    container "${params.container__pandas}"
     label "io_limited"
-    publishDir "${params.output_folder}/genes/", mode: 'copy', overwrite: true, enabled: "${params.publishGenes}" == "true"
+    publishDir "${params.project_folder}/genes/", mode: 'copy', overwrite: true, enabled: "${params.publishGenes}" == "true"
 
     input:
         path "fastas_by_genome/*.markers.fasta.gz"
@@ -521,9 +498,9 @@ reorganize_markers.py
 
 // Make the multiple sequence alignment
 process combine_markers {
-    container "${container__clustal}"
+    container "${params.container__clustal}"
     label "mem_medium"
-    publishDir "${params.output_folder}/markers/", mode: 'copy', overwrite: true
+    publishDir "${params.project_folder}/markers/", mode: 'copy', overwrite: true
 
     input:
         path unaligned_fasta
@@ -555,9 +532,9 @@ clustalo \
 
 // Build an ML tree from the MSA
 process raxml {
-    container "${container__raxml}"
+    container "${params.container__raxml}"
     label 'mem_veryhigh'
-    publishDir "${params.output_folder}/markers/", mode: 'copy', overwrite: true
+    publishDir "${params.project_folder}/markers/", mode: 'copy', overwrite: true
 
     input:
         path aln_fasta
@@ -574,7 +551,7 @@ process raxml {
 
 // Add the query genome file name as the last column to the alignments
 process add_genome_name {
-    container "${container__pandas}"
+    container "${params.container__pandas}"
     label 'io_limited'
     
     input:
@@ -598,9 +575,9 @@ gunzip -c "${alignments_gz}" \
 
 // Combine all of the outputs into a single file
 process concatenate_alignments {
-    container "${container__pandas}"
+    container "${params.container__pandas}"
     label 'io_limited'
-    publishDir "${params.output_folder}", mode: 'copy', overwrite: true
+    publishDir "${params.project_folder}", mode: 'copy', overwrite: true
    
     input:
     path "inputs/*.tsv.gz"
@@ -626,15 +603,15 @@ gzip "alignments.csv"
 
 // Combine all of the genome annotations into a single file
 process concatenate_annotations {
-    container "${container__pandas}"
+    container "${params.container__pandas}"
     label 'io_limited'
-    publishDir "${params.output_folder}", mode: 'copy', overwrite: true
+    publishDir "${params.project_folder}/downloaded_genomes", mode: 'copy', overwrite: true
    
     input:
     path "annotations/*.csv.gz"
 
     output:
-    path "genome.annotations.csv.gz"
+    path "genomes.annot.csv.gz"
 
 """#!/usr/bin/env python3
 import pandas as pd
@@ -651,7 +628,7 @@ df = pd.concat([
 
 # Write out the table
 df.to_csv(
-    "genome.annotations.csv.gz",
+    "genomes.annot.csv.gz",
     index=None
 )
 
@@ -661,9 +638,9 @@ df.to_csv(
 
 // Order genes based on their alignment to genomes
 process order_genes {
-    container "${container__pandas}"
+    container "${params.container__pandas}"
     label 'mem_medium'
-    publishDir "${params.output_folder}", mode: 'copy', overwrite: true
+    publishDir "${params.project_folder}", mode: 'copy', overwrite: true
    
     input:
     path alignments_csv_gz
@@ -684,39 +661,11 @@ order_genes.py \
 }
 
 
-// Generate 2-dimensional t-SNE coordinates for genes based on their alignment to genomes
-process generate_gene_map {
-    container "${container__pandas}"
-    label 'mem_medium'
-    publishDir "${params.output_folder}", mode: 'copy', overwrite: true
-   
-    input:
-    path alignments_feather
-
-    output:
-    path "tsne.coords.csv.gz"
-
-"""#!/bin/bash
-
-set -Eeuo pipefail
-
-generate_gene_map.py \
-    "${alignments_feather}" \
-    ${params.max_n_genes_train_pca} \
-    ${params.max_pcs_tsne} \
-    "tsne.coords.csv.gz" \
-    ${task.cpus}
-
-"""
-
-}
-
-
 // Format a set of gene annotations from the geneshot pipeline as a flat CSV
 process annotate_genes {
-    container "${container__pandas}"
+    container "${params.container__pandas}"
     label 'mem_medium'
-    publishDir "${params.output_folder}", mode: 'copy', overwrite: true
+    publishDir "${params.project_folder}", mode: 'copy', overwrite: true
    
     input:
     path geneshot_results_hdf
@@ -738,9 +687,9 @@ format_geneshot_annotations.py \
 
 // Format a set of gene annotations from the geneshot pipeline as a flat CSV
 process annotate_genes_with_abundances {
-    container "${container__pandas}"
+    container "${params.container__pandas}"
     label 'mem_medium'
-    publishDir "${params.output_folder}", mode: 'copy', overwrite: true
+    publishDir "${params.project_folder}", mode: 'copy', overwrite: true
    
     input:
     path geneshot_results_hdf
@@ -765,7 +714,7 @@ format_geneshot_annotations.py \
 
 // Cluster genomes by ANI
 process cluster_genomes {
-    container "${container__pandas}"
+    container "${params.container__pandas}"
     label 'mem_medium'
    
     input:
@@ -789,9 +738,9 @@ cluster_genomes.py \
 
 // Group together all results into a single HDF5 path object
 process aggregate_results {
-    container "${container__pandas}"
+    container "${params.container__pandas}"
     label 'mem_medium'
-    publishDir "${params.output_folder}", mode: 'copy', overwrite: true
+    publishDir "${params.project_folder}", mode: 'copy', overwrite: true
    
     input:
     path alignments_csv_gz
@@ -813,9 +762,9 @@ process aggregate_results {
 
 // Cluster genomes by ANI
 process cdhit {
-    container "${container__cdhit}"
+    container "${params.container__cdhit}"
     label 'mem_medium'
-    publishDir "${params.output_folder}", mode: 'copy', overwrite: true
+    publishDir "${params.project_folder}", mode: 'copy', overwrite: true
    
     input:
     path "input.genes.*.fasta.gz"
@@ -830,9 +779,9 @@ process cdhit {
 
 // Generate a simple annotation path for each centroid
 process annotate_centroids {
-    container "${container__pandas}"
+    container "${params.container__pandas}"
     label 'io_limited'
-    publishDir "${params.output_folder}", mode: 'copy', overwrite: true
+    publishDir "${params.project_folder}", mode: 'copy', overwrite: true
    
     input:
     path "clustered.genes.fasta.gz"
