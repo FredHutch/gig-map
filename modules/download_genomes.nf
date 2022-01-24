@@ -8,7 +8,7 @@ include {
     fetchFTP;
     parse_genome_csv;
     concatenate_annotations;
-} from './processes' addParams(
+} from './processes/download' addParams(
     ftp_output_folder: "${params.project_folder}/downloaded_genomes",
     publishFTP: 'true',
 )
