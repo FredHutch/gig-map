@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
 # Combine all of the files
 
@@ -33,7 +33,7 @@ done \
 # Cluster the inputs
 cd-hit \
     -i input.genes.fasta \
-    -o clustered.genes.fasta \
+    -o centroids.faa \
     -c ${params.cluster_similarity} \
     -aS ${params.cluster_coverage} \
     -T ${task.cpus} \
@@ -42,6 +42,6 @@ cd-hit \
     -d 0 \
 
 # Compress the outputs
-gzip clustered.genes.fasta
-gzip clustered.genes.fasta.clstr
-mv clustered.genes.fasta.clstr.gz clustered.membership.csv.gz
+gzip centroids.faa
+gzip centroids.faa.clstr
+mv centroids.faa.clstr.gz centroids.membership.csv.gz
