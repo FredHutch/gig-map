@@ -4,6 +4,7 @@
 import argparse
 import logging
 import os
+import gzip
 import pandas as pd
 
 def select_markers(
@@ -64,6 +65,41 @@ def summarize_gene(df):
         )
     )
 
+def subset_fasta(gene_list, fasta_in, fasta_out):
+    """Filter a FASTA file to just those sequences in the provided list"""
+
+    gene_set = set(gene_list)
+
+    # Open the input and output file handles
+    with gzip.open(fasta_out, "wt") as handle_o, gzip.open(fasta_in, "rt") as handle_i:
+
+        for header, seq in fasta_parser(handle_i):
+
+            if header in gene_set:
+
+                handle_o.write(f">{header}\n{seq}\n")
+
+
+def fasta_parser(handle):
+    """Parse a file handle in FASTA format."""
+    
+    header = None
+    seq = []
+    
+    for line in handle:
+        if line[0] == ">":
+            if header is not None and len(seq) > 0:
+                yield header, "".join(seq)
+            header = line[1:].split(" ")[0].rstrip("\n")
+            seq = []
+        else:
+            if len(line) > 1:
+                seq.append(line.rstrip("\n"))
+                    
+    if header is not None and len(seq) > 0:
+        yield header, "".join(seq)
+
+
 if __name__ == "__main__":
     ##################
     # SET UP LOGGING #
@@ -96,6 +132,12 @@ if __name__ == "__main__":
         type=str,
         required=True,
         help='Alignments of genes across genomes in CSV format'
+    )
+    parser.add_argument(
+        '--all-genes',
+        type=str,
+        required=True,
+        help='File containing all gene sequences in FASTA format (gzip-compressed)'
     )
     parser.add_argument(
         '--output',
@@ -141,7 +183,9 @@ if __name__ == "__main__":
         max_n=args.max_n
     )
 
-    # Write out the list of genes to a file
-    with open(args.output, "w") as handle:
-
-        handle.write("\n".join(marker_genes))
+    # Write out the sequences of the selected markers
+    subset_fasta(
+        marker_genes,
+        args.all_genes,
+        args.output
+    )

@@ -20,13 +20,13 @@ process cdhit {
 process annotate_centroids {
     container "${params.container__pandas}"
     label 'io_limited'
-    publishDir "${params.project_folder}", mode: 'copy', overwrite: true
+    publishDir "${params.project_folder}/deduplicated_genes/", mode: 'copy', overwrite: true
    
     input:
     path "clustered.genes.fasta.gz"
     
     output:
-    path "clustered.genes.csv.gz", emit: annot
+    path "centroids.annot.csv.gz", emit: annot
     
     script:
     template "annotate_centroids.py"
