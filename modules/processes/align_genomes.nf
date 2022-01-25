@@ -324,10 +324,11 @@ extract_genes.py \
 process reorganize_fastas {
     container "${params.container__pandas}"
     label "io_limited"
-    publishDir "${params.project_folder}/genome_alignments/genes/", mode: 'copy', overwrite: true
+    publishDir "${params.project_folder}/${subfolder}", mode: 'copy', overwrite: true
 
     input:
         path "inputs/*.fasta.gz"
+        val subfolder
 
     output:
         path "*.fasta.gz"

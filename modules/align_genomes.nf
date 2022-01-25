@@ -109,7 +109,12 @@ workflow align_genomes {
         extract_genes
             .out
             .ifEmpty { error "No genes found" }
-            .toSortedList()
+            .toSortedList(),
+        "genome_alignments/genes/"
     )
+
+    emit:
+    markers = select_markers.out
+    clean_genomes = clean_genomes.out
 
 }
