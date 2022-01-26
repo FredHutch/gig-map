@@ -4,6 +4,7 @@ import argparse
 from collections import defaultdict
 import logging
 import pandas as pd
+from plotly_subplots import PlotlySubplots
 import sys
 from types import FunctionType
 from uuid import uuid4
@@ -223,3 +224,38 @@ class FigureBuilder:
         # At this point, no match was found
         msg = f"Could not find a match for argument: {kw}"
         raise Exception(msg)
+
+    def read_data(self):
+        """Read in data using the `read_f` functions provided."""
+
+        # All data will be stored in a dict
+        self.data = dict()
+
+        # First, read in the data for the global namespace
+        self.log("Reading in data from the global namespace")
+        self.data['global'] = self.read_f(**self.params['global'])
+
+        # Next, iterate over each figure element
+        for element_id, element in self.elements.items():
+
+            # Read in the data for each of those elements
+            self.log(f"Reading in data for element: {element_id}")
+            self.data[element_id] = element.read_f(**self.params[element_id])
+
+    def make_plots(self):
+        """Make a plot using the arguments, data, and functions defined."""
+
+        # Instantiate a subplot object
+        self.subplots = PlotlySubplots()
+
+        # For each element
+        for element_id, element in self.elements.items():
+
+            # Call the plotting function
+            element.plot_f(
+                self.subplots,
+                self.params[element_id],
+                self.data[element_id],
+                self.params,
+                self.data,
+            )
