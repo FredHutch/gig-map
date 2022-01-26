@@ -90,13 +90,13 @@ workflow {
         align_genomes.out.gene_order
     )
 
-    // Render the results as an interactive figure
-    render(
-        align_genomes.out.concat_alignments,
-        download_genomes.out.annot,
-        ani.out.distances,
-        align_genomes.out.gene_order,
-        deduplicate.out.annot
-    )
+    // // Render the results as an interactive figure
+    // render(
+    //     align_genomes.out.concat_alignments,
+    //     download_genomes.out.annot,
+    //     ani.out.distances,
+    //     align_genomes.out.gene_order,
+    //     deduplicate.out.annot
+    // )
 
 }
