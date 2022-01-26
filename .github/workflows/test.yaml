@@ -22,18 +22,6 @@ jobs:
           sudo apt clean
           docker rmi $(docker image ls -aq)
           df -h
-      - name:  DIAMOND alignment from DMND
+      - name:  End-to-end workflow
         run: |
-          nextflow run main.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --genome_tables test_data/Escherichia_virus_T4.csv --genes_dmnd test_data/GCA_002599665.1_ASM259966v1_protein.dmnd --output_folder output_diamond_dmnd -resume
-
-      - name:  Download utility
-        run: |
-          nextflow run main.nf -entry download -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --genome_tables test_data/Escherichia_virus_T4.csv --output_folder download_genomes -resume
-
-      - name:  Deduplication utility
-        run: |
-          nextflow run main.nf -entry deduplicate -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --genome_tables test_data/Escherichia_virus_T4.csv --genes_fasta test_data/GCA_002599665.1_ASM259966v1_protein.faa.gz --output_folder deduplicate_genomes -resume
-
-      - name:  Render HTML
-        run: |
-          nextflow run render.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --mem_gbs 1 --rdb output_diamond_dmnd/gigmap.rdb -resume
+          nextflow run main.nf -c nextflow.config -profile testing -w work/ -with-docker ubuntu:latest --genome_tables test_data/Escherichia_virus_T4.csv --gene_tables test_data/Escherichia_virus_T4.csv --project_folder end_to_end -resume
