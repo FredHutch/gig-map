@@ -113,27 +113,3 @@ df = pd.concat(
 
 """
 }
-
-// Cluster genomes by ANI
-process cluster_genomes {
-    container "${params.container__pandas}"
-    label 'mem_medium'
-   
-    input:
-    tuple path(alignments_csv_gz), path(dists_csv_gz), val(ani_threshold)
-
-    output:
-    path "*.hdf5"
-
-"""#!/bin/bash
-
-set -Eeuo pipefail
-
-cluster_genomes.py \
-    --alignments "${alignments_csv_gz}" \
-    --dists "${dists_csv_gz}" \
-    --ani-threshold ${ani_threshold}
-
-"""
-
-}

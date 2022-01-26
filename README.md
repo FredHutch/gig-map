@@ -30,33 +30,75 @@ The execution of the analysis encoded by this repository is roughly grouped into
 activities: 1) alignment of genes against genomes and 2) visualization of those alignment
 results. 
 
-## Alignment of Genes Against Genomes
+## Aligning Genes To Genomes
 
-To align a set of genomes against a set of genomes, while also comparing those genomes
-to each other, this repository may be run as a Nextflow workflow. For more details on
-how to run Nextflow on your system, take a look at [their documentation](https://nextflow.io/).
-For a detailed set of instructions on how to specify your genes and genomes for analysis,
-run `nextflow run FredHutch/gig-map --help` to display the associated help message.
+The analysis workflow used to align genes to genomes (and metagenomes) is organized around
+the concept of a "project folder" which contains the inputs and outputs for a particular
+analysis. To provide the user with a good amount of flexibility, the inputs for an analysis
+can be sourced from any location, but the _default_ location of the inputs will be from
+the project folder.
 
-## Download Bacterial Genomes
+### Quick Reference
 
-It can be useful to decouple the process of downloading reference genomes from the
-work it takes to align genes against those genomes. Similarly, we often want to download
-a set of genomes and then align multiple distinct sets of genes against those genomes.
-For those cases, it can be very helpfult to download the genomes in one step with a dedicated
-utility. To view the instructions for running this utility,
-run `nextflow run FredHutch/gig-map -entry download --help`
-
-## Dedupliate Bacterial Genes
-
-When aligning a set of genes, it can be helpful to first combine any genes which have a
-very similar sequence. We refer to that particular process as "deduplicating" a set of genes.
-To deduplicate a set of genes based on a threshold of amino acid similarity and overlap,
-there is a standalone utility provided along with `gig-map`. To view the instructions for
-running this utility, run `nextflow run FredHutch/gig-map -entry deduplicate --help`.
-This utility uses the CD-HIT algorithm under the hood to cluster coding sequences
-(with support to download directly from NCBI via FTP) and save the combined gene
-catalog for downstream alignment.
+```
+gigmap-project/
+│
+│   # INPUT FILES
+│
+├── genome_tables/
+│   └── *.csv              # All genomes from *.csv files in this folder will be downloaded;
+│                          # Source: https://www.ncbi.nlm.nih.gov/genome/browse#!/prokaryotes/
+├── genomes/
+│   └── *.gz               # All files in this folder must be FASTA-formatted (gzip-compressed)
+│                          # genomes to include in this analysis;
+├── gene_tables/
+│   └── *.csv              # All genes from *.csv files in this folder will be downloaded;
+│                          # Source: https://www.ncbi.nlm.nih.gov/genome/browse#!/prokaryotes/
+├── genes/
+│   └── *.gz               # All files in this folder must be FASTA-formatted (gzip-compressed)
+│                          # genes to include in this analysis;
+├── markers/
+│   └── *.gz               # (optional) Any genes included in this folder will be aligned across
+│                          # all genomes and used to estimate phylogenies;
+│
+│   # OUTPUT FILES
+│
+├── downloaded_genomes/    # (module: download)
+│   ├── genomes.annot.csv.gz
+│   │                      # Annotations provided for the downloaded genomes
+│   └── *_genomic.fna.gz   # Genomes downloaded from genome_tables/
+│
+├── downloaded_genes/      # (module: download)
+│   └── *_protein.faa.gz   # Genes downloaded from gene_tables/
+│
+├── deduplicated_genes/    # (module: deduplicate)
+│   ├── centroids.faa.gz   # Non-redundant set of genes 
+│   ├── centroids.annot.csv.gz 
+│   │                      # Annotations applied to deduplicated genes
+│   └── centroids.membership.csv.gz
+│                          # Table indicating which centroids represent which input genes
+│
+├── genome_alignment/      # (module: align_genomes)
+│   ├── genomes.aln.csv.gz # Tabular results of the alignment of genes to genomes
+│   │                      
+│   ├── genomes.gene.order.txt.gz
+│   │                      # Ordination of genes based on genome membership
+│   └── genes/
+│       └── *.gz           # Nucleotide sequences of each gene from all genomes
+│ 
+├── ani/                   # (module: ani)
+│   ├── distances.csv.gz   # Square distance matrix with pairwise ANI for all genomes
+│   │
+│   ├── msh/
+│   │   └── *.msh          # Mash sketch generated from all genomes
+│   │
+│   └── tsv/
+│       └── *.tsv.gz       # Long-format table with distances for each genome
+│
+└── package                # (module: aggregate)
+    └── gigmap.rdb         # Collection of gig-map output data in RDB format for
+                           # interactive visualization with app/gig-map
+```
 
 ## GiG-map Visualization
 

@@ -211,10 +211,10 @@ marker_dists = dict()
 for fp in os.listdir("marker_distances"):
 
     # If the file has the expected extension
-    if fp.endswith(".markers.fasta.gz.distmat"):
+    if fp.endswith(".distmat"):
 
         # Parse the marker name from the file name
-        marker_name = fp.replace(".markers.fasta.gz.distmat", "")
+        marker_name = fp.replace(".distmat", "")
 
         # Read in the distances
         marker_dists[marker_name] = read_distmat(

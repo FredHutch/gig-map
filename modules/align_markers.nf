@@ -88,4 +88,8 @@ workflow align_markers {
     raxml(
         combine_markers.out.msa
     )
+
+    emit:
+        distmat = combine_markers.out.distmat
+        msa = combine_markers.out.msa
 }

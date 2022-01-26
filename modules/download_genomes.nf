@@ -52,5 +52,6 @@ workflow download_genomes {
 
     emit:
     genomes = fetchFTP.out
+    annot = concatenate_annotations.out
 
 }

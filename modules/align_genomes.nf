@@ -116,5 +116,7 @@ workflow align_genomes {
     emit:
     markers = select_markers.out
     clean_genomes = clean_genomes.out
+    concat_alignments = concatenate_alignments.out
+    gene_order = order_genes.out
 
 }
