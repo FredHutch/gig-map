@@ -9,6 +9,7 @@ import sys
 from types import FunctionType
 from uuid import uuid4
 
+
 class FigureArgument:
     """Define an argument used to drive the creation of a figure."""
 
@@ -110,7 +111,7 @@ class FigureBuilder:
 
         # All of the items in `elements` must be FigureElement
         msg = "Figure elements must be FigureElement objects"
-        for element in self.elements:
+        for element in elements:
             assert isinstance(element, FigureElement), msg
 
             assert element.id not in all_ids, f"Element id '{element.id}' is not unique"
@@ -262,10 +263,11 @@ class FigureBuilder:
         for element in self.elements:
 
             # Call the plotting function
-            element.plot_f(
-                self.subplots,
-                self.params[element.id],
-                self.data[element.id],
-                self.params,
-                self.data,
-            )
+            element.plot_f(self)
+
+    def write_html(self, fp):
+        """Write the figure to HTML"""
+
+        self.log(f"Writing HTML to {fp}")
+
+        self.subplots.fig.write_html(fp)
