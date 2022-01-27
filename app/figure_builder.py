@@ -36,25 +36,29 @@ class FigureElement:
 
     def __init__(
         self,
+        id:str=None,
         args:list=None,
         read_f:FunctionType=None,
         plot_f:FunctionType=None,
     ):
         """
         Instantiate a figure element.
-        args: A list of FigureArgument objects;
+        id:     An identifier for the element
+        args:   A list of FigureArgument objects;
         read_f: A function which returns a data object,
                 based on the values provided for those arguments;
         plot_f: A function which adds to a PlotlySubplot object,
                 based on the data object and arguments;
         """
         
+        assert isinstance(id, str), "id must be provided as a str"
         assert isinstance(args, list), "args must be provided as a list"
         for arg in args:
             assert isinstance(arg, FigureArgument), "args must be a list of FigureArgument objects"
         assert isinstance(read_f, FunctionType), "read_f must be a function"
         assert isinstance(plot_f, FunctionType), "plot_f must be a function"
 
+        self.id = id
         self.args = args
         self.read_f = read_f
         self.plot_f = plot_f
@@ -69,7 +73,7 @@ class FigureBuilder:
         description:str="Figure description",
         args:list=[],
         read_f:FunctionType=None,
-        **kwargs
+        elements:list=None
     ):
 
         # Store the logging_id associated with this figure builder
@@ -90,23 +94,29 @@ class FigureBuilder:
         assert isinstance(read_f, FunctionType)
         self.read_f = read_f
 
-        # Store all of the elements of the figure associated with a keyword
-        self.elements = dict()
-
-        # Add all of the elements provided for this figure
-        for key, element in kwargs.items():
-            self.add_element(key, element)
+        # Validate and store all of the `elements`
+        self.elements = self.validate_elements(elements)
 
         # Create a self.logger object
         self.create_logger()
 
-    def add_element(self, key:str, element:FigureElement):
-        """Add a FigureElement."""
+    def validate_elements(self, elements):
+        """Validate that the input `elements` are unique FigureElements."""
 
-        assert isinstance(key, str), "Figure elements must be identified with a string"
-        assert isinstance(element, FigureElement), "Figure elements must be FigureElement objects"
+        assert isinstance(elements, list), "`elements` must be a list"
+        
+        # All of the element `id` string must be unique
+        all_ids = set()
 
-        self.elements[key] = element
+        # All of the items in `elements` must be FigureElement
+        msg = "Figure elements must be FigureElement objects"
+        for element in self.elements:
+            assert isinstance(element, FigureElement), msg
+
+            assert element.id not in all_ids, f"Element id '{element.id}' is not unique"
+            all_ids.add(element.id)
+
+        return elements
 
     def create_logger(self):
         """Create a logging instance."""
@@ -159,11 +169,11 @@ class FigureBuilder:
             )
 
         # Iterate over each of the elements of the figure
-        for element_id, element in self.elements.items():
+        for element in self.elements:
 
             # Create an argument group
             arg_group = self.parser.add_argument_group(
-                element_id,
+                element.id,
             )
 
             # Iterate over each of the arguments for that element
@@ -171,7 +181,7 @@ class FigureBuilder:
 
                 # Add this argument to the parser
                 arg_group.add_argument(
-                    f"--{element_id}-{arg.key}",
+                    f"--{element.id}-{arg.key}",
                     type=arg.type,
                     default=arg.default,
                     help=arg.description
@@ -209,16 +219,16 @@ class FigureBuilder:
                 return
 
         # Next, iterate over each of the elements of the figure
-        for element_id, element in self.elements.items():
+        for element in self.elements:
 
             # Iterate over each of the arguments for this element
             for arg in element.args:
 
                 # If the keyword matches
-                if f"{element_id}_{arg.key.replace('-', '_')}" == kw:
+                if f"{element.id}_{arg.key.replace('-', '_')}" == kw:
 
-                    # Then add this value to the `element_id` namespace
-                    self.params[element_id][arg.key] = val
+                    # Then add this value to the `element.id` namespace
+                    self.params[element.id][arg.key] = val
                     return
         
         # At this point, no match was found
@@ -236,11 +246,11 @@ class FigureBuilder:
         self.data['global'] = self.read_f(**self.params['global'])
 
         # Next, iterate over each figure element
-        for element_id, element in self.elements.items():
+        for element in self.elements:
 
             # Read in the data for each of those elements
-            self.log(f"Reading in data for element: {element_id}")
-            self.data[element_id] = element.read_f(**self.params[element_id])
+            self.log(f"Reading in data for element: {element.id}")
+            self.data[element.id] = element.read_f(**self.params[element.id])
 
     def make_plots(self):
         """Make a plot using the arguments, data, and functions defined."""
@@ -249,13 +259,13 @@ class FigureBuilder:
         self.subplots = PlotlySubplots()
 
         # For each element
-        for element_id, element in self.elements.items():
+        for element in self.elements:
 
             # Call the plotting function
             element.plot_f(
                 self.subplots,
-                self.params[element_id],
-                self.data[element_id],
+                self.params[element.id],
+                self.data[element.id],
                 self.params,
                 self.data,
             )
