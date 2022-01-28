@@ -150,6 +150,39 @@ class PlotlySubplots:
                 elif ax == "y":
                     return self.y_axes[subplot.y_index]
 
+    def format_axis(self, id:str=None, params:dict=None, ax:str=None, anchor:str=None):
+        """Apply formatting to an axis, identified by ordinal position."""
+
+        assert ax in ['x', 'y'], "ax must be x or y"
+
+        assert isinstance(params, dict), "Must provide params as a dict"
+
+        # Get the name of the axis which was used for this subplot
+        axis_name = self.get_axis(id, ax=ax)
+
+        # While the axis name may be 'x2', the key used in the layout
+        # would then be 'xaxis2'
+        axis_name = f"{axis_name[0]}axis{axis_name[1:] if len(axis_name) > 1 else ''}"
+
+        # Apply the layout to the appropriate axis
+        self.fig.update_layout(
+            **{
+                axis_name: params
+            }
+        )
+
+        # If the user has requested that this axis be anchored
+        if anchor is not None:
+
+            # Get the name of the axis to set the anchor
+            anchor_axis_name = self.get_axis(anchor, ax=ax)
+            self.fig.update_layout(
+                **{
+                    axis_name: dict(
+                        anchor=anchor_axis_name
+                    )
+                }
+            )
 
 class PlotlySubplot:
     """Class to coordinate the location and content of a single Plotly subplot."""
