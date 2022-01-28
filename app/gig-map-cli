@@ -22,8 +22,24 @@ gigmap_figure = FigureBuilder(
             description="Column from the genomes annotations CSV used for labeling"
         ),
         FigureArgument(
+            key="max-genome-label-len",
+            description="Maximum number of characters allowed for genome labels (default: 60)",
+            type=int,
+            default=60
+        ),
+        FigureArgument(
             key="gene-annotations",
             description="File containing gene annotations (CSV)"
+        ),
+        FigureArgument(
+            key="label-genes-by",
+            description="Column from the genes annotations CSV used for labeling"
+        ),
+        FigureArgument(
+            key="max-gene-label-len",
+            description="Maximum number of characters allowed for gene labels (default: 60)",
+            type=int,
+            default=60
         ),
         FigureArgument(
             key="gene-order",
@@ -42,6 +58,7 @@ gigmap_figure = FigureBuilder(
     ],
     # Function to read in data for the global namespace
     read_f=gig_map_elements.read_global,
+    plot_f=gig_map_elements.plot_global,
     # List of FigureElement objects
     elements = [
         # Dendrogram showing the relatedness of genomes
@@ -55,7 +72,9 @@ gigmap_figure = FigureBuilder(
                     description="Distance matrix used to generate genome dendrogram (optional)"
                 )
             ],
+            # Function used to read data
             read_f=gig_map_elements.read_genome_tree,
+            # Function used to render the plot
             plot_f=gig_map_elements.plot_genome_tree
         ),
         FigureElement(
