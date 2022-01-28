@@ -74,6 +74,7 @@ class FigureBuilder:
         description:str="Figure description",
         args:list=[],
         read_f:FunctionType=None,
+        plot_f:FunctionType=None,
         elements:list=None
     ):
 
@@ -94,6 +95,10 @@ class FigureBuilder:
         msg = "read_f must be a function"
         assert isinstance(read_f, FunctionType)
         self.read_f = read_f
+
+        msg = "plot_f must be a function"
+        assert isinstance(plot_f, FunctionType)
+        self.plot_f = plot_f
 
         # Validate and store all of the `elements`
         self.elements = self.validate_elements(elements)
@@ -264,6 +269,9 @@ class FigureBuilder:
 
             # Call the plotting function
             element.plot_f(self)
+
+        # Apply the global plotting function
+        self.plot_f(self)
 
     def write_html(self, fp):
         """Write the figure to HTML"""
