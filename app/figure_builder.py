@@ -44,7 +44,7 @@ class FigureElement:
     ):
         """
         Instantiate a figure element.
-        id:     An identifier for the element
+        id:     An identifier for the element;
         args:   A list of FigureArgument objects;
         read_f: A function which returns a data object,
                 based on the values provided for those arguments;
@@ -56,17 +56,109 @@ class FigureElement:
         assert isinstance(args, list), "args must be provided as a list"
         for arg in args:
             assert isinstance(arg, FigureArgument), "args must be a list of FigureArgument objects"
-        assert isinstance(read_f, FunctionType), "read_f must be a function"
-        assert isinstance(plot_f, FunctionType), "plot_f must be a function"
 
         self.id = id
         self.args = args
-        self.read_f = read_f
-        self.plot_f = plot_f
+
+        # If read_f was provided
+        if read_f is not None:
+            assert isinstance(read_f, FunctionType), "read_f must be a function"
+            self.read_f = read_f
+
+        # If plot_f was provided
+        if plot_f is not None:
+            assert isinstance(plot_f, FunctionType), "plot_f must be a function"
+            self.plot_f = plot_f
+
+        # By default, the element is enabled
+        self.enabled = True
+
+    def disable(self):
+        """Prevent this element from being plotted."""
+
+        self.enabled = False
+
+
+class FigureAxis:
+    """Configure an axis."""
+
+    def __init__(self, id):
+
+        # By default, no values are provided
+        self.id = id
+        self.axis = None
+        self.exists = False
+        self.is_fixed = False
+
+    def set(self, axis):
+        """Set the order of an axis with a pd.Series object."""
+
+        msg = "Axis must be set by a pandas Series object"
+        assert isinstance(axis, pd.Series), msg
+
+        # Attach the Series
+        self.axis = axis
+
+        # Mark that the axis has been instantiated
+        self.exists = True
+
+    def member_set(self):
+        """Return a set of the elements on the axis."""
+
+        assert self.exists, f"Axis ({self.id}) has not yet been populated"
+
+        return set(self.axis.index.values)
+
+    def set_order(self, ordered_list):
+        """Update the order of the axis."""
     
+        assert self.exists, f"Axis ({self.id}) has not yet been populated"
+
+        # Make sure that every element of the list is in the axis
+        member_set = self.member_set()
+
+        for item in ordered_list:
+
+            assert item in member_set, f"Item ('{item}') not found in {self.id} axis"
+
+        # Reorder the Series
+        self.axis = self.axis.reindex(index=ordered_list)
+
+        self.is_fixed = True
+
+    def length(self):
+
+        assert self.exists, f"Axis ({self.id}) has not yet been populated"
+
+        return self.axis.shape[0]
+
+    def labels(self):
+
+        assert self.exists, f"Axis ({self.id}) has not yet been populated"
+
+        return self.axis.values
+
+    def order(self):
+
+        assert self.exists, f"Axis ({self.id}) has not yet been populated"
+
+        return self.axis.index.values
+
+    def label_dict(self):
+
+        assert self.exists, f"Axis ({self.id}) has not yet been populated"
+
+        return self.axis.to_dict()
+
 
 class FigureBuilder:
-    """Class to coordinate the construction of a figure from flexible data inputs."""
+    """
+    Class to coordinate the construction of a figure from flexible data inputs.
+
+    The order of operations is:
+        - read_data: 'global' first, and then each element in turn
+        - make_plots: Elements first, and then 'global' last
+    """
 
     def __init__(
         self,
@@ -92,19 +184,26 @@ class FigureBuilder:
         for arg in self.args:
             assert isinstance(arg, FigureArgument), msg
 
-        msg = "read_f must be a function"
-        assert isinstance(read_f, FunctionType)
-        self.read_f = read_f
+        # If read_f was provided
+        if read_f is not None:
+            msg = "read_f must be a function"
+            assert isinstance(read_f, FunctionType)
+            self.read_f = read_f
 
-        msg = "plot_f must be a function"
-        assert isinstance(plot_f, FunctionType)
-        self.plot_f = plot_f
+        # If plot_f was provided
+        if plot_f is not None:
+            msg = "plot_f must be a function"
+            assert isinstance(plot_f, FunctionType)
+            self.plot_f = plot_f
 
         # Validate and store all of the `elements`
         self.elements = self.validate_elements(elements)
 
         # Create a self.logger object
         self.create_logger()
+
+        # Store all axes as a dict
+        self.axes = dict()
 
     def validate_elements(self, elements):
         """Validate that the input `elements` are unique FigureElements."""
@@ -234,7 +333,11 @@ class FigureBuilder:
                 if f"{element.id}_{arg.key.replace('-', '_')}" == kw:
 
                     # Then add this value to the `element.id` namespace
-                    self.params[element.id][arg.key] = val
+                    self.params[
+                        element.id
+                    ][
+                        arg.key.replace('-', '_')
+                    ] = val
                     return
         
         # At this point, no match was found
@@ -244,34 +347,52 @@ class FigureBuilder:
     def read_data(self):
         """Read in data using the `read_f` functions provided."""
 
-        # All data will be stored in a dict
-        self.data = dict()
-
         # First, read in the data for the global namespace
         self.log("Reading in data from the global namespace")
-        self.data['global'] = self.read_f(**self.params['global'])
+        self.read_f(
+            self,
+            **self.params['global']
+        )
 
         # Next, iterate over each figure element
         for element in self.elements:
 
             # Read in the data for each of those elements
             self.log(f"Reading in data for element: {element.id}")
-            self.data[element.id] = element.read_f(**self.params[element.id])
+            element.read_f(
+                self,
+                **self.params[element.id]
+            )
 
     def make_plots(self):
         """Make a plot using the arguments, data, and functions defined."""
 
         # Instantiate a subplot object
-        self.subplots = PlotlySubplots()
+        self.subplots = PlotlySubplots(logger=self.logger)
 
         # For each element
         for element in self.elements:
 
-            # Call the plotting function
-            element.plot_f(self)
+            # Only make the plot if the element is enabled
+            if element.enabled:
+
+                # Call the plotting function
+                element.plot_f(self)
 
         # Apply the global plotting function
         self.plot_f(self)
+
+        # Arrange the axis domains
+        self.subplots.set_domains()
+
+    def axis(self, axis_name):
+        """Return a FigureAxis object corresponding to axis_name."""
+
+        if axis_name not in self.axes:
+
+            self.axes[axis_name] = FigureAxis(axis_name)
+
+        return self.axes[axis_name]
 
     def write_html(self, fp):
         """Write the figure to HTML"""
