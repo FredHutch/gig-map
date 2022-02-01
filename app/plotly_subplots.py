@@ -364,6 +364,44 @@ class PlotlySubplots:
                 }
             )
 
+    def open_column(self, y_index, side="right"):
+        """Return the first open position on the right or left of a row."""
+
+        # Get the list of x axis indices for every subplot with this y axis
+        x_indices = [
+            subplot.x_index
+            for subplot in self.subplots.values()
+            if subplot.y_index == y_index
+        ]
+
+        msg = f"No subplots found in the row {y_index}"
+        assert len(x_indices) > 0, msg
+
+        if side == "right":
+            return max(x_indices) + 1
+        else:
+            assert side == "left", f"side can be 'right' or 'left', not '{side}'"
+            return min(x_indices) - 1
+
+    def open_row(self, x_index, side="bottom"):
+        """Return the first open position on the top or bottom of a column."""
+
+        # Get the list of y axis indices for every subplot with this x axis
+        y_indices = [
+            subplot.y_index
+            for subplot in self.subplots.values()
+            if subplot.x_index == x_index
+        ]
+
+        msg = f"No subplots found in the column {x_index}"
+        assert len(y_indices) > 0, msg
+
+        if side == "top":
+            return max(y_indices) + 1
+        else:
+            assert side == "bottom", f"side can be 'top' or 'bottom', not '{side}'"
+            return min(y_indices) - 1
+
     def log(self, msg):
         if self.logger is not None:
             self.logger.info(msg)

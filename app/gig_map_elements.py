@@ -41,7 +41,7 @@ class GigMapFigure(FigureBuilder):
                 # Heatmap showing the occurrance of genes across genomes
                 GeneGenomeHeatmap(),
                 # Colorbar annotating the GeneGenomeHeatmap
-                GeneGenomeColorbar()
+                # GeneGenomeColorbar()
             ]
         )
 
@@ -252,13 +252,12 @@ class HeatmapElement(FigureElement):
             # Share the y-coordinates with all other subplots in this row
             share_y=True,
         )
-        
+
         # Add the trace for the plot
         fb.log(f"Plotting heatmap for {self.id}")
         fb.subplots.plot(
             id=self.id,
             trace=go.Heatmap(
-                x=self.df_wide.columns.values,
                 z=self.df_wide.values,
                 zmin=self.zmin,
                 zmax=self.max_val,
@@ -283,12 +282,23 @@ class HeatmapElement(FigureElement):
             )
         )
 
+        fb.subplots.format_axis(
+            id=self.id,
+            ax="x",
+            params=dict(
+                tickmode="array",
+                tickvals=list(range(fb.axis("gene").length())),
+                ticktext=fb.axis("gene").labels(),
+                showticklabels=True,
+                automargin=True,
+            )
+        )
+
         # Make sure that the labels for the x axis are on the bottom
         fb.subplots.anchor_xaxis(self.x_index, side="bottom")
 
         # Make sure that the labels for the y axis are on the right
         fb.subplots.anchor_yaxis(self.y_index, side="right")
-
 
 class GeneGenomeHeatmap(HeatmapElement):
 
@@ -561,6 +571,10 @@ class GenomeTree(FigureElement):
                 y=self.node_positions.y_coords(),
                 text=self.node_positions.text(),
                 hoverinfo="text",
+                line=dict(
+                    color="blue",
+                    width=2,
+                )
             )
         )
 
@@ -621,10 +635,12 @@ class AxisAnnot(FigureElement):
         id=None,
         # Label given for the entities which are being annotated (e.g. 'gene', 'genome')
         axis_label=None,
-        # The axis is oriented either vertically or horizontally
-        orient=None,
-        # Set the index position along that axis
-        index_pos=None,
+        # The column for the plot
+        x_index=None,
+        # The row for the plot
+        y_index=None,
+        # Set the side for the annotation
+        side=None,
         # Default column in the CSV which contains IDs
         id_col=None
     ):
@@ -632,12 +648,18 @@ class AxisAnnot(FigureElement):
         # Attach arguments to this object
         assert axis_label is not None, "Must provide axis_label="
         self.axis_label = axis_label
-        assert orient is not None, "Must provide orient="
-        self.orient = orient
-        assert index_pos is not None, "Must provide index_pos="
-        self.index_pos = index_pos
         assert id_col is not None, "Must provide id_col="
         self.id_col = id_col
+        assert x_index is not None, "Must provide x_index="
+        self.x_index = x_index
+        assert y_index is not None, "Must provide y_index="
+        self.y_index = y_index
+        assert side is not None, "Must provide side="
+        self.side = side
+
+        # The acceptable values of side are top, bottom, left, right
+        msg = f"side= must be top, bottom, left, right, not '{side}'"
+        assert side in ['top', 'bottom', 'left', 'right'], msg
 
         # Instantiate the base FigureElement object
         super().__init__(
@@ -654,7 +676,17 @@ class AxisAnnot(FigureElement):
                 ),
                 FigureArgument(
                     key=f"label-col",
-                    description=f"Column from the CSV used for labeling"
+                    description="Column from the CSV used for labeling"
+                ),
+                FigureArgument(
+                    key=f"color-col",
+                    description="Column from the CSV used marginal annotation; Multiple columns should be indicated with a comma-separated list"
+                ),
+                FigureArgument(
+                    key=f"color-palette",
+                    description="Color palette used for marginal annotation; Default: 'auto', uses 'blues' for numeric data and 'rainbow' for categorical strings.",
+                    default="auto",
+                    type=str
                 ),
                 FigureArgument(
                     key=f"max-label-len",
@@ -675,6 +707,8 @@ class AxisAnnot(FigureElement):
         csv=None,
         index_col=None,
         label_col=None,
+        color_col=None,
+        color_palette=None,
         max_label_len=None,
         order=None
     ):
@@ -760,8 +794,234 @@ class AxisAnnot(FigureElement):
 
             fb.log(f"Read in {df.shape[0]:,} {self.axis_label} annotations")
 
+        # If no color-col was provided
+        if color_col is None:
+
+            # Disable the plot
+            self.disable()
+
+        # If a color-col was provided
+        else:
+
+            # Parse the list of columns to plot
+            self.color_columns = color_col.split(",")
+
+            # Make sure that all of those columns are in the table
+            for cname in self.color_columns:
+
+                msg = f"Could not find column '{cname}' in {csv}"
+                assert cname in df.columns.values, msg
+
+            # Attach the table for later plotting
+            self.df = df.reindex(columns=self.color_columns)
+
+            # Attach the color palette selected
+            self.palette = color_palette
+
+    def all_numeric(self, plot_df):
+
+        # Try to coerce the values to numeric
+        num_plot_df = plot_df.applymap(
+            lambda s: pd.to_numeric(s, errors='coerce')
+        )
+
+        # If any values could not be converted
+        if num_plot_df.isnull().any().any():
+
+            # Then the table is not all numeric
+            return False
+
+        else:
+
+            return True
+
+    def parse_annot_data(self, plot_df):
+
+        # Check if the values are all numeric
+        if self.all_numeric(plot_df):
+
+            # If the color palette is 'auto'
+            if self.palette == 'auto':
+
+                # Use the 'blues' palette
+                plot_palette = "blues"
+
+            # Otherwise
+            else:
+
+                # Use the provided palette
+                plot_palette = self.palette
+
+            # For numeric values, the Z and text are the same
+            z_df = plot_df
+            text_df = plot_df
+
+        # If the values are not all numeric
+        else:
+
+            # If the color palette is 'auto'
+            if self.palette == 'auto':
+
+                # Use the 'rainbow' palette
+                plot_palette = "rainbow"
+
+            # Otherwise
+            else:
+
+                # Use the provided palette
+                plot_palette = self.palette
+
+            # For categorical values, the data will all be converted to a string
+            text_df = plot_df.applymap(str)
+
+            # The z values will map to the ordered list of all values
+            z_map = {
+                v: i
+                for i, v in enumerate(text_df.iloc[:, 0].drop_duplicates().sort_values().values)
+            }
+            z_df = text_df.applymap(z_map.get)
+
+        # If the orientation is on the top or bottom of a column
+        if self.side in ['top', 'bottom']:
+
+            # Rotate the DataFrames
+            text_df = text_df.T
+            z_df = z_df.T
+
+        return text_df, z_df, plot_palette
+
     def plot_f(self, fb):
-        pass
+
+        # For each of the columns selected for display
+        for i, cname in enumerate(self.color_columns):
+
+            # Make sure that the column is a column in self.df
+            assert cname in self.df.columns.values
+
+            # Make a DataFrame for plotting this, especially making
+            # sure that the order of the index matches the order
+            # of the associated axis (e.g., gene or genome)
+
+            plot_df = self.df.reindex(
+                columns=[cname],
+                index=fb.axis(self.axis_label).order()
+            )
+
+            # Get the text and the z values to plot, depending on
+            # whether the data is continuous or categorical
+            text_df, z_df, plot_palette = self.parse_annot_data(plot_df)
+
+            # If the orientation is on the top or bottom of a column
+            if self.side in ['top', 'bottom']:
+
+                # Set the relative size of the subplot
+                width = 1
+                height = 0.05
+
+                # The row index must be incremented to accommodate additional annotations
+                if self.side == "top":
+                    y_index = self.y_index + i
+                else:
+                    y_index = self.y_index - i
+
+                x_index = self.x_index
+
+                # Share the x axis, but not the y
+                share_x = True
+                share_y = False
+                ax = "x"
+
+            # If the orientation is on the right or left of a row
+            else:
+
+                # Set the relative size of the subplot
+                width = 0.05
+                height = 1
+
+                # The column index must be incremented to accommodate additional annotations
+                if self.side == "right":
+                    x_index = self.x_index + i
+                else:
+                    x_index = self.x_index - i
+
+                y_index = self.y_index
+
+                # Share the y axis, but not the x
+                share_x = False
+                share_y = True
+                ax = "y"
+
+            # Define the position at which this panel will be rendered
+            fb.log(f"Adding subplot for {self.id}-{cname} (x={x_index}, y={y_index})")
+            fb.subplots.add(
+                # ID for the subplot
+                id=f"{self.id}-{cname}",
+                # Ordinal position on the horizontal axis
+                x_index=x_index,
+                # Ordinal position on the vertial axis
+                y_index=y_index,
+                # Share the x-coordinates with all other subplots in this column
+                share_x=share_x,
+                # Share the y-coordinates with all other subplots in this row
+                share_y=share_y,
+                # Set the width of the plot
+                width=width,
+                # Set the height of the plot
+                height=height,
+            )
+            
+            # Add the trace for the plot
+            fb.log(f"Plotting heatmap for {self.id}-{cname}")
+            fb.subplots.plot(
+                id=f"{self.id}-{cname}",
+                trace=go.Heatmap(
+                    z=z_df.values,
+                    text=text_df,
+                    xaxis=fb.subplots.get_axis_label(f"{self.id}-{cname}", ax="x"),
+                    yaxis=fb.subplots.get_axis_label(f"{self.id}-{cname}", ax="y"),
+                    colorscale=plot_palette,
+                    showscale=False,
+                    hovertemplate="%{text}<extra></extra>",
+                )
+            )
+
+            # # Format the axes for this plot
+            # fb.log(f"Formatting axes for {self.id}-{cname}")
+            # fb.subplots.format_axis(
+            #     id=f"{self.id}-{cname}",
+            #     ax=ax,
+            #     params=dict(
+            #         tickmode="array",
+            #         tickvals=list(range(fb.axis(self.axis_label).length())),
+            #         ticktext=fb.axis(self.axis_label).labels(),
+            #         showticklabels=True,
+            #         automargin=True
+            #     )
+            # )
+
+            # If the marginal heatmap is on the right or left
+            if self.side in ["left", "right"]:
+
+                # Rotate the labels of the other axis
+                fb.subplots.format_axis(
+                    id=f"{self.id}-{cname}",
+                    ax="y" if ax == "x" else "x",
+                    params=dict(
+                        tickangle=90
+                    )
+                )
+
+            # If the plot is annotating a column
+            if ax == "y":
+
+                # Make sure that the labels for the x axis are on the bottom
+                fb.subplots.anchor_xaxis(x_index, side="bottom")
+
+            # If it is annotating a row
+            else:
+
+                # Make sure that the labels for the y axis are on the right
+                fb.subplots.anchor_yaxis(y_index, side="right")
 
 
 class GeneAnnotations(AxisAnnot):
@@ -771,8 +1031,9 @@ class GeneAnnotations(AxisAnnot):
         super().__init__(
             id="geneAnnot",
             axis_label="gene",
-            orient="h",
-            index_pos=-1,
+            x_index=1,
+            y_index=-1,
+            side="bottom",
             id_col="combined_name"
         )
 
@@ -784,8 +1045,9 @@ class GenomeAnnotations(AxisAnnot):
         super().__init__(
             id="genomeAnnot",
             axis_label="genome",
-            orient="v",
-            index_pos=2,
+            x_index=2,
+            y_index=0,
+            side="right",
             id_col="Formatted Name"
         )
 
