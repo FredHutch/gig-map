@@ -2,94 +2,11 @@
 """Standalone script to render a gig-map as static files."""
 
 from figure_builder import FigureBuilder, FigureElement, FigureArgument
-import gig_map_elements
+from gig_map_elements import GigMapFigure
 
 
 # Define the figure being used to render the display
-gigmap_figure = FigureBuilder(
-    # Short description used for the argument parser
-    description="Render a display showing the distribution of annotated genes across microbial genomes",
-    # Short ID used to label logs
-    logging_id="gig-map-render",
-    # Global arguments
-    args=[
-        FigureArgument(
-            key="genome-annotations",
-            description="File containing genome annotations (CSV)"
-        ),
-        FigureArgument(
-            key="label-genomes-by",
-            description="Column from the genomes annotations CSV used for labeling"
-        ),
-        FigureArgument(
-            key="max-genome-label-len",
-            description="Maximum number of characters allowed for genome labels (default: 60)",
-            type=int,
-            default=60
-        ),
-        FigureArgument(
-            key="gene-annotations",
-            description="File containing gene annotations (CSV)"
-        ),
-        FigureArgument(
-            key="label-genes-by",
-            description="Column from the genes annotations CSV used for labeling"
-        ),
-        FigureArgument(
-            key="max-gene-label-len",
-            description="Maximum number of characters allowed for gene labels (default: 60)",
-            type=int,
-            default=60
-        ),
-        FigureArgument(
-            key="gene-order",
-            description="File containing ordered list of gene names (TXT)"
-        ),
-        FigureArgument(
-            key="output-prefix",
-            description="Prefix for output file (default: gigmap-render)",
-            default="gigmap-render"
-        ),
-        FigureArgument(
-            key="output-folder",
-            description="Folder for output file (default: ./)",
-            default="./"
-        ),
-    ],
-    # Function to read in data for the global namespace
-    read_f=gig_map_elements.read_global,
-    plot_f=gig_map_elements.plot_global,
-    # List of FigureElement objects
-    elements = [
-        # Dendrogram showing the relatedness of genomes
-        FigureElement(
-            # ID for the element
-            id="genomeTree",
-            # Arguments which need to be provided by the user
-            args=[
-                FigureArgument(
-                    key="distmat",
-                    description="Distance matrix used to generate genome dendrogram (optional)"
-                )
-            ],
-            # Function used to read data
-            read_f=gig_map_elements.read_genome_tree,
-            # Function used to render the plot
-            plot_f=gig_map_elements.plot_genome_tree
-        ),
-        FigureElement(
-            id="genomeHeatmap",
-            args=[
-                FigureArgument(
-                    key="csv",
-                    description="File containing genome-gene alignment information"
-                )
-            ],
-            read_f=gig_map_elements.read_genome_alignments,
-            plot_f=lambda x: x
-        )
-    ]
-)
+gigmap_figure = GigMapFigure()
 
     # # Add the arguments
     # parser.add_argument(
