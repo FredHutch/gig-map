@@ -562,7 +562,9 @@ class GenomeTree(FigureElement):
             # Ordinal position on the vertial axis
             y_index=self.y_index,
             # Share the y-coordinates with all other subplots
-            share_y=True
+            share_y=True,
+            # Only take up half the width relative to the heatmap
+            width=0.5,
         )
         
         # Make an object to map the neighbor joining tree on a cartesian plot
