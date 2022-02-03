@@ -862,9 +862,8 @@ class AxisAnnot(FigureElement):
                 # Use the provided palette
                 plot_palette = self.palette
 
-            # For numeric values, the Z and text are the same
+            # For numeric values, the Z is not transformed
             z_df = plot_df
-            text_df = plot_df
 
         # If the values are not all numeric
         else:
@@ -881,15 +880,20 @@ class AxisAnnot(FigureElement):
                 # Use the provided palette
                 plot_palette = self.palette
 
-            # For categorical values, the data will all be converted to a string
-            text_df = plot_df.applymap(str)
-
             # The z values will map to the ordered list of all values
             z_map = {
                 v: i
-                for i, v in enumerate(text_df.iloc[:, 0].drop_duplicates().sort_values().values)
+                for i, v in enumerate(plot_df.applymap(str).iloc[:, 0].drop_duplicates().sort_values().values)
             }
-            z_df = text_df.applymap(z_map.get)
+            z_df = plot_df.applymap(str).applymap(z_map.get)
+        
+        # For categorical values, the data will all be converted to a string
+        text_df = plot_df.apply(
+            lambda c: [
+                f"{i}<br>{c.name} = {v}"
+                for i, v in c.items()
+            ]
+        )
 
         # If the orientation is on the top or bottom of a column
         if self.side in ['top', 'bottom']:
@@ -915,6 +919,8 @@ class AxisAnnot(FigureElement):
             plot_df = self.df.reindex(
                 columns=[cname],
                 index=fb.axis(self.axis_label).order()
+            ).rename(
+                index=fb.axis(self.axis_label).label_dict().get
             )
 
             # Get the text and the z values to plot, depending on
@@ -983,7 +989,7 @@ class AxisAnnot(FigureElement):
             # Get the axes to plot on
             xaxis = fb.subplots.get_axis_label(f"{self.id}-{cname}", ax="x")
             yaxis = fb.subplots.get_axis_label(f"{self.id}-{cname}", ax="y")
-            
+
             # Add the trace for the plot
             fb.log(f"Plotting heatmap for {self.id}-{cname}")
             fb.subplots.plot(
@@ -998,20 +1004,6 @@ class AxisAnnot(FigureElement):
                     hovertemplate="%{text}<extra></extra>",
                 )
             )
-
-            # # Format the axes for this plot
-            # fb.log(f"Formatting axes for {self.id}-{cname}")
-            # fb.subplots.format_axis(
-            #     id=f"{self.id}-{cname}",
-            #     ax=ax,
-            #     params=dict(
-            #         tickmode="array",
-            #         tickvals=list(range(fb.axis(self.axis_label).length())),
-            #         ticktext=fb.axis(self.axis_label).labels(),
-            #         showticklabels=True,
-            #         automargin=True
-            #     )
-            # )
 
             # If the marginal heatmap is on the right or left
             if self.side in ["left", "right"]:
