@@ -224,7 +224,7 @@ class PlotlySubplots:
                 elif ax == "y":
                     return self.y_axes[subplot.y_index]
 
-    def format_axis(self, id:str=None, params:dict=None, ax:str=None, anchor:str=None):
+    def format_axis(self, id:str=None, params:dict=None, ax:str=None, anchor:str=None, log:bool=False):
         """Apply formatting to an axis, identified by ordinal position."""
 
         assert ax in ['x', 'y'], "ax must be x or y"
@@ -237,6 +237,13 @@ class PlotlySubplots:
         # While the axis name may be 'x2', the key used in the layout
         # would then be 'xaxis2'
         axis_name = self.format_axis_name(axis_name)
+
+        # If the log flag has been set
+        if log:
+
+            # Log the layout options which are being applied
+            for k, v in params.items():
+                self.log(f"Setting {axis_name}: {k} = {v}")
 
         # Apply the layout to the appropriate axis
         self.fig.update_layout(

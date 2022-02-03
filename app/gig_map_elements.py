@@ -447,7 +447,8 @@ class HeatmapColorbarElement(FigureElement):
             params=dict(
                 showticklabels=True,
                 automargin=True,
-            )
+            ),
+            log=True
         )
 
         # Make sure that the labels for the y axis are on the right
@@ -616,7 +617,8 @@ class GenomeTree(FigureElement):
                     self.node_positions.df['x'].max() * -0.025,
                     self.node_positions.df['x'].max() * 1.025,
                 ]
-            )
+            ),
+            log=True
         )
 
         fb.subplots.format_axis(
@@ -628,7 +630,8 @@ class GenomeTree(FigureElement):
                 ticktext=fb.axis("genome").labels(),
                 showticklabels=True,
                 automargin=True,
-            )
+            ),
+            log=True
         )
 
         # Make sure that the labels for the y axis are always on the
@@ -883,7 +886,7 @@ class AxisAnnot(FigureElement):
             # The z values will map to the ordered list of all values
             z_map = {
                 v: i
-                for i, v in enumerate(plot_df.applymap(str).iloc[:, 0].drop_duplicates().sort_values().values)
+                for i, v in enumerate(plot_df.applymap(str).iloc[:, 0].value_counts().index.values)
             }
             z_df = plot_df.applymap(str).applymap(z_map.get)
         
@@ -934,6 +937,10 @@ class AxisAnnot(FigureElement):
                 width = 1
                 height = 0.05
 
+                # Place a gap between rows
+                xgap = 0
+                ygap = 2
+
                 # The row index must be incremented to accommodate additional annotations
                 if self.side == "top":
                     y_index = self.y_index + i
@@ -945,7 +952,10 @@ class AxisAnnot(FigureElement):
                 # Share the x axis, but not the y
                 share_x = True
                 share_y = False
+                # Label the axis which has the feature labels
                 ax = "x"
+                # Label the axis which does not have the feature labels
+                other_ax = "y"
 
             # If the orientation is on the right or left of a row
             else:
@@ -953,6 +963,10 @@ class AxisAnnot(FigureElement):
                 # Set the relative size of the subplot
                 width = 0.05
                 height = 1
+
+                # Place a gap between columns
+                xgap = 2
+                ygap = 0
 
                 # The column index must be incremented to accommodate additional annotations
                 if self.side == "right":
@@ -965,7 +979,11 @@ class AxisAnnot(FigureElement):
                 # Share the y axis, but not the x
                 share_x = False
                 share_y = True
+
+                # Label the axis which has the feature labels
                 ax = "y"
+                # Label the axis which does not have the feature labels
+                other_ax = "x"
 
             # Define the position at which this panel will be rendered
             fb.log(f"Adding subplot for {self.id}-{cname} (x={x_index}, y={y_index})")
@@ -1001,6 +1019,8 @@ class AxisAnnot(FigureElement):
                     yaxis=yaxis,
                     colorscale=plot_palette,
                     showscale=False,
+                    xgap=xgap,
+                    ygap=ygap,
                     hovertemplate="%{text}<extra></extra>",
                 )
             )
@@ -1011,23 +1031,22 @@ class AxisAnnot(FigureElement):
                 # Rotate the labels of the other axis
                 fb.subplots.format_axis(
                     id=f"{self.id}-{cname}",
-                    ax="y" if ax == "x" else "x",
+                    ax=other_ax,
                     params=dict(
                         tickangle=90
-                    )
+                    ),
+                    log=True
                 )
 
-            # If the plot is annotating a column
-            if ax == "y":
-
-                # Make sure that the labels for the x axis are on the bottom
-                fb.subplots.anchor_xaxis(x_index, side="bottom")
-
-            # If it is annotating a row
-            else:
-
-                # Make sure that the labels for the y axis are on the right
-                fb.subplots.anchor_yaxis(y_index, side="right")
+            # Turn off the ticks on the non-labelled axis
+            fb.subplots.format_axis(
+                id=f"{self.id}-{cname}",
+                ax=other_ax,
+                params=dict(
+                    showticklabels=False
+                ),
+                log=True
+            )
 
 
 class GeneAnnotations(AxisAnnot):
