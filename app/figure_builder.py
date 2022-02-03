@@ -397,6 +397,10 @@ class FigureBuilder:
     def write_html(self, fp):
         """Write the figure to HTML"""
 
+        self.log("Adding any interactive components")
+
+        self.subplots.add_interactivity()
+
         self.log(f"Writing HTML to {fp}")
 
         self.subplots.fig.write_html(fp)

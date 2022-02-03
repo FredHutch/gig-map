@@ -1,5 +1,6 @@
 from cartesian_tree import make_nj_tree
 from figure_builder import FigureBuilder, FigureElement, FigureArgument
+import json
 import gzip
 import numpy as np
 import os
@@ -253,6 +254,10 @@ class HeatmapElement(FigureElement):
             share_y=True,
         )
 
+        # Get the axes to plot on
+        xaxis = fb.subplots.get_axis_label(self.id, ax="x")
+        yaxis = fb.subplots.get_axis_label(self.id, ax="y")
+
         # Add the trace for the plot
         fb.log(f"Plotting heatmap for {self.id}")
         fb.subplots.plot(
@@ -261,8 +266,8 @@ class HeatmapElement(FigureElement):
                 z=self.df_wide.values,
                 zmin=self.zmin,
                 zmax=self.max_val,
-                xaxis=fb.subplots.get_axis_label(self.id, ax="x"),
-                yaxis=fb.subplots.get_axis_label(self.id, ax="y"),
+                xaxis=xaxis,
+                yaxis=yaxis,
                 colorscale=self.colorscale,
                 showscale=False
             )
@@ -299,6 +304,11 @@ class HeatmapElement(FigureElement):
 
         # Make sure that the labels for the y axis are on the right
         fb.subplots.anchor_yaxis(self.y_index, side="right")
+
+        # Toggle the labels on this axis
+        fb.subplots.toggle_axis(fb.subplots.format_axis_name(xaxis), "gene")
+        fb.subplots.toggle_axis(fb.subplots.format_axis_name(yaxis), "genome")
+
 
 class GeneGenomeHeatmap(HeatmapElement):
 
@@ -969,6 +979,10 @@ class AxisAnnot(FigureElement):
                 # Set the height of the plot
                 height=height,
             )
+
+            # Get the axes to plot on
+            xaxis = fb.subplots.get_axis_label(f"{self.id}-{cname}", ax="x")
+            yaxis = fb.subplots.get_axis_label(f"{self.id}-{cname}", ax="y")
             
             # Add the trace for the plot
             fb.log(f"Plotting heatmap for {self.id}-{cname}")
@@ -977,8 +991,8 @@ class AxisAnnot(FigureElement):
                 trace=go.Heatmap(
                     z=z_df.values,
                     text=text_df,
-                    xaxis=fb.subplots.get_axis_label(f"{self.id}-{cname}", ax="x"),
-                    yaxis=fb.subplots.get_axis_label(f"{self.id}-{cname}", ax="y"),
+                    xaxis=xaxis,
+                    yaxis=yaxis,
                     colorscale=plot_palette,
                     showscale=False,
                     hovertemplate="%{text}<extra></extra>",

@@ -1,6 +1,61 @@
 import pandas as pd
 import plotly.graph_objects as go
 
+
+class PlotlySubplot:
+    """Class to coordinate the location and content of a single Plotly subplot."""
+
+    def __init__(
+        self,
+        # ID for the subpanel
+        id='subpanel',
+        # Ordinal position on the horizontal axis
+        x_index=0,
+        # Ordinal position on the vertical axis
+        y_index=0,
+        # Relative width of the column
+        width=1,
+        # Relative height of the row
+        height=1,
+        # Optional padding around panel
+        padding=0,
+        # Share the x-coordinates with all other panels in the column
+        share_x=True,
+        # Share the y-coordinates with all other panels in the row
+        share_y=True
+    ):
+
+        # Attach the attributes of the subplot
+        self.id = id
+        self.x_index = x_index
+        self.y_index = y_index
+        self.width = width
+        self.height = height
+        self.padding = padding
+        self.share_x = share_x
+        self.share_y = share_y
+
+    def axis(self, ax):
+        """Return either x_index or y_index, based on user input ('x' or 'y')."""
+
+        assert ax in ['x', 'y']
+
+        if ax == 'x':
+            return self.x_index
+        else:
+            return self.y_index
+
+    def span(self, ax):
+        """Return either width or height, based on user input ('x' or 'y')."""
+
+        assert ax in ['x', 'y']
+
+        if ax == 'x':
+            return self.width
+        else:
+            return self.height
+    
+
 class PlotlySubplots:
     """Class used to coordinate the creation of a Plotly figure with optional subplots."""
 
@@ -20,6 +75,9 @@ class PlotlySubplots:
         # Attach the logger, if any
         self.logger = logger
 
+        # Keep a list of any axes which should be made toggleable
+        self.toggle_axes = dict()
+
     def add(
         self,
         # ID for the subpanel
@@ -37,7 +95,7 @@ class PlotlySubplots:
         # Share the x-coordinates with all other panels in the column
         share_x=True,
         # Share the y-coordinates with all other panels in the row
-        share_y=True
+        share_y=True,
     ):
         """Add a PlotlySubplot."""
 
@@ -408,57 +466,46 @@ class PlotlySubplots:
         else:
             print(msg)
 
+    def toggle_axis(self, axis, label):
+        """Enable toggle functionality for the tick labels on a particular axis."""
 
-class PlotlySubplot:
-    """Class to coordinate the location and content of a single Plotly subplot."""
+        self.log(f"Adding toggle buttons for the {axis} axis showing {label} values")
 
-    def __init__(
-        self,
-        # ID for the subpanel
-        id='subpanel',
-        # Ordinal position on the horizontal axis
-        x_index=0,
-        # Ordinal position on the vertical axis
-        y_index=0,
-        # Relative width of the column
-        width=1,
-        # Relative height of the row
-        height=1,
-        # Optional padding around panel
-        padding=0,
-        # Share the x-coordinates with all other panels in the column
-        share_x=True,
-        # Share the y-coordinates with all other panels in the row
-        share_y=True
-    ):
+        # Add the axis and label to the dict of axes to toggle
+        self.toggle_axes[axis] = label
 
-        # Attach the attributes of the subplot
-        self.id = id
-        self.x_index = x_index
-        self.y_index = y_index
-        self.width = width
-        self.height = height
-        self.padding = padding
-        self.share_x = share_x
-        self.share_y = share_y
+    def untoggle_axis(self, axis):
+        """Disable toggle functionality for the tick labels on a particular axis."""
 
-    def axis(self, ax):
-        """Return either x_index or y_index, based on user input ('x' or 'y')."""
+        # Remove the axis from the dict of axes to toggle
+        del self.toggle_axes[axis]
 
-        assert ax in ['x', 'y']
+    def add_interactivity(self):
+        """Add any interactive buttons or sliders which have been defined."""
 
-        if ax == 'x':
-            return self.x_index
-        else:
-            return self.y_index
+        self.fig.update_layout(
+            updatemenus=[
+                dict(
+                    type="buttons",
+                    active=-1,
+                    showactive=True,
+                    buttons=[
+                        i
+                        for axis, label in self.toggle_axes.items()
+                        for i in [
+                            dict(
+                                label=f"Hide {label} labels",
+                                method="relayout",
+                                args=[{f"{axis}.showticklabels": False}]
+                            ),
+                            dict(
+                                label=f"Show {label} labels",
+                                method="relayout",
+                                args=[{f"{axis}.showticklabels": True}]
+                            )
+                        ]
+                    ]
+                )
+            ]
+        )
 
-    def span(self, ax):
-        """Return either width or height, based on user input ('x' or 'y')."""
-
-        assert ax in ['x', 'y']
-
-        if ax == 'x':
-            return self.width
-        else:
-            return self.height
-    
