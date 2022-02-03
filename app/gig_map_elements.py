@@ -694,7 +694,7 @@ class AxisAnnot(FigureElement):
                 ),
                 FigureArgument(
                     key=f"color-palette",
-                    description="Color palette used for marginal annotation; Default: 'auto', uses 'blues' for numeric data and 'rainbow' for categorical strings.",
+                    description="Color palette used for marginal annotation; Default: 'auto', uses 'blues' for numeric data and 'jet' for categorical strings.",
                     default="auto",
                     type=str
                 ),
@@ -871,8 +871,8 @@ class AxisAnnot(FigureElement):
             # If the color palette is 'auto'
             if self.palette == 'auto':
 
-                # Use the 'rainbow' palette
-                plot_palette = "rainbow"
+                # Use the 'jet' palette
+                plot_palette = "jet"
 
             # Otherwise
             else:
