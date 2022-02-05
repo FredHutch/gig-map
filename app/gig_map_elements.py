@@ -42,7 +42,7 @@ class GigMapFigure(FigureBuilder):
                 # Heatmap showing the occurrance of genes across genomes
                 GeneGenomeHeatmap(),
                 # Colorbar annotating the GeneGenomeHeatmap
-                # GeneGenomeColorbar()
+                GeneGenomeColorbar()
             ]
         )
 
@@ -323,6 +323,8 @@ class HeatmapColorbarElement(FigureElement):
         x_index=None,
         # Relative vertial position of panel within larger figure
         y_index=None,
+        # Relative Z-index position
+        z_index=None,
         # Label to display on colorbar
         label=None,
     ):
@@ -334,6 +336,8 @@ class HeatmapColorbarElement(FigureElement):
         self.x_index = x_index
         assert y_index is not None, "Must provide y_index="
         self.y_index = y_index
+        assert z_index is not None, "Must provide z_index="
+        self.z_index = z_index
         assert label is not None, "Must provide label="
         self.label = label
 
@@ -385,7 +389,7 @@ class HeatmapColorbarElement(FigureElement):
         zmin = self.heatmap_elem.zmin
 
         value_list = [
-            v
+            [v]
             for v in np.linspace(
                 min_val, max_val, num=100
             )
@@ -400,10 +404,12 @@ class HeatmapColorbarElement(FigureElement):
             x_index=self.x_index,
             # Ordinal position on the vertial axis
             y_index=self.y_index,
+            # Ordinal position on the z axis
+            z_index=self.z_index,
             # Make this subplot smaller than the others
-            y_span=0.05,
+            x_span=0.05,
             # Add padding around the panel
-            y_padding=0.05
+            x_padding=0.05
         )
         
         # Add the trace for the plot
@@ -411,9 +417,9 @@ class HeatmapColorbarElement(FigureElement):
         fb.subplots.plot(
             id=self.id,
             trace=go.Heatmap(
-                y=[self.label],
-                x=value_list,
-                z=[value_list],
+                x=[self.label],
+                y=value_list,
+                z=value_list,
                 zmin=zmin,
                 zmax=max_val,
                 colorscale=colorscale,
@@ -427,10 +433,11 @@ class HeatmapColorbarElement(FigureElement):
         fb.log(f"Formatting axes for {self.id}")
         fb.subplots.format_axis(
             id=self.id,
-            ax="y",
+            ax="x",
             params=dict(
                 showticklabels=True,
                 automargin=True,
+                tickangle=90
             ),
             log=True
         )
@@ -443,8 +450,9 @@ class GeneGenomeColorbar(HeatmapColorbarElement):
         super().__init__(
             id="genomeColorbar",
             heatmap_id="genomeHeatmap",
-            x_index=2,
-            y_index=-1,
+            x_index=-1,
+            y_index=0,
+            z_index=1,
             label="Percent Identity"
         )
 
