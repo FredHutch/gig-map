@@ -248,15 +248,7 @@ class HeatmapElement(FigureElement):
             x_index=self.x_index,
             # Ordinal position on the vertial axis
             y_index=self.y_index,
-            # Share the x-coordinates with all other subplots in this column
-            share_x=True,
-            # Share the y-coordinates with all other subplots in this row
-            share_y=True,
         )
-
-        # Get the axes to plot on
-        xaxis = fb.subplots.get_axis_label(self.id, ax="x")
-        yaxis = fb.subplots.get_axis_label(self.id, ax="y")
 
         # Add the trace for the plot
         fb.log(f"Plotting heatmap for {self.id}")
@@ -266,8 +258,6 @@ class HeatmapElement(FigureElement):
                 z=self.df_wide.values,
                 zmin=self.zmin,
                 zmax=self.max_val,
-                xaxis=xaxis,
-                yaxis=yaxis,
                 colorscale=self.colorscale,
                 showscale=False
             )
@@ -299,15 +289,9 @@ class HeatmapElement(FigureElement):
             )
         )
 
-        # Make sure that the labels for the x axis are on the bottom
-        fb.subplots.anchor_xaxis(self.x_index, side="bottom")
-
-        # Make sure that the labels for the y axis are on the right
-        fb.subplots.anchor_yaxis(self.y_index, side="right")
-
         # Toggle the labels on this axis
-        fb.subplots.toggle_axis(fb.subplots.format_axis_name(xaxis), "gene")
-        fb.subplots.toggle_axis(fb.subplots.format_axis_name(yaxis), "genome")
+        fb.subplots.toggle_axis(fb.subplots.get_attr(self.id, "x_longname"), "gene")
+        fb.subplots.toggle_axis(fb.subplots.get_attr(self.id, "y_longname"), "genome")
 
 
 class GeneGenomeHeatmap(HeatmapElement):
@@ -417,9 +401,9 @@ class HeatmapColorbarElement(FigureElement):
             # Ordinal position on the vertial axis
             y_index=self.y_index,
             # Make this subplot smaller than the others
-            height=0.05,
+            y_span=0.05,
             # Add padding around the panel
-            padding=0.05
+            y_padding=0.05
         )
         
         # Add the trace for the plot
@@ -450,12 +434,6 @@ class HeatmapColorbarElement(FigureElement):
             ),
             log=True
         )
-
-        # Make sure that the labels for the y axis are on the right
-        fb.subplots.anchor_yaxis(self.y_index, side="right")
-
-        # Make sure that the labels for the x axis are on the bottom
-        fb.subplots.anchor_xaxis(self.x_index, side="bottom")
 
 
 class GeneGenomeColorbar(HeatmapColorbarElement):
@@ -561,10 +539,8 @@ class GenomeTree(FigureElement):
             x_index=self.x_index,
             # Ordinal position on the vertial axis
             y_index=self.y_index,
-            # Share the y-coordinates with all other subplots
-            share_y=True,
             # Only take up half the width relative to the heatmap
-            width=0.5,
+            x_span=0.5,
         )
         
         # Make an object to map the neighbor joining tree on a cartesian plot
@@ -632,13 +608,10 @@ class GenomeTree(FigureElement):
                 ticktext=fb.axis("genome").labels(),
                 showticklabels=True,
                 automargin=True,
+                side="right"
             ),
             log=True
         )
-
-        # Make sure that the labels for the y axis are always on the
-        # rightmost panel
-        fb.subplots.anchor_yaxis(self.y_index, side="right")
 
         fb.log(f"Done plotting {self.id}")
 
@@ -951,11 +924,6 @@ class AxisAnnot(FigureElement):
 
                 x_index = self.x_index
 
-                # Share the x axis, but not the y
-                share_x = True
-                share_y = False
-                # Label the axis which has the feature labels
-                ax = "x"
                 # Label the axis which does not have the feature labels
                 other_ax = "y"
 
@@ -978,47 +946,34 @@ class AxisAnnot(FigureElement):
 
                 y_index = self.y_index
 
-                # Share the y axis, but not the x
-                share_x = False
-                share_y = True
-
-                # Label the axis which has the feature labels
-                ax = "y"
                 # Label the axis which does not have the feature labels
                 other_ax = "x"
+
+            # ID for the subplot
+            subplot_id = f"{self.id}-{cname}"
 
             # Define the position at which this panel will be rendered
             fb.log(f"Adding subplot for {self.id}-{cname} (x={x_index}, y={y_index})")
             fb.subplots.add(
                 # ID for the subplot
-                id=f"{self.id}-{cname}",
+                id=subplot_id,
                 # Ordinal position on the horizontal axis
                 x_index=x_index,
                 # Ordinal position on the vertial axis
                 y_index=y_index,
-                # Share the x-coordinates with all other subplots in this column
-                share_x=share_x,
-                # Share the y-coordinates with all other subplots in this row
-                share_y=share_y,
                 # Set the width of the plot
-                width=width,
+                x_span=width,
                 # Set the height of the plot
-                height=height,
+                y_span=height,
             )
-
-            # Get the axes to plot on
-            xaxis = fb.subplots.get_axis_label(f"{self.id}-{cname}", ax="x")
-            yaxis = fb.subplots.get_axis_label(f"{self.id}-{cname}", ax="y")
 
             # Add the trace for the plot
             fb.log(f"Plotting heatmap for {self.id}-{cname}")
             fb.subplots.plot(
-                id=f"{self.id}-{cname}",
+                id=subplot_id,
                 trace=go.Heatmap(
                     z=z_df.values,
                     text=text_df,
-                    xaxis=xaxis,
-                    yaxis=yaxis,
                     colorscale=plot_palette,
                     showscale=False,
                     xgap=xgap,
@@ -1032,7 +987,7 @@ class AxisAnnot(FigureElement):
 
                 # Rotate the labels of the other axis
                 fb.subplots.format_axis(
-                    id=f"{self.id}-{cname}",
+                    id=subplot_id,
                     ax=other_ax,
                     params=dict(
                         tickangle=90
@@ -1040,9 +995,33 @@ class AxisAnnot(FigureElement):
                     log=True
                 )
 
+                # Anchor the y-axis on this x-axis
+                fb.subplots.format_axis(
+                    id=subplot_id,
+                    ax="y",
+                    params=dict(
+                        anchor=fb.subplots.get_attr(subplot_id, "x_shortname")
+                    ),
+                    log=True
+                )
+
+            # Otherwise, if the marginal heatmap is on the top or the bottom
+            else:
+
+                # Anchor the x-axis on this y-axis
+                fb.subplots.format_axis(
+                    id=subplot_id,
+                    ax="x",
+                    params=dict(
+                        anchor=fb.subplots.get_attr(subplot_id, "y_shortname")
+                    ),
+                    log=True
+                )
+
+
             # Turn off the ticks on the non-labelled axis
             fb.subplots.format_axis(
-                id=f"{self.id}-{cname}",
+                id=subplot_id,
                 ax=other_ax,
                 params=dict(
                     showticklabels=False
