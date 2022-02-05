@@ -917,8 +917,12 @@ class AxisAnnot(FigureElement):
             if self.side in ['top', 'bottom']:
 
                 # Set the relative size of the subplot
-                width = 1
-                height = 0.05
+                plot_size = dict(
+                    x_span = 1,
+                    x_padding = 0,
+                    y_span = 0.05,
+                    y_padding = 0.005,
+                )
 
                 # Place a gap between rows
                 xgap = 0
@@ -939,8 +943,12 @@ class AxisAnnot(FigureElement):
             else:
 
                 # Set the relative size of the subplot
-                width = 0.05
-                height = 1
+                plot_size = dict(
+                    y_span = 1,
+                    y_padding = 0,
+                    x_span = 0.05,
+                    x_padding = 0.005,
+                )
 
                 # Place a gap between columns
                 xgap = 2
@@ -969,10 +977,8 @@ class AxisAnnot(FigureElement):
                 x_index=x_index,
                 # Ordinal position on the vertial axis
                 y_index=y_index,
-                # Set the width of the plot
-                x_span=width,
-                # Set the height of the plot
-                y_span=height,
+                # Set the size of the plot
+                **plot_size
             )
 
             # Add the trace for the plot
