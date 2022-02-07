@@ -61,6 +61,13 @@ gigmap-project/
 │   └── *.gz               # (optional) Any genes included in this folder will be aligned across
 │                          # all genomes and used to estimate phylogenies;
 │
+├── metagenomes/
+│   └── single_end/*.fastq.gz
+│                          # (optional) Short reads in this folder will be aligned to the gene catalog
+│
+│   └── paired_end/*_R{1,2}*.fastq.gz
+│                          # (optional) Short reads in this folder will be aligned to the gene catalog
+│
 │   # OUTPUT FILES
 │
 ├── downloaded_genomes/    # (module: download)
@@ -94,6 +101,12 @@ gigmap-project/
 │   │
 │   └── tsv/
 │       └── *.tsv.gz       # Long-format table with distances for each genome
+│
+├── metagenomes/           # (module: align_reads)
+│   ├── alignments/
+│   │   └── *.json.gz      # Alignment information for each individual metagenome
+│   │
+│   └── alignments.csv.gz  # Summary of all alignment information per gene across samples
 │
 └── package                # (module: aggregate)
     └── gigmap.rdb         # Collection of gig-map output data in RDB format for

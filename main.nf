@@ -11,6 +11,7 @@ include { download_genes } from './modules/download_genes'
 include { deduplicate } from './modules/deduplicate'
 include { align_genomes } from './modules/align_genomes'
 include { align_markers } from './modules/align_markers'
+include { align_reads } from './modules/align_reads'
 include { ani } from './modules/ani'
 include { aggregate } from './modules/aggregate'
 include { render } from './modules/render'
@@ -82,6 +83,13 @@ workflow {
             .clean_genomes
     )
 
+    // Align short reads from any metagenomes
+    align_reads(
+        deduplicate
+            .out
+            .fasta
+    )
+
     // Aggregate results
     aggregate(
         align_genomes.out.concat_alignments,
@@ -90,13 +98,13 @@ workflow {
         align_genomes.out.gene_order
     )
 
-    // // Render the results as an interactive figure
-    // render(
-    //     align_genomes.out.concat_alignments,
-    //     download_genomes.out.annot,
-    //     ani.out.distances,
-    //     align_genomes.out.gene_order,
-    //     deduplicate.out.annot
-    // )
+    // Render the results as an interactive figure
+    render(
+        align_genomes.out.concat_alignments,
+        download_genomes.out.annot,
+        ani.out.distances,
+        align_genomes.out.gene_order,
+        deduplicate.out.annot
+    )
 
 }

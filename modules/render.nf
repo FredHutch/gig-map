@@ -29,13 +29,13 @@ set -e
 NOW=\$(date +"%Y-%m-%d-%H-%M-%S")
 
 gig-map-cli \
-    --genome_alignments "${genome_alignments}" \
-    --genome_annotations "${genome_annotations}" \
-    --genome_distmat "${genome_distmat}" \
-    --gene_order "${gene_order}" \
-    --gene_annotations "${gene_annotations}" \
-    --output-prefix gigmap.\$NOW \
+    --genomeTree-distmat "${genome_distmat}" \
+    --genomeHeatmap-csv "${genome_alignments}" \
+    --genomeAnnot-csv "${genome_annotations}" \
+    --geneAnnot-csv "${gene_annotations}" \
+    --geneAnnot-order "${gene_order}" \
     --output-folder ./ \
+    --output-prefix gigmap.\$NOW \
     ${params.render_options}
     """
 }
