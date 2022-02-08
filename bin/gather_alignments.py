@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import gzip
-from itertools import count
 import json
 import logging
 import os
@@ -9,6 +8,12 @@ import pandas as pd
 
 def gather_from_folder(input_folder, suffix, read_f):
     """Read in a set of files from a folder and return a dict."""
+
+    # If the folder does not exist
+    if not os.path.exists(input_folder):
+
+        # Return a null
+        return
 
     # Set up a dict
     output = dict()
@@ -66,6 +71,12 @@ def gather_alignments():
 
     # Read in all of the alignment information as a dict of FAMLI results
     famli_data = gather_famli()
+
+    # If there is no FAMLI data
+    if famli_data is None:
+
+        # Return a null
+        return
 
     # Read in the total number of reads per specimen as a dict
     count_data = gather_counts()

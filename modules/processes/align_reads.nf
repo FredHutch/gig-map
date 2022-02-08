@@ -65,7 +65,7 @@ process gather {
     path "read_counts/*"
     
     output:
-    path "alignments.csv.gz"
+    path "alignments.csv.gz", optional: true
 
     """
     gather_alignments.py
