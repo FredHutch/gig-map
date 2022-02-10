@@ -61,7 +61,7 @@ fp_list = [
     pd.read_csv(
         os.path.join('annotations', fp)
     )
-    for fp in os.listdir('annotations')
+    for fp in os.listdir('annotations') if os.path.exists('annotations') else []
     if fp.endswith('.csv.gz')
 ]
 
