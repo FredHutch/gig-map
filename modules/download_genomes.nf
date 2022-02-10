@@ -53,7 +53,8 @@ workflow download_genomes {
     concatenate_annotations(
         parse_genome_csv
             .out[1]
-            .toSortedList()
+            .toSortedList(),
+        "genomes"
     )
 
     emit:

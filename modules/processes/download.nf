@@ -40,32 +40,49 @@ process parse_genome_csv {
 process concatenate_annotations {
     container "${params.container__pandas}"
     label 'io_limited'
-    publishDir "${params.project_folder}/downloaded_genomes", mode: 'copy', overwrite: true
+    publishDir "${params.project_folder}/downloaded_${output_prefix}", mode: 'copy', overwrite: true
    
     input:
     path "annotations/*.csv.gz"
+    val output_prefix
 
     output:
-    path "genomes.annot.csv.gz"
+    path "${output_prefix}.annot.csv.gz"
 
 """#!/usr/bin/env python3
 import pandas as pd
 import os
 
-# Read in all of the inputs
-df = pd.concat([
+# Set the name of the output file based on the output_prefix value (genes/genomes)
+output_fp = "${output_prefix}.annot.csv.gz"
+
+# Find all of the CSV filepaths
+fp_list = [
     pd.read_csv(
         os.path.join('annotations', fp)
     )
     for fp in os.listdir('annotations')
     if fp.endswith('.csv.gz')
-])
+]
 
-# Write out the table
-df.to_csv(
-    "genomes.annot.csv.gz",
-    index=None
-)
+# If there are any annotations available
+if len(fp_list) > 0:
+
+    # Read in all of the inputs
+    df = pd.concat(fp_list)
+
+    # Write out the table
+    df.to_csv(
+        output_fp,
+        index=None
+    )
+
+# If there are no annotations available
+else:
+
+    # Write out an empty file
+    with open(output_fp, 'wt') as handle:
+        handle.write("${output_prefix}_id\\n")
 
 """
 }
