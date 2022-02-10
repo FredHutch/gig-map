@@ -96,9 +96,9 @@ class PlotlySubplots:
         # Format the new subplot
         new_subplot = dict(
             id=id,
-            x_index=x_index,
-            y_index=y_index,
-            z_index=z_index,
+            x_index=str(x_index),
+            y_index=str(y_index),
+            z_index=str(z_index),
             x_shortname=x_shortname,
             x_longname=x_longname,
             y_shortname=y_shortname,
@@ -118,6 +118,38 @@ class PlotlySubplots:
             pd.DataFrame([new_subplot]),
         ])
 
+    def query_subplots(self, query_list):
+        """Subset the subplots table using any list of queries."""
+
+        # If a single query was provided
+        if isinstance(query_list, str):
+
+            # Turn the single query into a list with one member
+            query_list = [query_list]
+
+        # The input must otherwise be a list
+        assert isinstance(query_list, list)
+
+        # Start with the full table of subplots
+        queried_subsets = self.subplots
+
+        # Iterate over each query
+        for query in query_list:
+
+            # If there are any subplots remaining
+            if queried_subsets.shape[0] > 0:
+
+                # Filter it based on the query string
+                try:
+                    queried_subsets = queried_subsets.query(query)
+                except Exception as e:
+                    self.log(f"There was an error while applying the subplot query {query}")
+                    self.log(queried_subsets)
+                    raise e
+
+        # Return the final queried table
+        return queried_subsets
+
     def assign_index(self, index=None, ax=None, z_index=None):
         """Assign ordinal indices to axis ID strings."""
 
@@ -134,12 +166,11 @@ class PlotlySubplots:
         assert z_index is not None, "Must provide z_index"
 
         # First check to see if this axis already exists
-        overlap_df = self.subplots.query(
-            f"z_index == {z_index}"
-        ).query(
-            f"{ax}_index == {index}"
-        )
-
+        overlap_df = self.query_subplots([
+            f"z_index == '{z_index}'",
+            f"{ax}_index == '{index}'"
+        ])
+        
         # If there are any axes already defined
         if overlap_df.shape[0] > 0:
 
@@ -271,8 +302,8 @@ class PlotlySubplots:
             for axis_index, vals in pos.iterrows():
 
                 # Get the name of all axes which share this index
-                for axis_name in self.subplots.query(
-                    f"{ax}_index == {axis_index}"
+                for axis_name in self.query_subplots(
+                    f"{ax}_index == '{axis_index}'"
                 )[
                     f"{ax}_longname"
                 ].unique():
@@ -292,8 +323,8 @@ class PlotlySubplots:
         """Return the first open position on the right or left of a row."""
 
         # Get the list of x axis indices for every subplot with this y axis
-        x_indices = self.subplots.query(
-            f"y_index == {y_index}"
+        x_indices = self.query_subplots(
+            f"y_index == '{y_index}'"
         )["x_index"]
 
         msg = f"No subplots found in the row {y_index}"
@@ -309,8 +340,8 @@ class PlotlySubplots:
         """Return the first open position on the top or bottom of a column."""
 
         # Get the list of y axis indices for every subplot with this x axis
-        y_indices = self.subplots.query(
-            f"x_index == {x_index}"
+        y_indices = self.query_subplots(
+            f"x_index == '{x_index}'"
         )["y_index"]
 
         msg = f"No subplots found in the column {x_index}"
@@ -351,6 +382,7 @@ class PlotlySubplots:
                     type="buttons",
                     active=-1,
                     showactive=True,
+                    pad=dict(t=20),
                     buttons=[
                         i
                         for axis, label in self.toggle_axes.items()
