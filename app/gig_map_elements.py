@@ -187,10 +187,11 @@ class HeatmapElement(FigureElement):
             # Format a wide table
             fb.log(f"Pivoting to wide format")
             # Attach the table to this object
-            self.df_wide = df_long.pivot(
+            self.df_wide = df_long.pivot_table(
                 index=y_col,
                 columns=x_col,
-                values=val_col
+                values=val_col,
+                aggfunc=max
             ).fillna(
                 self.fill_value
             )
