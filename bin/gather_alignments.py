@@ -6,6 +6,19 @@ import logging
 import os
 import pandas as pd
 
+# Set up logging
+logFormatter = logging.Formatter(
+    '%(asctime)s %(levelname)-8s [gather_alignments] %(message)s'
+)
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+# Write to STDOUT
+consoleHandler = logging.StreamHandler()
+consoleHandler.setFormatter(logFormatter)
+logger.addHandler(consoleHandler)
+
+
 def gather_from_folder(input_folder, suffix, read_f):
     """Read in a set of files from a folder and return a dict."""
 
@@ -29,10 +42,10 @@ def gather_from_folder(input_folder, suffix, read_f):
         specimen = fp[:-len(suffix)]
 
         # Read in the file using the function
-        logging.info(f"Reading in {input_folder}/{fp}")
+        logger.info(f"Reading in {input_folder}/{fp}")
         output[specimen] = read_f(os.path.join(input_folder, fp))
 
-    logging.info(f"Read in data for {len(output):,} specimens")
+    logger.info(f"Read in data for {len(output):,} specimens")
     return output
 
 
@@ -53,7 +66,7 @@ def read_famli(fp):
             json.load(handle)
         )
     
-    logging.info(f"Read in alignments to {df.shape[0]:,} genes")
+    logger.info(f"Read in alignments to {df.shape[0]:,} genes")
     return df
 
 
