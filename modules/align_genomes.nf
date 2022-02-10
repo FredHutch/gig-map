@@ -19,10 +19,30 @@ include {
 workflow align_genomes {
 
     take:
-    genomes_ch
+    input_genomes_ch
     centroids_faa
 
     main:
+
+    // If the --genomes param has been set by the user
+    if ( params.genomes ) {
+
+        // Get all of the files which are specified
+        Channel
+            .fromPath(params.genomes)
+            .mix(input_genomes_ch)
+            .set { genomes_ch }
+
+    // Otherwise, if the --genomes param has not been set
+    } else {
+
+        // Read files from the genomes/ subfolder in the project folder
+        Channel
+            .fromPath("${params.project_folder}/genomes/*.gz")
+            .mix(input_genomes_ch)
+            .set { genomes_ch }
+
+    }
 
     // Clean up the genome formatting
     clean_genomes(
