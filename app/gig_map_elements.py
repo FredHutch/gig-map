@@ -445,6 +445,16 @@ class HeatmapColorbarElement(FigureElement):
             log=True
         )
 
+        # Turn off the y-axis tick labels
+        fb.subplots.format_axis(
+            id=self.id,
+            ax="y",
+            params=dict(
+                showticklabels=False
+            ),
+            log=True
+        )
+
 
 class GeneGenomeColorbar(HeatmapColorbarElement):
 
@@ -776,6 +786,14 @@ class AxisAnnot(FigureElement):
 
                 # Reorder the annotation table
                 df = df.reindex(index=index_order)
+
+                # Set the order of the axis
+                fb.log(f"Setting up {self.axis_label} axis")
+                fb.axis(self.axis_label).set(
+                    pd.Series(index_order, index=index_order)
+                )
+                fb.log(f"Setting order of {self.axis_label} axis")
+                fb.axis(self.axis_label).set_order(index_order)
 
             # Set the axis labels using the values in this column
             fb.axis(self.axis_label).set(
