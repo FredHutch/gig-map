@@ -20,17 +20,22 @@ workflow download_genes {
 
     // If the --gene_tables flag is set, use that path
     if ( params.gene_tables ){
-        gene_tables = params.gene_tables
-    } else {
-        // Otherwise use the default path in the project folder
-        gene_tables = "${params.project_folder}/gene_tables/*.csv"
-    }
 
-    // Get the CSV files
-    Channel
-        .fromPath( gene_tables )
-        .ifEmpty { error "Cannot find any files matching the wildcard '${gene_tables}'" }
-        .set { gene_manifests }
+        // Get the CSV files and raise an error if none are found
+        Channel
+            .fromPath( params.gene_tables )
+            .ifEmpty { error "Cannot find any files matching the wildcard '${params.gene_tables}'" }
+            .set { gene_manifests }
+
+    } else {
+
+        // Otherwise use the default path in the project folder
+        // Get the CSV files, but don't raise an error if none are present
+        Channel
+            .fromPath( "${params.project_folder}/gene_tables/*.csv" )
+            .set { gene_manifests }
+
+    }
 
     // Read the contents of each manifest file
     parse_genome_csv(

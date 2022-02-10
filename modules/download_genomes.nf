@@ -18,17 +18,23 @@ workflow download_genomes {
 
     // If the --genome_tables flag is set, use that path
     if ( params.genome_tables ){
-        genome_tables = params.genome_tables
+        
+        // Get the CSV files, and raise an error if none are found at that path
+        Channel
+            .fromPath( params.genome_tables )
+            .ifEmpty { error "Cannot find any files matching the wildcard '${params.genome_tables}'" }
+            .set { genome_manifests }
+
     } else {
+
         // Otherwise use the default path in the project folder
-        genome_tables = "${params.project_folder}/genome_tables/*.csv"
+        // Get the CSV files, but don't raise an error if none are present
+        Channel
+            .fromPath( "${params.project_folder}/genome_tables/*.csv" )
+            .set { genome_manifests }
+
     }
 
-    // Get the CSV files
-    Channel
-        .fromPath( genome_tables )
-        .ifEmpty { error "Cannot find any files matching the wildcard '${genome_tables}'" }
-        .set { genome_manifests }
 
     // Read the contents of each manifest file
     parse_genome_csv(
