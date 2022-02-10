@@ -56,20 +56,17 @@ import os
 # Set the name of the output file based on the output_prefix value (genes/genomes)
 output_fp = "${output_prefix}.annot.csv.gz"
 
-# Find all of the CSV filepaths
-fp_list = [
-    pd.read_csv(
-        os.path.join('annotations', fp)
-    )
-    for fp in os.listdir('annotations') if os.path.exists('annotations') else []
-    if fp.endswith('.csv.gz')
-]
-
 # If there are any annotations available
-if len(fp_list) > 0:
+if os.path.exists('annotations'):
 
     # Read in all of the inputs
-    df = pd.concat(fp_list)
+    df = pd.concat([
+        pd.read_csv(
+            os.path.join('annotations', fp)
+        )
+        for fp in os.listdir('annotations')
+        if fp.endswith('.csv.gz')
+    ])
 
     # Write out the table
     df.to_csv(
