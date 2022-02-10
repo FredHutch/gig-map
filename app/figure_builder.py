@@ -394,12 +394,27 @@ class FigureBuilder:
 
         return self.axes[axis_name]
 
-    def write_html(self, fp):
+    def write_image(self, fp, **layout_kwargs):
+        """Write the figure to a static image, supporting jpeg, png, webp, svg, and pdf"""
+
+        supported_types = ("jpeg", "png", "webp", "svg", "pdf")
+
+        assert fp.endswith(supported_types)
+
+        if len(layout_kwargs) > 0:
+            self.subplots.fig.update_layout(**layout_kwargs)
+
+        self.log(f"Writing image to {fp}")
+
+        self.subplots.fig.write_image(fp)
+
+    def write_html(self, fp, with_interactivity=True):
         """Write the figure to HTML"""
 
         self.log("Adding any interactive components")
 
-        self.subplots.add_interactivity()
+        if with_interactivity:
+            self.subplots.add_interactivity()
 
         self.log(f"Writing HTML to {fp}")
 
