@@ -200,6 +200,7 @@ class HeatmapElement(FigureElement):
             if not fb.axis(self.x_axis).is_fixed:
 
                 # Set the order based on similarity of values
+                fb.log(f"Ordering {self.x_axis} by linkage")
                 fb.axis(self.x_axis).set_order(
                     order_by_linkage(self.df_wide.T)
                 )
@@ -208,6 +209,7 @@ class HeatmapElement(FigureElement):
             if not fb.axis(self.y_axis).is_fixed:
 
                 # Set the order based on similarity of values
+                fb.log(f"Ordering {self.y_axis} by linkage")
                 fb.axis(self.y_axis).set_order(
                     order_by_linkage(self.df_wide)
                 )
