@@ -110,7 +110,7 @@ workflow {
 }
 
 // Entrypoint for dedicated sections of the workflow
-workflow deduplicate {
+workflow deduplicate_only {
 
     deduplicate(Channel.empty())
 
