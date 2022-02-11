@@ -6,6 +6,7 @@ import numpy as np
 import os
 import pandas as pd
 import plotly.graph_objects as go
+from plotly.colors import hex_to_rgb
 from scipy.cluster import hierarchy
 
 
@@ -698,6 +699,12 @@ class AxisAnnot(FigureElement):
                     type=str
                 ),
                 FigureArgument(
+                    key=f"color-map",
+                    description="Optional color mapping of specific values in the marginal annotation; Format CSV, columns: column,value,color",
+                    default=None,
+                    type=str
+                ),
+                FigureArgument(
                     key=f"max-label-len",
                     description=f"Maximum number of characters allowed for {axis_label} labels (default: 60)",
                     type=int,
@@ -718,6 +725,7 @@ class AxisAnnot(FigureElement):
         label_col=None,
         color_col=None,
         color_palette=None,
+        color_map=None,
         max_label_len=None,
         order=None
     ):
@@ -835,6 +843,43 @@ class AxisAnnot(FigureElement):
             # Attach the color palette selected
             self.palette = color_palette
 
+        # If an explicit color mapping file was provided
+        if color_map is not None:
+
+            # Make sure the file exists
+            assert os.path.exists(color_map), f"File not found: {color_map}"
+
+            # Save that CSV
+            self.color_map_df = pd.read_csv(color_map)
+
+            # Check that it has the expected columns
+            expected = ["column", "value", "color"]
+            provided = list(self.color_map_df.columns.values)
+
+            msg = f"Unexpected columns in {color_map}, expected {', '.join(expected)}, saw {', '.join(provided)}"
+            assert set(expected) == set(provided), msg
+
+            # All of the values in the color column should be hex codes
+            for c in self.color_map_df['color'].values:
+
+                msg = f"Error: Expected value in 'color' column to be a hex code, not '{c}'"
+                assert c[0] == "#", msg
+                assert len(c) == 7, msg
+
+            # Add the RGB color
+            self.color_map_df = self.color_map_df.assign(
+                rgb = self.color_map_df.color.apply(
+                    hex_to_rgb
+                )
+            )
+
+        # If not
+        else:
+
+            # Mark that element as None
+            self.color_map_df = None
+
+
     def all_numeric(self, plot_df):
 
         # Try to coerce the values to numeric
@@ -854,45 +899,90 @@ class AxisAnnot(FigureElement):
 
     def parse_annot_data(self, plot_df):
 
-        # Check if the values are all numeric
-        if self.all_numeric(plot_df):
+        # If an explicit color mapping was provided
+        if self.color_map_df is not None:
 
-            # If the color palette is 'auto'
-            if self.palette == 'auto':
+            # Get the mapping for this particular column
+            assert plot_df.shape[1] == 1, "Expected a single column of annotations"
+            cname = plot_df.columns.values[0]
 
-                # Use the 'blues' palette
-                plot_palette = "blues"
+            # Subset the color map to just the values for this column
+            column_colors = self.color_map_df.query(
+                f"column == '{cname}'"
+            )
 
-            # Otherwise
-            else:
+            assert column_colors.shape[0] > 0, f"No color mapping found for {cname}"
 
-                # Use the provided palette
-                plot_palette = self.palette
+            # Get the number of discrete values
+            nrows = column_colors.shape[0]
 
-            # For numeric values, the Z is not transformed
-            z_df = plot_df
+            # Scale each color to a range of values 0-1
+            column_colors = column_colors.assign(
+                scaled_val = [i / (nrows - 1) for i in range(nrows)]
+            )
 
-        # If the values are not all numeric
+            # Make a list mapping each scaled value to the RGB
+            plot_palette = [
+                [r.scaled_val, f"rgb{r.rgb}"]
+                for _, r in column_colors.iterrows()
+            ]
+
+            # Transform the plot_df into the appropriate scaled values
+            z_df = plot_df.replace(
+                to_replace=column_colors.set_index("value")["scaled_val"].to_dict()
+            )
+
+            # Check to see if any values did not have a corresponding color
+            for value, hex_code in z_df[cname].items():
+
+                msg = f"Did not find color specified for '{cname}' == '{value}' in the mapping table"
+                assert pd.notnull(hex_code), msg
+
+        # If an explicit color mapping was not provided, we will generate the colors programatically
         else:
 
-            # If the color palette is 'auto'
-            if self.palette == 'auto':
+            # Check if the values are all numeric
+            if self.all_numeric(plot_df):
 
-                # Use the 'jet' palette
-                plot_palette = "jet"
+                # If the color palette is 'auto'
+                if self.palette == 'auto':
 
-            # Otherwise
+                    # Use the 'blues' palette
+                    plot_palette = "blues"
+
+                # Otherwise
+                else:
+
+                    # Use the provided palette
+                    plot_palette = self.palette
+
+                # For numeric values, the Z is not transformed
+                z_df = plot_df
+
+            # If the values are not all numeric
             else:
 
-                # Use the provided palette
-                plot_palette = self.palette
+                # If the color palette is 'auto'
+                if self.palette == 'auto':
 
-            # The z values will map to the ordered list of all values
-            z_map = {
-                v: i
-                for i, v in enumerate(plot_df.applymap(str).iloc[:, 0].value_counts().index.values)
-            }
-            z_df = plot_df.applymap(str).applymap(z_map.get)
+                    # Use the 'rainbow' palette
+                    plot_palette = "rainbow"
+
+                # Otherwise
+                else:
+
+                    # Use the provided palette
+                    plot_palette = self.palette
+
+                # The z values will map to the ordered list of all values for each column
+                z_map = {
+                    cname: {
+                        value: i
+                        for i, value in enumerate(cvals.drop_duplicates().sort_values().values)
+                    }
+                    for cname, cvals in plot_df.applymap(str).items()
+                }
+                z_df = plot_df.applymap(str).replace(to_replace=z_map)
         
         # For categorical values, the data will all be converted to a string
         text_df = plot_df.apply(
