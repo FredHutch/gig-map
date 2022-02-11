@@ -275,7 +275,7 @@ class HeatmapElement(FigureElement):
                 tickmode="array",
                 tickvals=list(range(fb.axis("genome").length())),
                 ticktext=fb.axis("genome").labels(),
-                showticklabels=True,
+                showticklabels=fb.axis("genome").length() < 100,
                 automargin=True,
             )
         )
@@ -287,7 +287,7 @@ class HeatmapElement(FigureElement):
                 tickmode="array",
                 tickvals=list(range(fb.axis("gene").length())),
                 ticktext=fb.axis("gene").labels(),
-                showticklabels=True,
+                showticklabels=fb.axis("gene").length() < 100,
                 automargin=True,
             )
         )
