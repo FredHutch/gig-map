@@ -47,7 +47,7 @@ For those cases, it can be very helpfult to download the genomes in one step wit
 utility. To view the instructions for running this utility,
 run `nextflow run FredHutch/gig-map -entry download --help`
 
-## Dedupliate Bacterial Genes
+## Deduplicate Bacterial Genes
 
 When aligning a set of genes, it can be helpful to first combine any genes which have a
 very similar sequence. We refer to that particular process as "deduplicating" a set of genes.
