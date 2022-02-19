@@ -1,5 +1,5 @@
 {
-    "rdb": "alignments/alignments.rdb",
+    "rdb": "alignments/gigmap.rdb",
     "output_prefix": "gig-map",
     "output_folder": "output"
 }
