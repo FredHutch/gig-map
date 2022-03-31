@@ -2,7 +2,7 @@
 process cdhit {
     container "${params.container__cdhit}"
     label 'mem_medium'
-    publishDir "${params.project_folder}/deduplicated_genes", mode: 'copy', overwrite: true
+    publishDir "${params.output}", mode: 'copy', overwrite: true
    
     input:
     path "input.genes.*.fasta.gz"
@@ -20,7 +20,7 @@ process cdhit {
 process annotate_centroids {
     container "${params.container__pandas}"
     label 'io_limited'
-    publishDir "${params.project_folder}/deduplicated_genes/", mode: 'copy', overwrite: true
+    publishDir "${params.output}", mode: 'copy', overwrite: true
    
     input:
     path "clustered.genes.fasta.gz"

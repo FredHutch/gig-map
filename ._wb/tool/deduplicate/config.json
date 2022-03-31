@@ -1,0 +1,26 @@
+{
+    "name": "Deduplicate genes (gig-map)",
+    "description": "Identify a non-redundant set of gene sequences based on pairwise alignment of amino acid sequences.",
+    "args": {
+        "genes": {
+            "help": "Folder containing all genes to be analyzed. All files must be in amino acid FASTA format (gzip-compressed).",
+            "wb_env": "GENES",
+            "wb_type": "folder",
+            "required": true
+        },
+        "cluster_similarity": {
+            "help": "Amino acid similarity used for clustering (ranges from 0.0 to 1.0) [default: 0.9]",
+            "wb_env": "CLUSTER_SIMILARITY",
+            "wb_type": "float",
+            "default": 0.9,
+            "required": true
+        },
+        "cluster_coverage": {
+            "help": "Alignment coverage coverage used for clustering (ranges from 0.0 to 1.0) [default: 0.9]",
+            "wb_env": "CLUSTER_COVERAGE",
+            "wb_type": "float",
+            "default": 0.9,
+            "required": true
+        }
+    }
+}
