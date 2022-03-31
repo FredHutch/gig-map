@@ -10,32 +10,39 @@ include {
     concatenate_annotations;
 } from './processes/download' addParams(
     parse_genome_csv_suffix: "_protein.faa.gz",
-    ftp_output_folder: "${params.project_folder}/downloaded_genes",
+    ftp_output_folder: params.output,
     skip_missing_ftp: "true",
     publishFTP: 'true',
 )
 
+// Function which prints help message text
+def helpMessage() {
+    log.info"""
+    Download genes from a collection of genomes in the NCBI Genome database
+    
+    Downloads the gene sequences in amino acid FASTA format from a collection
+    of genomes in the NCBI Genome database. A table of genomes to be downloaded
+    can be accessed from the website:
+    https://www.ncbi.nlm.nih.gov/genome/browse#!/prokaryotes/
+
+    Parameters:
+
+    --genome_csv           Table of genomes to be downloaded (CSV)
+    --output               Folder where output files will be written
+
+    """.stripIndent()
+}
+
+// Set the default parameters
+params.genome_csv = false
+params.output = false
 
 workflow download_genes {
 
-    // If the --gene_tables flag is set, use that path
-    if ( params.gene_tables ){
-
-        // Get the CSV files and raise an error if none are found
-        Channel
-            .fromPath( params.gene_tables )
-            .ifEmpty { error "Cannot find any files matching the wildcard '${params.gene_tables}'" }
-            .set { gene_manifests }
-
-    } else {
-
-        // Otherwise use the default path in the project folder
-        // Get the CSV files, but don't raise an error if none are present
-        Channel
-            .fromPath( "${params.project_folder}/gene_tables/*.csv" )
-            .set { gene_manifests }
-
-    }
+    take:
+    gene_manifests
+    
+    main:
 
     // Read the contents of each manifest file
     parse_genome_csv(
@@ -60,4 +67,32 @@ workflow download_genes {
 
     emit:
     genes = fetchFTP.out
+}
+
+workflow {
+
+    // If the --genome_csv or --output flags were not set
+    if ( params.output == false or params.genome_csv == false ){
+
+        // Print the help message
+        helpMessage()
+
+        // Raise an error
+        exit 1
+
+    } else {
+
+        // Parse the CSV and raise an error if the path is not valid
+        Channel
+            .fromPath( params.genome_csv )
+            .ifEmpty { error "Cannot find any file at '${params.genome_csv}'" }
+            .set { gene_manifest }
+
+        // Download the genes for each genome
+        download_genes(
+            gene_manifest
+        )
+
+    }
+
 }
