@@ -4,7 +4,7 @@
 nextflow.enable.dsl=2
 
 // Import the subworkflow to run
-include { download_genes } from '.modules/download_genes'
+include { download_genes } from './modules/download_genes'
 
 // Function which prints help message text
 def helpMessage() {
