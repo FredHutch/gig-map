@@ -1,0 +1,60 @@
+{
+    "name": "Align genes against genomes (gig-map)",
+    "description": "Align a deduplicated collection of genes against a collection of genomes.",
+    "args": {
+        "genes": {
+            "help": "Single file containing all genes to be aligned, in amino acid FASTA format (gzip-compressed).",
+            "wb_env": "GENES",
+            "wb_type": "file",
+            "required": true
+        },
+        "genomes": {
+            "help": "Folder containing all genomes to align against (gzip-compressed FASTA format).",
+            "wb_env": "GENOMES",
+            "wb_type": "folder",
+            "required": true
+        },
+        "min_coverage": {
+            "help": "Minimum proportion of a gene which must align in order to retain the alignment",
+            "wb_env": "MIN_COVERAGE",
+            "wb_type": "integer",
+            "default": 90,
+            "required": true
+        },
+        "min_identity": {
+            "help": "Minimum percent identity of the amino acid alignment required to retain the alignment",
+            "wb_env": "MIN_IDENTITY",
+            "wb_type": "integer",
+            "default": 90,
+            "required": true
+        },
+        "max_evalue": {
+            "help": "Maximum E-value threshold used to filter all alignments",
+            "wb_env": "MAX_EVALUE",
+            "wb_type": "float",
+            "default": 0.001,
+            "required": true
+        },
+        "aligner": {
+            "help": "Algorithm used for alignment (default: diamond, options: diamond, blast)",
+            "wb_env": "ALIGNER",
+            "wb_type": "string",
+            "default": "diamond",
+            "required": true
+        },
+        "max_overlap": {
+            "help": "Any alignment which overlaps a higher-scoring alignment by more than this",
+            "wb_env": "MAX_OVERLAP",
+            "wb_type": "integer",
+            "default": 50,
+            "required": true
+        },
+        "query_gencode": {
+            "help": "Genetic code used for conceptual translation of genome sequences",
+            "wb_env": "QUERY_GENCODE",
+            "wb_type": "integer",
+            "default": 11,
+            "required": true
+        }
+    }
+}
