@@ -6,7 +6,6 @@ __pycache__/
 .nextflow.log*
 work/
 output*
-download_genomes/
 deduplicate_genomes/
 test_data/example_projects
 
