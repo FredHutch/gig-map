@@ -72,7 +72,7 @@ workflow download_genes {
 workflow {
 
     // If the --genome_csv or --output flags were not set
-    if ( params.output == false or params.genome_csv == false ){
+    if ( params.output == false || params.genome_csv == false ){
 
         // Print the help message
         helpMessage()
