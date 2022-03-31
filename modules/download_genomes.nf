@@ -9,32 +9,17 @@ include {
     parse_genome_csv;
     concatenate_annotations;
 } from './processes/download' addParams(
-    ftp_output_folder: "${params.project_folder}/downloaded_genomes",
+    ftp_output_folder: "${params.output}",
     publishFTP: 'true',
 )
 
 
 workflow download_genomes {
 
-    // If the --genome_tables flag is set, use that path
-    if ( params.genome_tables ){
-        
-        // Get the CSV files, and raise an error if none are found at that path
-        Channel
-            .fromPath( params.genome_tables )
-            .ifEmpty { error "Cannot find any files matching the wildcard '${params.genome_tables}'" }
-            .set { genome_manifests }
+    take:
+    genome_manifests
 
-    } else {
-
-        // Otherwise use the default path in the project folder
-        // Get the CSV files, but don't raise an error if none are present
-        Channel
-            .fromPath( "${params.project_folder}/genome_tables/*.csv" )
-            .set { genome_manifests }
-
-    }
-
+    main:
 
     // Read the contents of each manifest file
     parse_genome_csv(
