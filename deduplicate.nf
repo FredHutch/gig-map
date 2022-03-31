@@ -23,13 +23,15 @@ workflow {
 
         Parameters:
 
-        --genes                Folder(s) containing all gene FASTA files to deduplicate
+        --genes                Wildcard path indicating the amino acid gene FASTA files to analyze
         --output               Folder where output files will be written
 
         --cluster_similarity   Amino acid similarity used for clustering (ranges from 0.0 to 1.0)
-                            (default: ${params.cluster_similarity})
+                               (default: ${params.cluster_similarity})
         --cluster_coverage     Alignment coverage used for clustering (ranges from 0.0 to 1.0)
-                            (default: ${params.cluster_coverage})
+                               (default: ${params.cluster_coverage})
+        --min_gene_length      Minimum amino acidlength threshold used to filter genes
+                               (default: ${params.min_gene_length})
         """,
         params.help
     )
@@ -41,6 +43,7 @@ workflow {
     // Get all of the files in the specified folder
     Channel
         .fromPath(params.genes)
+        .ifEmpty { error "Cannot find any files at '${params.genes}'" }
         .set { gene_ch }
 
     // Run the deduplication utility on those files

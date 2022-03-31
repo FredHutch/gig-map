@@ -286,7 +286,7 @@ process order_genes {
 
 """#!/bin/bash
 
-set -Eeuo pipefail
+set -euo pipefail
 
 order_genes.py \
     "${alignments_csv_gz}" \
@@ -339,19 +339,4 @@ set -e
 
 reorganize_fastas.py
 """
-}
-
-process filter_genes {
-    container "${params.container__pandas}"
-    label 'io_limited'
-    
-    input:
-        path input_fasta
-    
-    output:
-        path "${input_fasta.name}.filtered.fasta"
-    
-    script:
-    template "filter_genes.py"
-
 }

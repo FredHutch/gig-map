@@ -7,6 +7,7 @@ nextflow.enable.dsl=2
 include {
     cdhit;
     annotate_centroids;
+    filter_genes;
 } from './processes/deduplicate'
 
 workflow deduplicate {
@@ -16,9 +17,17 @@ workflow deduplicate {
 
     main:
 
+    // Filter the genes by minimum amino acid length
+    filter_genes(
+        genes_ch
+    )
+
+
     // Run CD-HIT on all of the gene sequences
     cdhit(
-        genes_ch.toSortedList()
+        filter_genes
+            .out
+            .toSortedList()
     )
 
     // Generate a simple annotation file for each centroid

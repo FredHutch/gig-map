@@ -31,3 +31,19 @@ process annotate_centroids {
     script:
     template "annotate_centroids.py"
 }
+
+// Filter a set of genes by minimum amino acid length
+process filter_genes {
+    container "${params.container__pandas}"
+    label 'io_limited'
+    
+    input:
+        path input_fasta
+    
+    output:
+        path "${input_fasta.name}.filtered.fasta"
+    
+    script:
+    template "filter_genes.py"
+
+}
