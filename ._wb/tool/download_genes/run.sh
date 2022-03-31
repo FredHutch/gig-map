@@ -5,12 +5,10 @@ set -euo pipefail
 # Run the workflow
 nextflow \
     run \
-    FredHutch/gig-map/download_genes.nf \
-    -r ${REVISION} \
+    "${TOOL_REPO}/download_genes.nf" \
     --genome_csv "${GENOME_CSV}" \
     --output "${PWD}/genes/" \
-    -resume \
-    -latest
+    -resume
 
 # Delete the temporary files created during execution
 rm -r work

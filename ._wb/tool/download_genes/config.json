@@ -7,12 +7,6 @@
             "wb_env": "GENOME_CSV",
             "wb_type": "file",
             "required": true
-        },
-        "revision": {
-            "help": "Version of the gig-map workflow to run",
-            "wb_env": "REVISION",
-            "wb_type": "string",
-            "default": "main"
         }
     }
 }
