@@ -514,6 +514,11 @@ process reorganize_markers {
 set -e
 
 mkdir fastas_by_marker
+
+# PWD is /, must cd to the directory before running script
+BASEDIR=`dirname \$0`
+cd \$BASEDIR
+
 reorganize_markers.py
 """
 }
