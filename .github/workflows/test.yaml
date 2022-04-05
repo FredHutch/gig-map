@@ -44,6 +44,5 @@ jobs:
           WB_BASE=$PWD/._workbench wb add_repo --remote-name FredHutch/bash-workbench-tools
 
       - name: Run tests
-        run: |
-          cd test_data
-          bash run_tests.sh
+        working-directory: test_data
+        run: bats tests.bats
