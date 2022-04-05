@@ -12,7 +12,8 @@ nextflow \
     --cluster_similarity ${CLUSTER_SIMILARITY} \
     --cluster_coverage ${CLUSTER_COVERAGE} \
     --min_gene_length ${MIN_GENE_LENGTH} \
-    -resume
+    -resume \
+    -profile "${PROFILE}"
 
 # Delete the temporary files created during execution
 echo Removing temporary files
