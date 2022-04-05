@@ -2,7 +2,7 @@
 process aggregate_results {
     container "${params.container__pandas}"
     label 'mem_medium'
-    publishDir "${params.project_folder}/package/", mode: 'copy', overwrite: true
+    publishDir "${params.output}", mode: 'copy', overwrite: true
    
     input:
     path alignments_csv_gz

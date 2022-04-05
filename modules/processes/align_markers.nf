@@ -2,8 +2,8 @@
 process combine_markers {
     container "${params.container__clustal}"
     label "mem_medium"
-    publishDir "${params.project_folder}/markers/msa/", mode: 'copy', overwrite: true, pattern: "*.msa.gz"
-    publishDir "${params.project_folder}/markers/distmat/", mode: 'copy', overwrite: true, pattern: "*.distmat"
+    publishDir "${params.output}/msa/", mode: 'copy', overwrite: true, pattern: "*.msa.gz"
+    publishDir "${params.output}/distmat/", mode: 'copy', overwrite: true, pattern: "*.distmat"
 
     input:
         path unaligned_fasta
@@ -39,7 +39,7 @@ gzip *msa
 process raxml {
     container "${params.container__raxml}"
     label 'mem_veryhigh'
-    publishDir "${params.project_folder}/markers/raxml/", mode: 'copy', overwrite: true
+    publishDir "${params.output}/raxml/", mode: 'copy', overwrite: true
 
     input:
         path aln_fasta

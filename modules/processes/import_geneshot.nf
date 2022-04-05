@@ -2,7 +2,7 @@
 process annotate_genes {
     container "${params.container__pandas}"
     label 'mem_medium'
-    publishDir "${params.project_folder}/geneshot/", mode: 'copy', overwrite: true
+    publishDir "${params.output}", mode: 'copy', overwrite: true
    
     input:
     path geneshot_results_hdf
@@ -26,7 +26,7 @@ format_geneshot_annotations.py \
 process annotate_genes_with_abundances {
     container "${params.container__pandas}"
     label 'mem_medium'
-    publishDir "${params.project_folder}/geneshot/", mode: 'copy', overwrite: true
+    publishDir "${params.output}", mode: 'copy', overwrite: true
    
     input:
     path geneshot_results_hdf

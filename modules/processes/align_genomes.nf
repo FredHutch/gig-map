@@ -197,7 +197,7 @@ gunzip -c "${alignments_gz}" \
 process concatenate_alignments {
     container "${params.container__pandas}"
     label 'io_limited'
-    publishDir "${params.project_folder}/genome_alignments/", mode: 'copy', overwrite: true
+    publishDir "${params.output}", mode: 'copy', overwrite: true
    
     input:
     path "inputs/*.tsv.gz"
@@ -276,7 +276,7 @@ subset_alignments_by_genes.py \
 process order_genes {
     container "${params.container__pandas}"
     label 'mem_medium'
-    publishDir "${params.project_folder}/genome_alignments/", mode: 'copy', overwrite: true
+    publishDir "${params.output}", mode: 'copy', overwrite: true
    
     input:
     path alignments_csv_gz
@@ -324,7 +324,7 @@ extract_genes.py \
 process reorganize_fastas {
     container "${params.container__pandas}"
     label "io_limited"
-    publishDir "${params.project_folder}/${subfolder}", mode: 'copy', overwrite: true
+    publishDir "${params.output}", mode: 'copy', overwrite: true
 
     input:
         path "inputs/*.fasta.gz"

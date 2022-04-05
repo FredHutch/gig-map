@@ -1,7 +1,7 @@
 process mash_sketch {
     container "${params.container__mashtree}"
     label 'io_limited'
-    publishDir "${params.project_folder}/ani/msh/", mode: 'copy', overwrite: true
+    publishDir "${params.output}/msh/", mode: 'copy', overwrite: true
     
     input:
         path fasta
@@ -48,7 +48,7 @@ mash \
 process mash_dist {
     container "${params.container__mashtree}"
     label 'io_limited'
-    publishDir "${params.project_folder}/ani/tsv/", mode: 'copy', overwrite: true
+    publishDir "${params.output}/tsv/", mode: 'copy', overwrite: true
     
     input:
         tuple path(query_msh), path(combined_msh)
@@ -75,7 +75,7 @@ mash \
 process aggregate_distances {
     container "${params.container__pandas}"
     label 'io_limited'
-    publishDir "${params.project_folder}/ani/", mode: 'copy', overwrite: true
+    publishDir "${params.output}", mode: 'copy', overwrite: true
 
     
     input:

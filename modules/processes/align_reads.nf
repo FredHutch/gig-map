@@ -41,7 +41,7 @@ process diamond {
 process famli {
     container "${params.container__famli}"
     label 'mem_veryhigh'
-    publishDir "${params.project_folder}/metagenomes/alignments/", mode: "copy", overwrite: true
+    publishDir "${params.output}/alignments/", mode: "copy", overwrite: true
     
     input:
     tuple val(sample_name), file(input_aln)
@@ -58,7 +58,7 @@ process famli {
 process gather {
     container "${params.container__pandas}"
     label 'io_limited'
-    publishDir "${params.project_folder}/metagenomes/", mode: "copy", overwrite: true
+    publishDir "${params.output}", mode: "copy", overwrite: true
     
     input:
     path "famli/*"
