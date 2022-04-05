@@ -59,6 +59,9 @@
     # Print the process error and output to the screen
     cat ._wb/error.txt
     cat ._wb/output.txt
+    cat ._wb/tool/run.sh
+    cat ._wb/tool/env
+    cat .nextflow.log
     ls -lahtr
 
     # Make sure that the genes were deduplicated
