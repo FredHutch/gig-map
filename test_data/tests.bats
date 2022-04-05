@@ -86,4 +86,8 @@
         --nxf_profile testing \
         --wait
 
+    # Make sure that the outputs were created
+    [ -s genomes.aln.csv.gz ]
+    [ -s markers.fasta.gz ]
+
 }

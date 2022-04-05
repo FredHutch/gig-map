@@ -225,6 +225,7 @@ gzip "genomes.aln.csv"
 process select_markers {
     container "${params.container__pandas}"
     label "io_limited"
+    publishDir "${params.output}", mode: "copy", overwrite: true
 
     input:
         path "alignments.gz"
@@ -324,7 +325,7 @@ extract_genes.py \
 process reorganize_fastas {
     container "${params.container__pandas}"
     label "io_limited"
-    publishDir "${params.output}", mode: 'copy', overwrite: true
+    publishDir "${params.output}/${subfolder}", mode: 'copy', overwrite: true
 
     input:
         path "inputs/*.fasta.gz"

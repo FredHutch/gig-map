@@ -56,15 +56,12 @@ workflow {
         .set { genomes_ch }
 
     // Get the gene FASTA
-    Channel
-        .fromPath(params.genes)
-        .ifEmpty { error "Cannot find any files at '${params.genes}'" }
-        .set { genes_ch }
+    genes_faa = file(params.genes, checkIfExists: true)
 
     // Run the genome alignment sub-workflow
     align_genomes(
         genomes_ch,
-        genes_ch
+        genes_faa
     )
 
 }

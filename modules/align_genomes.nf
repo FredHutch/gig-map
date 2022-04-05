@@ -109,7 +109,7 @@ workflow align_genomes {
             .out
             .ifEmpty { error "No genes found" }
             .toSortedList(),
-        "genome_alignments/genes/"
+        "genes"
     )
 
     emit:
