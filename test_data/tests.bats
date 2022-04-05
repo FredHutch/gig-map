@@ -69,3 +69,21 @@
     [ -s centroids.membership.csv.gz ]
     [ -s centroids.annot.csv.gz ]
 }
+
+@test "Align genomes" {
+    TOOL=align_genomes
+    rm -rf ${TOOL}
+    mkdir ${TOOL}
+    cd ${TOOL}
+
+    # Specify the tool and launcher to use
+    wb setup_dataset --tool ${TOOL} --launcher nextflow_docker
+
+    # Specify the genes and genomes to align
+    wb run_dataset \
+        --genes ../deduplicate_genes/centroids.faa.gz \
+        --genomes ../download_genomes/genomes \
+        --nxf_profile testing \
+        --wait
+
+}

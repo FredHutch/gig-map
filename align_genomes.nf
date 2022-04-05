@@ -4,8 +4,8 @@
 nextflow.enable.dsl=2
 
 // Import helpers
-Import require_param from 'lib/helpers.groovy'
-Import help_message from 'lib/helpers.groovy'
+GroovyShell shell = new GroovyShell()
+def helpers = shell.parse(new File("${workflow.projectDir}/helpers.gvy"))
 
 // Import sub-workflow
 include { align_genomes } from './modules/align_genomes'
@@ -14,7 +14,7 @@ include { align_genomes } from './modules/align_genomes'
 workflow {
 
     // Show help message if the user specifies the --help flag at runtime
-    help_message(
+    helpers.help_message(
         """
         Align genes against a set of genomes
         
@@ -45,9 +45,9 @@ workflow {
     )
 
     // Make sure that the required parameters were provided
-    require_param(params.output, "output")
-    require_param(params.genomes, "genomes")
-    require_param(params.genes, "genes")
+    helpers.require_param(params.output, "output")
+    helpers.require_param(params.genomes, "genomes")
+    helpers.require_param(params.genes, "genes")
 
     // Get all of the genomes
     Channel

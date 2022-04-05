@@ -18,43 +18,43 @@
             "help": "Minimum proportion of a gene which must align in order to retain the alignment",
             "wb_env": "MIN_COVERAGE",
             "wb_type": "integer",
-            "default": 90,
-            "required": true
+            "default": 90
         },
         "min_identity": {
             "help": "Minimum percent identity of the amino acid alignment required to retain the alignment",
             "wb_env": "MIN_IDENTITY",
             "wb_type": "integer",
-            "default": 90,
-            "required": true
+            "default": 90
         },
         "max_evalue": {
             "help": "Maximum E-value threshold used to filter all alignments",
             "wb_env": "MAX_EVALUE",
             "wb_type": "float",
-            "default": 0.001,
-            "required": true
+            "default": 0.001
         },
         "aligner": {
             "help": "Algorithm used for alignment (default: diamond, options: diamond, blast)",
             "wb_env": "ALIGNER",
             "wb_type": "string",
-            "default": "diamond",
-            "required": true
+            "default": "diamond"
         },
         "max_overlap": {
             "help": "Any alignment which overlaps a higher-scoring alignment by more than this",
             "wb_env": "MAX_OVERLAP",
             "wb_type": "integer",
-            "default": 50,
-            "required": true
+            "default": 50
         },
         "query_gencode": {
             "help": "Genetic code used for conceptual translation of genome sequences",
             "wb_env": "QUERY_GENCODE",
             "wb_type": "integer",
-            "default": 11,
-            "required": true
+            "default": 11
+        },
+        "nxf_profile": {
+            "help": "Profile used for resource allocation (standard or testing)",
+            "wb_env": "PROFILE",
+            "wb_type": "string",
+            "default": "standard"
         }
     }
 }

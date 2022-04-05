@@ -12,6 +12,7 @@ test_data/example_projects
 test_data/download_genes
 test_data/download_genomes
 test_data/deduplicate_genes
+test_data/align_genomes
 ._workbench/*
 
 # C extensions
