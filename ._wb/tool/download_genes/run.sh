@@ -9,7 +9,8 @@ nextflow \
     "${TOOL_REPO}/download_genes.nf" \
     --genome_csv "${GENOME_CSV}" \
     --output "${PWD}/genes/" \
-    -resume
+    -resume \
+    -profile "${PROFILE}"
 
 # Delete the temporary files created during execution
 echo Removing temporary files

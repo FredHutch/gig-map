@@ -7,6 +7,12 @@
             "wb_env": "GENOME_CSV",
             "wb_type": "file",
             "required": true
+        },
+        "profile": {
+            "help": "Profile used for resource allocation (standard or testing)",
+            "wb_env": "PROFILE",
+            "wb_type": "string",
+            "default": "standard"
         }
     }
 }
