@@ -54,7 +54,7 @@
     wb setup_dataset --tool ${TOOL} --launcher nextflow_docker
     
     # Specify the folder which contains the set of genes to deduplicate
-    wb run_dataset --genes ../download_genes/genes/ --profile testing --wait
+    wb run_dataset --genes ../download_genes/genes/ --nxf_profile testing --wait
 
     # Print the process error and output to the screen
     cat ._wb/error.txt
