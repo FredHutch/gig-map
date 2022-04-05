@@ -12,15 +12,19 @@
             "help": "Amino acid similarity used for clustering (ranges from 0.0 to 1.0) [default: 0.9]",
             "wb_env": "CLUSTER_SIMILARITY",
             "wb_type": "float",
-            "default": 0.9,
-            "required": true
+            "default": 0.9
         },
         "cluster_coverage": {
             "help": "Alignment coverage coverage used for clustering (ranges from 0.0 to 1.0) [default: 0.9]",
             "wb_env": "CLUSTER_COVERAGE",
             "wb_type": "float",
-            "default": 0.9,
-            "required": true
+            "default": 0.9
+        },
+        "min_gene_length": {
+            "help": "Minimum amino acid length threshold used to filter genes [default: 50]",
+            "wb_env": "MIN_GENE_LENGTH",
+            "wb_type": "integer",
+            "default": 50
         }
     }
 }

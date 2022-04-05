@@ -10,6 +10,7 @@ deduplicate_genomes/
 test_data/example_projects
 test_data/download_genes
 test_data/download_genomes
+test_data/deduplicate_genes
 ._workbench/*
 
 # C extensions

@@ -1,14 +1,13 @@
 #!/usr/bin/env bats
 
 @test "Download genomes" {
-    rm -rf download_genomes
-    mkdir download_genomes
-    cd download_genomes
+    TOOL=download_genomes
+    rm -rf ${TOOL}
+    mkdir ${TOOL}
+    cd ${TOOL}
     
     # Specify the tool and launcher to use
-    wb setup_dataset \
-    --tool download_genomes \
-    --launcher nextflow_docker
+    wb setup_dataset --tool ${TOOL} --launcher nextflow_docker
 
     # Specify which table of genomes to download and
     # run the dataset, waiting until it finishes
@@ -19,14 +18,13 @@
 }
 
 @test "Download genes" {
-    rm -rf download_genes
-    mkdir download_genes
-    cd download_genes
+    TOOL=download_genes
+    rm -rf ${TOOL}
+    mkdir ${TOOL}
+    cd ${TOOL}
 
     # Specify the tool and launcher to use
-    wb setup_dataset \
-    --tool download_genes \
-    --launcher nextflow_docker
+    wb setup_dataset --tool ${TOOL} --launcher nextflow_docker
     
     # Specify which table of genomes to download and
     # run the dataset, waiting until it finishes
@@ -34,4 +32,22 @@
 
     # Make sure that the genes were downloaded
     (( $(ls genes/*.faa.gz | wc -l) == 8 ))
+}
+
+@test "Deduplicate genes" {
+    TOOL=deduplicate_genes
+    rm -rf ${TOOL}
+    mkdir ${TOOL}
+    cd ${TOOL}
+
+    # Specify the tool and launcher to use
+    wb setup_dataset --tool ${TOOL} --launcher nextflow_docker
+    
+    # Specify the folder which contains the set of genes to deduplicate
+    wb run_dataset --genes ../download_genes/genes/ --wait
+
+    # Make sure that the genes were deduplicated
+    [ -s centroids.faa.gz ]
+    [ -s centroids.membership.csv.gz ]
+    [ -s centroids.annot.csv.gz ]
 }

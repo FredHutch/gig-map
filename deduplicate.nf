@@ -4,8 +4,8 @@
 nextflow.enable.dsl=2
 
 // Import helpers
-Import require_param from 'lib/helpers.groovy'
-Import help_message from 'lib/helpers.groovy'
+GroovyShell shell = new GroovyShell()
+def helpers = shell.parse(new File("${workflow.projectDir}/helpers.gvy"))
 
 // Import sub-workflow
 include { deduplicate } from './modules/deduplicate'
@@ -14,7 +14,7 @@ include { deduplicate } from './modules/deduplicate'
 workflow {
 
     // Show help message if the user specifies the --help flag at runtime
-    help_message(
+    helpers.help_message(
         """
         Dedicated gene deduplication utility
         
@@ -30,15 +30,15 @@ workflow {
                                (default: ${params.cluster_similarity})
         --cluster_coverage     Alignment coverage used for clustering (ranges from 0.0 to 1.0)
                                (default: ${params.cluster_coverage})
-        --min_gene_length      Minimum amino acidlength threshold used to filter genes
+        --min_gene_length      Minimum amino acid length threshold used to filter genes
                                (default: ${params.min_gene_length})
         """,
         params.help
     )
 
     // Make sure that the required parameters were provided
-    require_param(params.output, "output")
-    require_param(params.genes, "genes")
+    helpers.require_param(params.output, "output")
+    helpers.require_param(params.genes, "genes")
 
     // Get all of the files in the specified folder
     Channel

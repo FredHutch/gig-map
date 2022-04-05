@@ -10,12 +10,7 @@ def helpers = shell.parse(new File("${workflow.projectDir}/helpers.gvy"))
 // Import the subworkflow to run
 include { download_genes } from './modules/download_genes'
 
-// Function which prints help message text
-def helpMessage() {
-    log.info.stripIndent()
-}
-
-
+// Standalone entrypoint
 workflow {
 
     helpers.help_message(
