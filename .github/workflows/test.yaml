@@ -24,9 +24,6 @@ jobs:
       - name: set up Python3
         uses: actions/setup-python@v3
       
-      - name: Install BASH Workbench
-        run: pip3 install git+https://github.com/FredHutch/bash-workbench.git
-      
       # - name: Free disk space
       #   run: |
       #     sudo swapoff -a
@@ -35,14 +32,6 @@ jobs:
       #     docker rmi $(docker image ls -aq)
       #     df -h
 
-      - name: Configure gig-map repository
-        run: |
-          WB_BASE=$PWD/._workbench wb link_local_repo --path $PWD --name gig-map
-
-      - name: Download bash-workbench-tools
-        run: |
-          WB_BASE=$PWD/._workbench wb add_repo --remote-name FredHutch/bash-workbench-tools
-
       - name: Run tests
         working-directory: test_data
-        run: bats tests.bats
+        run: bash run_tests.sh
