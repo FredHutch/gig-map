@@ -125,3 +125,15 @@ rendered using the interactive tool provided as `app.py`. In order to use this t
 3. Install the python dependencies contained in `requirements.txt`
 4. Run `python3 app.py --help` for detailed instructions on launching the visualization
 
+# Development Guide
+
+Any contributions to this repository are more than welcome.
+Please start by opening an issue to discuss any potential contribution, bugfix, or improvement.
+
+## Testing
+
+To test the `gig-map` toolset, clone the repository locally and execute `run_tests.sh` from `test_data`.
+You will need to have Python3, Nextflow, BATS, and Docker configured appropriately for tests to run.
+
+Note: Due to unresolved permissions issues, the `act` utility does not appear to work for testing.
+Any suggestions for resolving this issue would be greatly appreciated.
