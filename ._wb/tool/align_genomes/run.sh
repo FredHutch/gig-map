@@ -8,7 +8,7 @@ nextflow \
     run \
     "${TOOL_REPO}/align_genomes.nf" \
     --genes "${GENES}" \
-    --genomes "${GENOMES}/*a.gz" \
+    --genomes "${GENOMES}/*.gz" \
     --min_coverage "${MIN_COVERAGE}" \
     --min_identity "${MIN_IDENTITY}" \
     --max_evalue "${MAX_EVALUE}" \

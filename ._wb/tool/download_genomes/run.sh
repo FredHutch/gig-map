@@ -8,7 +8,7 @@ nextflow \
     run \
     "${TOOL_REPO}/download_genomes.nf" \
     --genome_csv "${GENOME_CSV}" \
-    --output "${PWD}/genomes/" \
+    --output "${PWD}" \
     -resume \
     -profile "${PROFILE}"
 
