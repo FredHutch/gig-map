@@ -152,7 +152,7 @@ print("Done")
 
 process merge_abund {
     container "${params.container__pandas}"
-    publishDir "${params.project_folder}", mode: 'copy', overwrite: true
+    publishDir "${params.output}", mode: 'copy', overwrite: true
     label "io_limited"
 
     input:
@@ -196,7 +196,7 @@ pd.concat(
 
 process extract_manifest {
     container "${params.container__pandas}"
-    publishDir "${params.project_folder}", mode: 'copy', overwrite: true
+    publishDir "${params.output}", mode: 'copy', overwrite: true
     label "io_limited"
 
     input:

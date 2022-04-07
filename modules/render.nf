@@ -8,7 +8,7 @@ nextflow.enable.dsl=2
 process render {
     container "${params.container__gigmap}"
     memory "${params.render_mem_gbs}.GB"
-    publishDir "${params.project_folder}/render/", mode: 'copy', overwrite: true
+    publishDir "${params.output}", mode: 'copy', overwrite: true
 
     input:
     path genome_alignments

@@ -2,6 +2,8 @@ include {
     aggregate_results;
     cluster_genomes;
     cluster_genomes as cluster_genomes_by_marker;
+    create_genome_manifest;
+    create_gene_manifest;
 } from './processes/aggregate'
 
 workflow aggregate {
@@ -38,6 +40,16 @@ workflow aggregate {
             )
         )
 
+        // Make an empty annotation file for the genomes
+        create_genome_manifest(
+            concat_alignments
+        )
+
+        // Make an empty annotation file for the genes
+        create_gene_manifest(
+            concat_alignments
+        )
+
         // Group together all results into a single HDF5 file object
         aggregate_results(
             concat_alignments,
@@ -47,5 +59,9 @@ workflow aggregate {
             cluster_genomes_by_marker.out.toSortedList(),
             markers_distmat.toSortedList()
         )
+
+    emit:
+    genome_annot = create_genome_manifest.out
+    gene_annot = create_gene_manifest.out
 
 }

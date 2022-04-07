@@ -18,6 +18,10 @@
     cat ._wb/output.txt
     ls -lahtr
 
+    # Print the logs
+    cat ._wb/output.txt
+    cat ._wb/error.txt
+
     # Make sure that the genomes were downloaded
     (( $(ls genomes/*.fna.gz | wc -l) == 8 ))
 }
@@ -39,6 +43,10 @@
     cat ._wb/error.txt
     cat ._wb/output.txt
     ls -lahtr
+
+    # Print the logs
+    cat ._wb/output.txt
+    cat ._wb/error.txt
 
     # Make sure that the genes were downloaded
     (( $(ls genes/*.faa.gz | wc -l) == 8 ))
@@ -64,6 +72,10 @@
     cat .nextflow.log
     ls -lahtr
 
+    # Print the logs
+    cat ._wb/output.txt
+    cat ._wb/error.txt
+
     # Make sure that the genes were deduplicated
     [ -s centroids.faa.gz ]
     [ -s centroids.membership.csv.gz ]
@@ -86,8 +98,42 @@
         --nxf_profile testing \
         --wait
 
+    # Print the logs
+    cat ._wb/output.txt
+    cat ._wb/error.txt
+
     # Make sure that the outputs were created
     [ -s genomes.aln.csv.gz ]
     [ -s markers.fasta.gz ]
+
+}
+
+@test "Collect results" {
+
+    TOOL=collect
+    # rm -rf ${TOOL}
+    # mkdir ${TOOL}
+    cd ${TOOL}
+
+    rm -r ._wb
+
+    # Specify the tool and launcher to use
+    wb setup_dataset --tool ${TOOL} --launcher nextflow_docker
+
+    # Specify the genes and genomes to align
+    wb run_dataset \
+        --genomes ../download_genomes/genomes \
+        --genome_aln ../align_genomes/genomes.aln.csv.gz \
+        --gene_order ../align_genomes/genomes.gene.order.txt.gz \
+        --marker_genes ../align_genomes/markers.fasta.gz \
+        --nxf_profile testing \
+        --wait
+
+    # Print the logs
+    cat ._wb/output.txt
+    cat ._wb/error.txt
+
+    # Make sure that the outputs were created
+    [ -s gigmap.rdb ]
 
 }

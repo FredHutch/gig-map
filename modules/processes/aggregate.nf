@@ -43,3 +43,93 @@ cluster_genomes.py \
 """
 
 }
+
+// Create a manifest of the genomes
+process create_genome_manifest {
+    container "${params.container__pandas}"
+    publishDir "${params.output}", mode: 'copy', overwrite: true
+    label 'io_limited'
+   
+    input:
+    path "genome_aln.csv.gz"
+
+    output:
+    path "genome.manifest.csv"
+
+"""#!/usr/bin/env python3
+
+import os
+import pandas as pd
+
+# Read the table of genome alignments
+pd.read_csv(
+    "genome_aln.csv.gz"
+).reindex(
+    # Only keep the genome IDs
+    columns=["genome"]
+).drop_duplicates(
+).rename(
+    columns=dict(
+        genome="genome_id"
+    )
+).sort_values(
+    by="genome_id"
+).assign(
+    **{
+        "Formatted Name": lambda d: d["genome_id"].apply(
+            lambda s: s.replace(".gz", "").replace(".fna", "").replace(".fasta", "")
+        )
+    }
+).to_csv(
+    "genome.manifest.csv",
+    index=None
+)
+
+"""
+
+}
+
+// Create a manifest of the genes
+process create_gene_manifest {
+    container "${params.container__pandas}"
+    publishDir "${params.output}", mode: 'copy', overwrite: true
+    label 'io_limited'
+   
+    input:
+    path "genome_aln.csv.gz"
+
+    output:
+    path "gene.manifest.csv"
+
+"""#!/usr/bin/env python3
+
+import os
+import pandas as pd
+
+# Read the table of genome alignments
+pd.read_csv(
+    "genome_aln.csv.gz"
+).reindex(
+    # Only keep the gene IDs
+    columns=["sseqid"]
+).drop_duplicates(
+).rename(
+    columns=dict(
+        sseqid="gene_id"
+    )
+).sort_values(
+    by="gene_id"
+).assign(
+    **{
+        "Formatted Name": lambda d: d["gene_id"].apply(
+            lambda s: s.replace(".gz", "").replace(".faa", "").replace(".fasta", "")
+        )
+    }
+).to_csv(
+    "gene.manifest.csv",
+    index=None
+)
+
+"""
+
+}

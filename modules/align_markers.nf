@@ -16,35 +16,13 @@ include {
 workflow align_markers {
     take:
     genomes_ch
-    upstream_markers_ch
+    marker_genes
 
     main:
-
-    // If the user specified the --markers flag/param
-    if ( params.markers ) {
-
-        // Read markers from that wildcard/path
-        markers_fp = params.markers
-    
-    // If the user did not specify the --markers flag/param
-    } else {
-
-        // Read any files in the markers/ folder in the project folder
-        markers_fp = "${params.project_folder}/markers/"
-    }
-
-    // Combine any files from those folders with the markers
-    // selected by alignment to the genomes
-    Channel
-        .fromPath(markers_fp)
-        .mix(upstream_markers_ch)
-        .ifEmpty { error "No marker genes found" }
-        .set { markers_ch }
     
     // Build a BLAST database with the marker sequences
     makedb_blast(
-        markers_ch
-            .toSortedList()
+        marker_genes
     )
 
     // Align the genomes against those markers
@@ -76,7 +54,7 @@ workflow align_markers {
     // with the FASTA headers indicating the genome of origin
     reorganize_fastas(
         extract_genes.out.toSortedList(),
-        "markers/fasta/"
+        "markers"
     )
 
     // Run the MSA
