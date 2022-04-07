@@ -2,20 +2,15 @@
 
 set -euo pipefail
 
+echo "Running workflow from ${PWD}"
+
 # Run the workflow
 echo Starting workflow
 nextflow \
     run \
     "${TOOL_REPO}/align_genomes.nf" \
-    --genes "${GENES}" \
-    --genomes "${GENOMES}/*.gz" \
-    --min_coverage "${MIN_COVERAGE}" \
-    --min_identity "${MIN_IDENTITY}" \
-    --max_evalue "${MAX_EVALUE}" \
-    --aligner "${ALIGNER}" \
-    --query_gencode "${QUERY_GENCODE}" \
-    --max_overlap "${MAX_OVERLAP}" \
     --output "${PWD}" \
+    -params-file ._wb/tool/params.json \
     -profile "${PROFILE}" \
     -resume
 

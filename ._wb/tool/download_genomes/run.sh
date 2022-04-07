@@ -2,13 +2,15 @@
 
 set -euo pipefail
 
+echo "Running workflow from ${PWD}"
+
 # Run the workflow
 echo Starting workflow
 nextflow \
     run \
     "${TOOL_REPO}/download_genomes.nf" \
-    --genome_csv "${GENOME_CSV}" \
     --output "${PWD}" \
+    -params-file ._wb/tool/params.json \
     -resume \
     -profile "${PROFILE}"
 

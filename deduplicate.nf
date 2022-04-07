@@ -23,7 +23,7 @@ workflow {
 
         Parameters:
 
-        --genes                Wildcard path indicating the amino acid gene FASTA files to analyze
+        --genes                Folder containing the amino acid gene FASTA files to analyze
         --output               Folder where output files will be written
 
         --cluster_similarity   Amino acid similarity used for clustering (ranges from 0.0 to 1.0)
@@ -40,10 +40,13 @@ workflow {
     helpers.require_param(params.output, "output")
     helpers.require_param(params.genes, "genes")
 
+    // Remove any trailing slash from the gene folder
+    gene_folder = params.genes.replaceAll('/$', '')
+
     // Get all of the files in the specified folder
     Channel
-        .fromPath(params.genes)
-        .ifEmpty { error "Cannot find any files at '${params.genes}'" }
+        .fromPath("${gene_folder}/*")
+        .ifEmpty { error "Cannot find any files at ${gene_folder}/*" }
         .set { gene_ch }
 
     // Run the deduplication utility on those files

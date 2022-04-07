@@ -2,16 +2,15 @@
 
 set -euo pipefail
 
+echo "Running workflow from ${PWD}"
+
 # Run the workflow
 echo Starting workflow
 nextflow \
     run \
     "${TOOL_REPO}/deduplicate.nf" \
-    --genes "${GENES}/*.gz" \
     --output "${PWD}" \
-    --cluster_similarity ${CLUSTER_SIMILARITY} \
-    --cluster_coverage ${CLUSTER_COVERAGE} \
-    --min_gene_length ${MIN_GENE_LENGTH} \
+    -params-file ._wb/tool/params.json \
     -resume \
     -profile "${PROFILE}"
 

@@ -24,7 +24,7 @@ workflow {
         Parameters:
 
         --genes             Path of single deduplicated amino acid FASTA file to be used for alignment
-        --genomes           Wildcard path indicating the set of genome nucleotide FASTAs to align against
+        --genomes           Folder containing the set of genome nucleotide FASTAs to align against
         --output            Folder where output files will be written
 
         --min_coverage      Minimum proportion of a gene which must align in order to retain the alignment
@@ -49,10 +49,13 @@ workflow {
     helpers.require_param(params.genomes, "genomes")
     helpers.require_param(params.genes, "genes")
 
+    // Remove any trailing slash from the genome folder
+    genome_folder = params.genomes.replaceAll('/$', '')
+
     // Get all of the genomes
     Channel
-        .fromPath(params.genomes)
-        .ifEmpty { error "Cannot find any files at '${params.genomes}'" }
+        .fromPath("${genome_folder}/*")
+        .ifEmpty { error "Cannot find any files at ${genome_folder}/*" }
         .set { genomes_ch }
 
     // Get the gene FASTA
