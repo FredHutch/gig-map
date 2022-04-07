@@ -111,8 +111,8 @@
 @test "Collect results" {
 
     TOOL=collect
-    # rm -rf ${TOOL}
-    # mkdir ${TOOL}
+    rm -rf ${TOOL}
+    mkdir ${TOOL}
     cd ${TOOL}
 
     rm -r ._wb
