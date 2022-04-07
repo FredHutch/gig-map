@@ -115,8 +115,6 @@
     mkdir ${TOOL}
     cd ${TOOL}
 
-    rm -r ._wb
-
     # Specify the tool and launcher to use
     wb setup_dataset --tool ${TOOL} --launcher nextflow_docker
 
