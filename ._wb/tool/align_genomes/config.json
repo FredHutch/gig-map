@@ -14,6 +14,11 @@
             "wb_type": "folder",
             "required": true
         },
+        "collect_results": {
+            "help": "After aligning genomes, perform all additional analyses needed for visualization.",
+            "wb_type": "bool",
+            "default": true
+        },
         "min_coverage": {
             "help": "Minimum proportion of a gene which must align in order to retain the alignment",
             "wb_env": "MIN_COVERAGE",

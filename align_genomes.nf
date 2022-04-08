@@ -7,8 +7,9 @@ nextflow.enable.dsl=2
 GroovyShell shell = new GroovyShell()
 def helpers = shell.parse(new File("${workflow.projectDir}/helpers.gvy"))
 
-// Import sub-workflow
+// Import sub-workflows
 include { align_genomes } from './modules/align_genomes'
+include { collect } from './modules/collect'
 
 // Standalone entrypoint
 workflow {
@@ -26,6 +27,8 @@ workflow {
         --genes             Path of single deduplicated amino acid FASTA file to be used for alignment
         --genomes           Folder containing the set of genome nucleotide FASTAs to align against
         --output            Folder where output files will be written
+        --collect_results   After aligning genomes, perform all additional analyses needed for visualization
+                            (default: ${params.collect_results})
 
         --min_coverage      Minimum proportion of a gene which must align in order to retain the alignment
                             (default: ${params.min_coverage}, ranges 0-100)
@@ -66,5 +69,19 @@ workflow {
         genomes_ch,
         genes_faa
     )
+
+    // If the collect_results flag is set
+    // note, the flag will be treated as false even if set to the string "false"
+    if ( params.collect_results && "${params.collect_results}".toLowerCase() != "false" ){
+
+        // Run the collect sub-workflow
+        collect(
+            genomes_ch,
+            align_genomes.out.concat_alignments,
+            align_genomes.out.gene_order,
+            align_genomes.out.markers.collect()
+        )
+
+    }
 
 }
