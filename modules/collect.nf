@@ -60,7 +60,8 @@ workflow collect {
         aggregate.out.genome_annot,
         ani.out.distances,
         gene_order,
-        aggregate.out.gene_annot
+        aggregate.out.gene_annot,
+        Channel.fromPath(params.render_options, checkIfExists: true)
     )
 
 }
