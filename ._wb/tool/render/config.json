@@ -1,0 +1,53 @@
+{
+    "name": "Render genes-in-genomes map (gig-map)",
+    "description": "Generate a visual display summarizing the gene content of a set of genomes.",
+    "args": {
+        "genome_aln": {
+            "help": "Alignments of genes against genomes (CSV)",
+            "wb_type": "file",
+            "required": true
+        },
+        "genome_annot": {
+            "help": "Genome annotations, keyed on the column 'genome_id' (CSV)",
+            "wb_type": "file",
+            "required": true
+        },
+        "gene_annot": {
+            "help": "Gene annotations, keyed on the column 'gene_id' (CSV)",
+            "wb_type": "file",
+            "required": true
+        },
+        "genome_distmat": {
+            "help": "Distance matrix for all genomes",
+            "wb_type": "file",
+            "required": true
+        },
+        "gene_order": {
+            "help": "Ordered list of genes (TXT)",
+            "wb_type": "file",
+            "required": true
+        },
+        "genomeAnnot_label_col": {
+            "help": "Column in the genome annotation file used to label genomes",
+            "wb_type": "string"
+        },
+        "genomeAnnot_color_col": {
+            "help": "Column in the genome annotation file used for color labeling of genomes (multiple columns may be used with a comma delimiter, e.g. 'species,strain')",
+            "wb_type": "string"
+        },
+        "geneAnnot_label_col": {
+            "help": "Column in the gene annotation file used to label genes",
+            "wb_type": "string"
+        },
+        "geneAnnot_color_col": {
+            "help": "Column in the gene annotation file used for color labeling of genes (multiple columns may be used with a comma delimiter, e.g. 'function,expressed')",
+            "wb_type": "string"
+        },
+        "nxf_profile": {
+            "help": "Profile used for resource allocation (standard or testing)",
+            "wb_env": "PROFILE",
+            "wb_type": "string",
+            "default": "standard"
+        }
+    }
+}

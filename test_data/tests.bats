@@ -136,3 +136,34 @@
     [ -s gigmap.rdb ]
 
 }
+
+@test "Render HTML" {
+
+    TOOL=render
+    rm -rf ${TOOL}
+    mkdir ${TOOL}
+    cd ${TOOL}
+
+    # Specify the tool and launcher to use
+    wb setup_dataset --tool ${TOOL} --launcher nextflow_docker
+
+    # Specify the genes and genomes to align
+    wb run_dataset \
+        --genome_aln ../align_genomes/genomes.aln.csv.gz \
+        --genome_annot ../align_genomes/genome.manifest.csv \
+        --gene_annot ../align_genomes/gene.manifest.csv \
+        --genome_distmat ../align_genomes/distances.csv.gz \
+        --gene_order ../align_genomes/genomes.gene.order.txt.gz \
+        --genomeAnnot_label_col "Formatted Name" \
+        --geneAnnot_label_col "Formatted Name" \
+        --nxf_profile testing \
+        --wait
+
+    # Print the logs
+    cat ._wb/output.txt
+    cat ._wb/error.txt
+
+    # Make sure that the outputs were created
+    (( $(find ./ -name "gigmap*.html" | wc -l) > 0 ))
+
+}
