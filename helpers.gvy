@@ -3,7 +3,7 @@ def require_param(param_val, param_key) {
 
     // If the parameter was not provided
     if (!param_val){
-        log.info"""
+        java.util.logging.Logger.getLogger("").info"""
         -----------------
         MISSING PARAMETER: ${param_key}
         -----------------
@@ -11,7 +11,7 @@ def require_param(param_val, param_key) {
         Run with --help for more information
         """
 
-        exit 1
+        System.exit 1
     }
 }
 
@@ -22,12 +22,12 @@ def help_message(msg, show) {
     if (show){
 
         // Show the help message
-        log.info"""
+        java.util.logging.Logger.getLogger("").info"""
         ${msg}
         """.stripIndent()
 
         // Exit out and do not run anything else
-        exit 0
+        System.exit 0
     }
 
 }
