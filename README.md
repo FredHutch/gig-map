@@ -1,9 +1,13 @@
 # GiG-map (Genes in Genomes - Map)
 Build a map of genes present across a set of microbial genomes
 
-[![Test gig-map](https://github.com/FredHutch/gig-map/actions/workflows/test.yaml/badge.svg?branch=modularize&event=push)](https://github.com/FredHutch/gig-map/actions/workflows/test.yaml)
+[![Test gig-map](https://github.com/FredHutch/gig-map/actions/workflows/test.yaml/badge.svg?branch=main&event=push)](https://github.com/FredHutch/gig-map/actions/workflows/test.yaml)
 
 [![Docker Repository on Quay](https://quay.io/repository/hdc-workflows/gig-map/status "Docker Repository on Quay")](https://quay.io/repository/hdc-workflows/gig-map)
+
+Note: The documentation below refers to `gig-map` versions starting with `0.2.0`.
+To run the initial version with a single monolithic workflow entrypoint, use the
+flag `0.1.0` to access that [pre-release](https://github.com/FredHutch/gig-map/releases/tag/0.1.0).
 
 # Background
 
@@ -22,98 +26,10 @@ of genes against a set of genomes (e.g. BLAST), calculate the similarity of thos
 to each other (e.g. [mashtree](https://github.com/lskatz/mashtree)), and visualize the
 results alongside annotations of the genes and/or genomes.
 
-# Documentation
+# Workflow Documentation
 
-For a more complete set of documentation, please [visit the Wiki](https://github.com/FredHutch/gig-map/wiki)
-
-# Implementation
-
-The execution of the analysis encoded by this repository is roughly grouped into two
-activities: 1) alignment of genes against genomes and 2) visualization of those alignment
-results. 
-
-## Aligning Genes To Genomes
-
-The analysis workflow used to align genes to genomes (and metagenomes) is organized around
-the concept of a "project folder" which contains the inputs and outputs for a particular
-analysis. To provide the user with a good amount of flexibility, the inputs for an analysis
-can be sourced from any location, but the _default_ location of the inputs will be from
-the project folder.
-
-### Quick Reference
-
-```
-gigmap-project/
-│
-│   # INPUT FILES
-│
-├── genome_tables/
-│   └── *.csv              # All genomes from *.csv files in this folder will be downloaded;
-│                          # Source: https://www.ncbi.nlm.nih.gov/genome/browse#!/prokaryotes/
-├── genomes/
-│   └── *.gz               # All files in this folder must be FASTA-formatted (gzip-compressed)
-│                          # genomes to include in this analysis;
-├── gene_tables/
-│   └── *.csv              # All genes from *.csv files in this folder will be downloaded;
-│                          # Source: https://www.ncbi.nlm.nih.gov/genome/browse#!/prokaryotes/
-├── genes/
-│   └── *.gz               # All files in this folder must be FASTA-formatted (gzip-compressed)
-│                          # genes to include in this analysis;
-├── markers/
-│   └── *.gz               # (optional) Any genes included in this folder will be aligned across
-│                          # all genomes and used to estimate phylogenies;
-│
-├── metagenomes/
-│   └── single_end/*.fastq.gz
-│                          # (optional) Short reads in this folder will be aligned to the gene catalog
-│
-│   └── paired_end/*_R{1,2}*.fastq.gz
-│                          # (optional) Short reads in this folder will be aligned to the gene catalog
-│
-│   # OUTPUT FILES
-│
-├── downloaded_genomes/    # (module: download)
-│   ├── genomes.annot.csv.gz
-│   │                      # Annotations provided for the downloaded genomes
-│   └── *_genomic.fna.gz   # Genomes downloaded from genome_tables/
-│
-├── downloaded_genes/      # (module: download)
-│   └── *_protein.faa.gz   # Genes downloaded from gene_tables/
-│
-├── deduplicated_genes/    # (module: deduplicate)
-│   ├── centroids.faa.gz   # Non-redundant set of genes 
-│   ├── centroids.annot.csv.gz 
-│   │                      # Annotations applied to deduplicated genes
-│   └── centroids.membership.csv.gz
-│                          # Table indicating which centroids represent which input genes
-│
-├── genome_alignment/      # (module: align_genomes)
-│   ├── genomes.aln.csv.gz # Tabular results of the alignment of genes to genomes
-│   │                      
-│   ├── genomes.gene.order.txt.gz
-│   │                      # Ordination of genes based on genome membership
-│   └── genes/
-│       └── *.gz           # Nucleotide sequences of each gene from all genomes
-│ 
-├── ani/                   # (module: ani)
-│   ├── distances.csv.gz   # Square distance matrix with pairwise ANI for all genomes
-│   │
-│   ├── msh/
-│   │   └── *.msh          # Mash sketch generated from all genomes
-│   │
-│   └── tsv/
-│       └── *.tsv.gz       # Long-format table with distances for each genome
-│
-├── metagenomes/           # (module: align_reads)
-│   ├── alignments/
-│   │   └── *.json.gz      # Alignment information for each individual metagenome
-│   │
-│   └── alignments.csv.gz  # Summary of all alignment information per gene across samples
-│
-└── package                # (module: aggregate)
-    └── gigmap.rdb         # Collection of gig-map output data in RDB format for
-                           # interactive visualization with app/gig-map
-```
+For a more complete set of documentation of the workflow commands which can be used to
+organize and align microbial genes and genomes, please [visit the Wiki](https://github.com/FredHutch/gig-map/wiki).
 
 ## GiG-map Visualization
 
