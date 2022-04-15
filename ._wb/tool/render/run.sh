@@ -18,9 +18,13 @@ nextflow \
     -profile "${PROFILE}" \
     -resume
 
-# Delete the temporary files created during execution
-echo Removing temporary files
-rm -r work
+# If temporary files were not placed in a separate location
+if [ -d work ]; then
+    # Delete the temporary files created during execution
+    echo Removing temporary files
+    rm -r work
+fi
+
 
 echo
 date
