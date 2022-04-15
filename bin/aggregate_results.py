@@ -54,12 +54,6 @@ parser.add_argument(
     help='Pairwise ANI values for all genomes'
 )
 parser.add_argument(
-    '--tnse-coords',
-    type=str,
-    required=True,
-    help='t-SNE coordinates for all genes in two dimensions'
-)
-parser.add_argument(
     '--host',
     type=str,
     default="localhost",
@@ -128,19 +122,6 @@ alignments = alignments.groupby(
         )
     )
 ).reset_index()
-
-
-#####################
-# t-SNE COORDINATES #
-#####################
-
-# Read in the t-SNE coordinates per-gene
-logger.info(f"Reading from {args.tnse_coords}")
-tsne_coords = pd.read_csv(
-    args.tnse_coords,
-    index_col=0
-)
-logger.info(f"Read in {tsne_coords.shape[0]:,} rows and {tsne_coords.shape[1]:,} columns")
 
 
 ###############
@@ -230,10 +211,10 @@ marker_dists = dict()
 for fp in os.listdir("marker_distances"):
 
     # If the file has the expected extension
-    if fp.endswith(".markers.fasta.gz.distmat"):
+    if fp.endswith(".distmat"):
 
         # Parse the marker name from the file name
-        marker_name = fp.replace(".markers.fasta.gz.distmat", "")
+        marker_name = fp.replace(".distmat", "")
 
         # Read in the distances
         marker_dists[marker_name] = read_distmat(
@@ -489,15 +470,6 @@ with DirectRedis(host=args.host, port=args.port) as r:
         logger.info(f"Writing {k} to redis")
         r.set(k, v)
     
-    # Save the table of t-SNE coordinates
-    logger.info("Saving tsne to redis")
-    r.set(
-        # The key at which the values may be accessed
-        "tsne",
-        # The values which will be accessed at the key
-        tsne_coords
-    )
-
     logger.info("Done writing to redis")
 
 logger.info("Closed connection to redis")

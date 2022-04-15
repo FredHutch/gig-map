@@ -6,9 +6,17 @@ __pycache__/
 .nextflow.log*
 work/
 output*
-download_genomes/
 deduplicate_genomes/
+test_data/._workbench
+test_data/._wb
 test_data/example_projects
+test_data/collect
+test_data/download_genes
+test_data/download_genomes
+test_data/deduplicate_genes
+test_data/align_genomes
+test_data/render
+._workbench/*
 
 # C extensions
 *.so

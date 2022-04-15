@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import pandas as pd
-import re
 
 df = pd.read_csv("input.csv")
 

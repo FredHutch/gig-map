@@ -140,8 +140,8 @@ if args.dists.endswith(".distmat"):
 
     # Get the name of the marker from the input file name
     msg = f"Input file does not conform to expected pattern: {args.dists}"
-    assert args.dists.endswith(".markers.fasta.gz.distmat"), msg
-    marker_name = args.dists.replace(".markers.fasta.gz.distmat", "")
+    assert args.dists.endswith(".distmat"), msg
+    marker_name = args.dists.replace(".distmat", "")
 
     # Add the marker name to the output file name
     output_fp = f"{marker_name}.{args.ani_threshold}.hdf5"

@@ -1,0 +1,18 @@
+{
+    "name": "Download genes (gig-map)",
+    "description": "Download genes from a collection of genomes in the NCBI Genome database.",
+    "args": {
+        "genome_csv": {
+            "help": "A table of genomes to be downloaded can be accessed from the website: https://www.ncbi.nlm.nih.gov/genome/browse#!/prokaryotes/",
+            "wb_env": "GENOME_CSV",
+            "wb_type": "file",
+            "required": true
+        },
+        "nxf_profile": {
+            "help": "Profile used for resource allocation (standard or testing)",
+            "wb_env": "PROFILE",
+            "wb_type": "string",
+            "default": "standard"
+        }
+    }
+}

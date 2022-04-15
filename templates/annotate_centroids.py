@@ -3,7 +3,7 @@
 import gzip
 
 fpi = "clustered.genes.fasta.gz"
-fpo = "clustered.genes.csv.gz"
+fpo = "centroids.annot.csv.gz"
 
 # Open both file paths, input and output
 with gzip.open(fpi, "rt") as i, gzip.open(fpo, "wt") as o:

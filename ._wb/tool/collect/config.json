@@ -1,0 +1,54 @@
+{
+    "name": "Collect gene alignments (gig-map)",
+    "description": "Aggregate gene alignment information for rapid downstream visualization.",
+    "args": {
+        "genomes": {
+            "help": "Folder containing all genomes to align against (gzip-compressed FASTA format).",
+            "wb_env": "GENOMES",
+            "wb_type": "folder",
+            "required": true
+        },
+        "genome_aln": {
+            "help": "Alignments of genes against genomes (CSV)",
+            "wb_env": "GENOME_ALN",
+            "wb_type": "file",
+            "required": true
+        },
+        "gene_order": {
+            "help": "Ordered list of genes (TXT)",
+            "wb_env": "GENE_ORDER",
+            "wb_type": "file",
+            "required": true
+        },
+        "marker_genes": {
+            "help": "Sequences of marker genes (FASTA)",
+            "wb_env": "MARKER_GENES",
+            "wb_type": "file",
+            "required": true
+        },
+        "max_evalue": {
+            "help": "Maximum E-value threshold used to filter marker alignments",
+            "wb_env": "MAX_EVALUE",
+            "wb_type": "float",
+            "default": 0.001
+        },
+        "query_gencode": {
+            "help": "Genetic code used for conceptual translation of genome sequences",
+            "wb_env": "QUERY_GENCODE",
+            "wb_type": "integer",
+            "default": 11
+        },
+        "sketch_size": {
+            "help": "Number of minmers to use calculating genome-genome ANI distance",
+            "wb_env": "SKETCH_SIZE",
+            "wb_type": "integer",
+            "default": 10000
+        },
+        "nxf_profile": {
+            "help": "Profile used for resource allocation (standard or testing)",
+            "wb_env": "PROFILE",
+            "wb_type": "string",
+            "default": "standard"
+        }
+    }
+}
