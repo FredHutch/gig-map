@@ -31,7 +31,7 @@ results alongside annotations of the genes and/or genomes.
 For a more complete set of documentation of the workflow commands which can be used to
 organize and align microbial genes and genomes, please [visit the Wiki](https://github.com/FredHutch/gig-map/wiki).
 
-## GiG-map Visualization
+# GiG-map Visualization
 
 To visualize the results of the gig-map alignment workflow, the output files may be
 rendered using the interactive tool provided as `app.py`. In order to use this tool:
