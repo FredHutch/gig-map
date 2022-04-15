@@ -1,0 +1,12 @@
+{
+    "name": "Run gig-map locally (requires Docker)",
+    "description": "Configure Nextflow to run with Docker enabled",
+    "args": {
+        "nxf_ver": {
+            "help": "Nextflow Version",
+            "wb_env": "NXF_VER",
+            "wb_type": "string",
+            "default": "21.10.6"
+        }
+    }
+}

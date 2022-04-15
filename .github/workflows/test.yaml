@@ -24,14 +24,6 @@ jobs:
       - name: set up Python3
         uses: actions/setup-python@v3
       
-      # - name: Free disk space
-      #   run: |
-      #     sudo swapoff -a
-      #     sudo rm -f /swapfile
-      #     sudo apt clean
-      #     docker rmi $(docker image ls -aq)
-      #     df -h
-
       - name: Run tests
         working-directory: test_data
         run: bash run_tests.sh

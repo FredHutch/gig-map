@@ -28,18 +28,5 @@ else
 
 fi
 
-# If the bash-workbench-tools aren't already installed
-if (( $(wb list_repos | grep -c bash-workbench-tools) == 0 )); then
-
-    # Download it
-    echo "downloading bash-workbench-tools repository"
-    wb add_repo --remote-name FredHutch/bash-workbench-tools
-
-else
-
-    echo "bash-workbench-tools repository is already installed"
-
-fi
-
 # Run the tests
 bats tests.bats

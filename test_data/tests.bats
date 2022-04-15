@@ -7,7 +7,7 @@
     cd ${TOOL}
     
     # Specify the tool and launcher to use
-    wb setup_dataset --tool ${TOOL} --launcher nextflow_docker
+    wb setup_dataset --tool ${TOOL} --launcher gigmap_docker
 
     # Specify which table of genomes to download and
     # run the dataset, waiting until it finishes
@@ -33,7 +33,7 @@
     cd ${TOOL}
 
     # Specify the tool and launcher to use
-    wb setup_dataset --tool ${TOOL} --launcher nextflow_docker
+    wb setup_dataset --tool ${TOOL} --launcher gigmap_docker
     
     # Specify which table of genomes to download and
     # run the dataset, waiting until it finishes
@@ -59,7 +59,7 @@
     cd ${TOOL}
 
     # Specify the tool and launcher to use
-    wb setup_dataset --tool ${TOOL} --launcher nextflow_docker
+    wb setup_dataset --tool ${TOOL} --launcher gigmap_docker
     
     # Specify the folder which contains the set of genes to deduplicate
     wb run_dataset --genes ../download_genes/genes/ --nxf_profile testing --wait
@@ -89,7 +89,7 @@
     cd ${TOOL}
 
     # Specify the tool and launcher to use
-    wb setup_dataset --tool ${TOOL} --launcher nextflow_docker
+    wb setup_dataset --tool ${TOOL} --launcher gigmap_docker
 
     # Specify the genes and genomes to align
     wb run_dataset \
@@ -117,7 +117,7 @@
     cd ${TOOL}
 
     # Specify the tool and launcher to use
-    wb setup_dataset --tool ${TOOL} --launcher nextflow_docker
+    wb setup_dataset --tool ${TOOL} --launcher gigmap_docker
 
     # Specify the genes and genomes to align
     wb run_dataset \
@@ -145,7 +145,7 @@
     cd ${TOOL}
 
     # Specify the tool and launcher to use
-    wb setup_dataset --tool ${TOOL} --launcher nextflow_docker
+    wb setup_dataset --tool ${TOOL} --launcher gigmap_docker
 
     # Specify the genes and genomes to align
     wb run_dataset \
