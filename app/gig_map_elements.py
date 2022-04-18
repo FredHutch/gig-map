@@ -42,8 +42,8 @@ class GigMapFigure(FigureBuilder):
                 GenomeTree(),
                 # Heatmap showing the occurrance of genes across genomes
                 GeneGenomeHeatmap(),
-                # Colorbar annotating the GeneGenomeHeatmap
-                GeneGenomeColorbar()
+                # # Colorbar annotating the GeneGenomeHeatmap
+                # GeneGenomeColorbar()
             ]
         )
 
