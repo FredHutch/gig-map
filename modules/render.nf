@@ -37,7 +37,7 @@ gig-map-cli \
     --geneAnnot-order "${gene_order}" \
     --output-folder ./ \
     --output-prefix gigmap.\$NOW \
-    \$(cat render_options | jq '')
+    --options-json ${render_options}
 
 cp .command.sh gigmap.\$NOW.sh
 cp .command.log gigmap.\$NOW.log

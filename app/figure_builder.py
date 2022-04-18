@@ -8,6 +8,8 @@ from plotly_subplots import PlotlySubplots
 import sys
 from types import FunctionType
 from uuid import uuid4
+import json
+import os
 
 
 class FigureArgument:
@@ -292,15 +294,51 @@ class FigureBuilder:
                     help=arg.description
                 )
 
+        # Also allow the user to provide any params as a JSON
+        self.parser.add_argument(
+            "--options-json",
+            default=None,
+            help="Optional JSON file to use for providing configuration settings"
+        )
+
         # All arguments from the command line will be stored
         # in a nested dict, where the first key is either
         # 'global' or an `element_id`
         self.params = defaultdict(dict)
 
+        # Parse the arguments
+        args = self.parser.parse_args()
+
         # Parse the arguments, iterating over each one
-        for kw, val in self.parser.parse_args().__dict__.items():
+        for kw, val in args.__dict__.items():
 
             self.add_param(kw, val)
+
+        # If the options-json was provided
+        if args.options_json is not None:
+
+            # Make sure the file exists
+            assert os.path.exists(args.options_json), f"File not found: {args.options_json}"
+
+            # Read the file
+            with open(args.options_json, "r") as handle:
+                options = json.load(handle)
+
+            msg = "The options-json must be a dictionary"
+            assert isinstance(options, dict), msg
+
+            # Iterate over each entry
+            for kw, val in options.items():
+
+                # The value must not be a string of a list
+                assert not isinstance(val, list)
+                assert not isinstance(val, dict)
+
+                # If the options are either a 'geneAnnot' or 'genomeAnnot'
+                if kw.startswith("geneAnnot") or kw.startswith("genomeAnnot"):
+
+                    # Add the parameter
+                    self.add_param(kw, val)
 
         # Log the params
         self.log("Parameters:")
@@ -312,6 +350,10 @@ class FigureBuilder:
 
     def add_param(self, kw, val):
         """Add a single argument to either the 'global' or `element_id` namespace."""
+
+        # Do not add "options_json" to the params
+        if kw == "options_json":
+            return
 
         # First iterate over the global arguments
         for arg in self.args:
