@@ -19,7 +19,7 @@ process render {
     path render_options
 
     output:
-    path "gigmap*.html"
+    path "gigmap*"
 
     script:
     """#!/bin/bash
@@ -38,5 +38,8 @@ gig-map-cli \
     --output-folder ./ \
     --output-prefix gigmap.\$NOW \
     \$(cat render_options | jq '')
+
+cp .command.sh gigmap.\$NOW.sh
+cp .command.log gigmap.\$NOW.log
     """
 }
