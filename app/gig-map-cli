@@ -1,7 +1,6 @@
 #!/usr/bin/python3.8
 """Standalone script to render a gig-map as static files."""
 
-from figure_builder import FigureBuilder, FigureElement, FigureArgument
 from gig_map_elements import GigMapFigure
 
 # Define the figure being used to render the display
