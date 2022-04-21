@@ -44,7 +44,7 @@
             "default": "diamond"
         },
         "max_overlap": {
-            "help": "Any alignment which overlaps a higher-scoring alignment by more than this",
+            "help": "Any alignment which overlaps a higher-scoring alignment by more than this will be filtered out",
             "wb_env": "MAX_OVERLAP",
             "wb_type": "integer",
             "default": 50
