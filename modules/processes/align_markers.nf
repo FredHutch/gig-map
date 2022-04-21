@@ -38,7 +38,7 @@ gzip *msa
 // Build an ML tree from the MSA
 process raxml {
     container "${params.container__raxml}"
-    label 'mem_veryhigh'
+    label 'mem_medium'
     publishDir "${params.output}/raxml/", mode: 'copy', overwrite: true
 
     input:

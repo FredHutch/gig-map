@@ -22,7 +22,7 @@ gunzip -c input/input*.fastq.gz | awk 'NR % 4 == 1' | wc -l > ${sample_name}.num
 // Align short reads against a gene catalog in amino acid space
 process diamond {
     container "${params.container__diamond}"
-    label 'mem_veryhigh'
+    label 'mem_medium'
     
     input:
     // Place all input files in an input/ folder, naming with a simple numeric index
@@ -40,7 +40,7 @@ process diamond {
 // Filter the alignments with the FAMLI algorithm
 process famli {
     container "${params.container__famli}"
-    label 'mem_veryhigh'
+    label 'mem_medium'
     publishDir "${params.output}/alignments/", mode: "copy", overwrite: true
     
     input:
