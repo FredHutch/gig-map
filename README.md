@@ -5,9 +5,11 @@ Build a map of genes present across a set of microbial genomes
 
 [![Docker Repository on Quay](https://quay.io/repository/hdc-workflows/gig-map/status "Docker Repository on Quay")](https://quay.io/repository/hdc-workflows/gig-map)
 
-Note: The documentation below refers to `gig-map` versions starting with `0.2.0`.
-To run the initial version with a single monolithic workflow entrypoint, use the
-flag `0.1.0` to access that [pre-release](https://github.com/FredHutch/gig-map/releases/tag/0.1.0).
+[**Documentation Wiki**](https://github.com/FredHutch/gig-map/wiki)
+
+> Note: The documentation below refers to `gig-map` versions starting with `0.2.0`.
+> To run the initial version with a single monolithic workflow entrypoint, use the
+> flag `0.1.0` to access that [pre-release](https://github.com/FredHutch/gig-map/releases/tag/0.1.0).
 
 # Background
 
