@@ -1,6 +1,7 @@
 #!/bin/bash
 
-set -e
+# Note: Setting the -m flag is essential for the fg command
+set -eumo pipefail
 
 echo "Setting up nextflow.config"
 
@@ -42,4 +43,4 @@ kill ${PID}
 chmod +x ._wb/bin/stop
 
 # Bring the command back to the foreground
-fg
+fg %1
