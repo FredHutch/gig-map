@@ -40,3 +40,6 @@ echo \"\$(date) Sending a kill signal to the process\"
 kill ${PID}
 """ > ._wb/bin/stop
 chmod +x ._wb/bin/stop
+
+# Bring the command back to the foreground
+fg
