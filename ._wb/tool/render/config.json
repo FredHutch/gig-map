@@ -1,4 +1,5 @@
 {
+    "$schema": "https://raw.githubusercontent.com/FredHutch/bash-workbench/main/docs/schema.json",
     "name": "Render genes-in-genomes map (gig-map)",
     "description": "Generate a visual display summarizing the gene content of a set of genomes.",
     "args": {

@@ -1,4 +1,5 @@
 {
+    "$schema": "https://raw.githubusercontent.com/FredHutch/bash-workbench/main/docs/schema.json",
     "name": "Deduplicate genes (gig-map)",
     "description": "Identify a non-redundant set of gene sequences based on pairwise alignment of amino acid sequences.",
     "args": {

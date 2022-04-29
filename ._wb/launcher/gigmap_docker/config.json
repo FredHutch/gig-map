@@ -1,4 +1,5 @@
 {
+    "$schema": "https://raw.githubusercontent.com/FredHutch/bash-workbench/main/docs/schema.json",
     "name": "Run gig-map locally (requires Docker)",
     "description": "Configure Nextflow to run with Docker enabled",
     "args": {

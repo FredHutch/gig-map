@@ -1,4 +1,5 @@
 {
+    "$schema": "https://raw.githubusercontent.com/FredHutch/bash-workbench/main/docs/schema.json",
     "name": "Download genes (gig-map)",
     "description": "Download genes from a collection of genomes in the NCBI Genome database.",
     "args": {

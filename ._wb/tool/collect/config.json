@@ -1,4 +1,5 @@
 {
+    "$schema": "https://raw.githubusercontent.com/FredHutch/bash-workbench/main/docs/schema.json",
     "name": "Collect gene alignments (gig-map)",
     "description": "Aggregate gene alignment information for rapid downstream visualization.",
     "args": {

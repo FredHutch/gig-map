@@ -1,4 +1,5 @@
 {
+    "$schema": "https://raw.githubusercontent.com/FredHutch/bash-workbench/main/docs/schema.json",
     "name": "Align genes against genomes (gig-map)",
     "description": "Align a deduplicated collection of genes against a collection of genomes.",
     "args": {
