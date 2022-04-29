@@ -40,7 +40,8 @@
         "aligner": {
             "help": "Algorithm used for alignment (default: diamond, options: diamond, blast)",
             "wb_env": "ALIGNER",
-            "wb_type": "string",
+            "wb_type": "select",
+            "wb_choices": ["diamond", "blast"],
             "default": "diamond"
         },
         "max_overlap": {
@@ -50,7 +51,7 @@
             "default": 50
         },
         "query_gencode": {
-            "help": "Genetic code used for conceptual translation of genome sequences",
+            "help": "Genetic code used for conceptual translation of gnvenome sequences",
             "wb_env": "QUERY_GENCODE",
             "wb_type": "integer",
             "default": 11
@@ -58,7 +59,8 @@
         "nxf_profile": {
             "help": "Profile used for resource allocation (standard or testing)",
             "wb_env": "PROFILE",
-            "wb_type": "string",
+            "wb_type": "select",
+            "wb_choices": ["standard", "testing"],
             "default": "standard"
         }
     }
