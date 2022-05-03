@@ -24,12 +24,28 @@ process annotate_centroids {
    
     input:
     path "clustered.genes.fasta.gz"
+    path "input_annotations/"
     
     output:
     path "centroids.annot.csv.gz", emit: annot
     
     script:
     template "annotate_centroids.py"
+}
+
+// Get any annotations which are present in the FASTA headers
+process get_gene_annot {
+    container "${params.container__pandas}"
+    label 'io_limited'
+   
+    input:
+    path fasta
+    
+    output:
+    path "${fasta}.annot.csv.gz", emit: annot
+    
+    script:
+    template "get_gene_annot.py"
 }
 
 // Filter a set of genes by minimum amino acid length

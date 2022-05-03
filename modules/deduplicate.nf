@@ -8,6 +8,7 @@ include {
     cdhit;
     annotate_centroids;
     filter_genes;
+    get_gene_annot;
 } from './processes/deduplicate'
 
 workflow deduplicate {
@@ -22,6 +23,11 @@ workflow deduplicate {
         genes_ch
     )
 
+    // Get the annotations for all of the genes
+    get_gene_annot(
+        genes_ch
+    )
+
 
     // Run CD-HIT on all of the gene sequences
     cdhit(
@@ -32,7 +38,11 @@ workflow deduplicate {
 
     // Generate a simple annotation file for each centroid
     annotate_centroids(
-        cdhit.out.fasta
+        cdhit.out.fasta,
+        get_gene_annot
+            .out
+            .annot
+            .toSortedList()
     )
 
     emit:
