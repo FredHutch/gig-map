@@ -955,3 +955,60 @@ def empty_plot():
             width=10,
         )
     )
+
+
+# Function to read in a distmat matrix
+def read_distmat(fp):
+
+    # If the file has the '.csv' extension
+    if ".csv" in fp:
+
+        # Read as a CSV, with the first column as the index, and a header
+        return pd.read_csv(fp, index_col=0)
+
+    # Otherwise, parse the .distmat format used by raxml
+
+    # Make a list with the contents of each line
+    output = []
+    # Make a list with the index
+    index = []
+
+    # Iterate over the lines in the file
+    for line_i, line in enumerate(open(fp, "r")):
+
+        # If this is the first line
+        if line_i == 0:
+
+            # Skip it
+            continue
+
+        # For every other line
+        else:
+
+            # Remove the newline character at the end of the line
+            line = line.rstrip("\n")
+
+            # Remove every double space in the line
+            while "  " in line:
+                line = line.replace("  ", " ")
+
+            # Split up the fields of the line
+            fields = line.split(" ")
+            
+            # The index is the first position
+            index.append(fields[0])
+
+            # The rest of the fields are fields in the matrix
+            output.append(fields[1:])
+
+    # Format a DataFrame
+    df = pd.DataFrame(
+        output,
+        index=index,
+        columns=index
+    ).applymap(
+        float
+    )
+
+    # Return the DataFrame
+    return df
