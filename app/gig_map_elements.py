@@ -516,7 +516,7 @@ class GenomeTree(FigureElement):
 
             # Read in the distance matrix
             fb.log(f"Reading {distmat}")
-            dm = pd.read_csv(distmat, index_col=0)
+            dm = self.read_distmat(distmat)
 
             # If a genome annotation file was provided, then the 'genome'
             # axis will contain the set of genomes which can be found in
@@ -548,6 +548,31 @@ class GenomeTree(FigureElement):
 
             # Fix the order
             fb.axis("genome").is_fixed = True
+
+    def read_distmat(self, distmat):
+        """Read the distance matrix."""
+
+        # If the file has the '.csv' extension
+        if ".csv" in distmat:
+
+            # Read as a CSV, with the first column as the index, and a header
+            return pd.read_csv(distmat, index_col=0)
+
+        # If not
+        else:
+
+            # Read as a TSV, with no header
+            df = pd.read_csv(distmat, index_col=0, header=None)
+
+            # The column names should match the row names
+            df = df.rename(
+                columns={
+                    i: rname
+                    for i, rname in enumerate(df.index.values)
+                }
+            )
+
+            return df
 
     def plot_f(self, fb):
         """Plot a genome tree on the FigureBuilder."""
