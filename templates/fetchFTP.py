@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import gzip
 import shutil
 import urllib.request as request
 from urllib.error import URLError
@@ -27,3 +28,12 @@ except URLError as e:
     else:
         print("Raising error")
         raise e
+
+# If the file is expected to be gzip compressed
+if local_path.endswith('.gz'):
+
+    # Try to open the file
+    with gzip.GzipFile(local_path, mode="r") as handle:
+
+        # Try to read it
+        handle.read()
