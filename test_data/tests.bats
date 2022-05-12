@@ -196,7 +196,7 @@
 
 @test "Align Paired Reads" {
 
-    TOOL=align_paired_reads
+    TOOL=align_reads
     rm -rf ${TOOL}
     mkdir ${TOOL}
     cd ${TOOL}
