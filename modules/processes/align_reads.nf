@@ -1,3 +1,20 @@
+// Join pairs of FASTA files
+process join_read_pairs {
+    container "${params.container__gigmap}"
+    label 'io_limited'
+    
+    input:
+    tuple val(sample_name), path("inputs/")
+    
+    output:
+    tuple val(sample_name), path"${sample_name}${params.reads_suffix}"
+
+    """#!/bin/bash
+set -e
+cat inputs/* > "${sample_name}${params.reads_suffix}"
+    """
+}
+
 // Count the number of reads per specimen
 process count_reads {
     container "${params.container__pandas}"
@@ -65,7 +82,7 @@ process gather {
     path "read_counts/*"
     
     output:
-    path "alignments.csv.gz", optional: true
+    path "read_alignments.csv.gz"
 
     """
     gather_alignments.py
