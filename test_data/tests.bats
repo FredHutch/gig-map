@@ -23,7 +23,7 @@
     cat ._wb/error.txt
 
     # Make sure that the genomes were downloaded
-    (( $(ls genomes/*.fna.gz | wc -l) == 8 ))
+    (( $(ls genomes/*.fna.gz | wc -l) == 4 ))
 }
 
 @test "Download genes" {
@@ -49,7 +49,7 @@
     cat ._wb/error.txt
 
     # Make sure that the genes were downloaded
-    (( $(ls genes/*.faa.gz | wc -l) == 8 ))
+    (( $(ls genes/*.faa.gz | wc -l) == 4 ))
 }
 
 @test "Deduplicate genes" {
@@ -165,5 +165,58 @@
 
     # Make sure that the outputs were created
     (( $(find ./ -name "gigmap*.html" | wc -l) > 0 ))
+
+}
+
+@test "Align Reads" {
+
+    TOOL=align_reads
+    rm -rf ${TOOL}
+    mkdir ${TOOL}
+    cd ${TOOL}
+
+    # Specify the tool and launcher to use
+    wb setup_dataset --tool ${TOOL} --launcher gigmap_docker
+
+    # Specify the genes and reads to align
+    wb run_dataset \
+        --genes ../GCA_000005845.2_ASM584v2_protein.faa.gz \
+        --reads ../fastq \
+        --nxf_profile testing \
+        --wait
+
+    # Print the logs
+    cat ._wb/output.txt
+    cat ._wb/error.txt
+
+    # Make sure that the outputs were created
+    (( $(find ./ -name "read_alignments.csv.gz" | wc -l) > 0 ))
+
+}
+
+@test "Align Paired Reads" {
+
+    TOOL=align_reads
+    rm -rf ${TOOL}
+    mkdir ${TOOL}
+    cd ${TOOL}
+
+    # Specify the tool and launcher to use
+    wb setup_dataset --tool ${TOOL} --launcher gigmap_docker
+
+    # Specify the genes and reads to align
+    wb run_dataset \
+        --genes ../GCA_000005845.2_ASM584v2_protein.faa.gz \
+        --reads ../fastq \
+        --paired 1 \
+        --nxf_profile testing \
+        --wait
+
+    # Print the logs
+    cat ._wb/output.txt
+    cat ._wb/error.txt
+
+    # Make sure that the outputs were created
+    (( $(find ./ -name "read_alignments.csv.gz" | wc -l) > 0 ))
 
 }

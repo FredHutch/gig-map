@@ -110,7 +110,7 @@ def gather_alignments():
     )
 
     # Write it out as a CSV
-    df.to_csv("alignments.csv.gz", index=None)
+    df.to_csv("read_alignments.csv.gz", index=None)
 
 if __name__ == "__main__":
 
