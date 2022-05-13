@@ -23,7 +23,7 @@
     cat ._wb/error.txt
 
     # Make sure that the genomes were downloaded
-    (( $(ls genomes/*.fna.gz | wc -l) == 8 ))
+    (( $(ls genomes/*.fna.gz | wc -l) == 4 ))
 }
 
 @test "Download genes" {
@@ -49,7 +49,7 @@
     cat ._wb/error.txt
 
     # Make sure that the genes were downloaded
-    (( $(ls genes/*.faa.gz | wc -l) == 8 ))
+    (( $(ls genes/*.faa.gz | wc -l) == 4 ))
 }
 
 @test "Deduplicate genes" {
