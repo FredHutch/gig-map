@@ -69,7 +69,7 @@ workflow {
         reads_ch = Channel
             .fromPath("${params.reads}**${params.reads_suffix}")
             .map {
-                it -> [it.name.substring(0, it.name.length() - params.reads_suffix.length()), it]
+                it -> [it.name.substring(0, it.name.length() - "${params.reads_suffix}".length()), it]
             }
 
     }
