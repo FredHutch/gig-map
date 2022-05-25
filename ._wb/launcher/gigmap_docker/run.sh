@@ -9,6 +9,8 @@ echo """
 docker.enabled = true
 report.enabled = true
 trace.enabled = true
+
+docker.runOptions = '-u $(id -u):$(id -g)'
 """ > nextflow.config
 
 cat nextflow.config
