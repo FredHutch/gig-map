@@ -242,6 +242,6 @@
     cat ._wb/error.txt
 
     # Make sure that the outputs were created
-    (( $(find ./ -name "*.prot.msh" | wc -l) > 0 ))
+    (( $(find ../download_genomes/genomes/ -name "*.msh" | wc -l) > 0 ))
 
 }
