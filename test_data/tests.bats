@@ -234,6 +234,7 @@
     # Specify the genes and reads to align
     wb run_dataset \
         --genomes ../download_genomes/genomes/ \
+        --task_limit 2 \
         --nxf_profile testing \
         --wait
 

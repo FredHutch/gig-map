@@ -7,6 +7,14 @@ echo
 echo "Running workflow from ${PWD}"
 echo
 
+# If the TASK_LIMIT variable is set
+if [ -z ${TASK_LIMIT} ]; then
+
+    # Add the 'process.maxForks' parameter
+    echo "process.maxForks = ${TASK_LIMIT}" >> nextflow.config
+
+fi
+
 # Run the workflow
 echo Starting workflow
 nextflow \

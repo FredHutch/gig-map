@@ -23,6 +23,11 @@
             "wb_type": "integer",
             "default": "11"
         },
+        "task_limit": {
+            "help": "If specified, limit the number of tasks being run at one time",
+            "wb_type": "integer",
+            "wb_env": "TASK_LIMIT"
+        },
         "nxf_profile": {
             "help": "Profile used for resource allocation (standard or testing)",
             "wb_env": "PROFILE",
