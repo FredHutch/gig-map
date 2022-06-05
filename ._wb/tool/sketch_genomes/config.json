@@ -16,7 +16,7 @@
         "sketch_size": {
             "help": "Number of minmers to include in each sketch",
             "wb_type": "integer",
-            "default": "XXX"
+            "default": "1000"
         },
         "gencode": {
             "help": "Genetic code to use for conceptual translation of genome sequences",
