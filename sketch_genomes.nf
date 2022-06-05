@@ -42,11 +42,22 @@ workflow {
     helpers.require_param(params.genomes, "genomes")
 
     // Remove any trailing slash from the genome folder
-    genome_folder = params.genomes.replaceAll('/$', '')
+    def genome_folder = params.genomes.replaceAll('/$', '')
+
+    // Use * or ** depending on the --recursive flag
+    def path_base = ("${params.recursive}" == true) ? "${genome_folder}/**" : "${genome_folder}/*"
 
     // Get all of the genomes
     Channel
-        .fromPath( ("${params.recursive}" == true) ? "${genome_folder}/**" : "${genome_folder}/*" )
+        // Check all of the possible file extensions
+        .fromPath( [
+            "${path_base}.fna.gz",
+            "${path_base}.fasta.gz",
+            "${path_base}.fa.gz",
+            "${path_base}.fna",
+            "${path_base}.fasta",
+            "${path_base}.fa"
+        ] )
         .ifEmpty { error "Cannot find any files in ${genome_folder}/" }
         .map { it -> [it, "${it}"]}
         .set { genomes_ch }
