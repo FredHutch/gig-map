@@ -220,3 +220,28 @@
     (( $(find ./ -name "read_alignments.csv.gz" | wc -l) > 0 ))
 
 }
+
+@test "Sketch genomes" {
+
+    TOOL=sketch_genomes
+    rm -rf ${TOOL}
+    mkdir ${TOOL}
+    cd ${TOOL}
+
+    # Specify the tool and launcher to use
+    wb setup_dataset --tool ${TOOL} --launcher gigmap_docker
+
+    # Specify the genes and reads to align
+    wb run_dataset \
+        --genomes ../download_genomes/genomes/ \
+        --nxf_profile testing \
+        --wait
+
+    # Print the logs
+    cat ._wb/output.txt
+    cat ._wb/error.txt
+
+    # Make sure that the outputs were created
+    (( $(find ./ -name "*.prot.msh" | wc -l) > 0 ))
+
+}

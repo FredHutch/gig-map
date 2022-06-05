@@ -17,6 +17,7 @@ test_data/deduplicate_genes
 test_data/align_genomes
 test_data/render
 test_data/align_reads
+test_data/sketch_genomes
 ._workbench/*
 
 # C extensions
