@@ -16,7 +16,6 @@ def read_tsv(fp):
         fp,
         sep="\\t",
         names = [
-            "genome_uri",
             "ref",
             "query",
             "mash_distance",
@@ -34,25 +33,13 @@ df = pd.concat([
     ascending=True
 )
 
-# Write out the results
-df.to_csv("${query_filename}.csv", sep=",", index=None)
+# Remove the .orfs.fasta from the genomes (if any)
+df = df.assign(
+    ref = df["ref"].apply(
+        lambda s: s[:-len(".orfs.fasta") if s.endswith(".orfs.fasta") else s]
+    )
+)
 
-# If the user wants to save any overlapping genomes
-if "${params.save_overlapping}" != "false":
-
-    # Get the number of minmers to use as a threshold
-    try:
-        min_val = int("${params.save_overlapping}")
-    except:
-        raise Exception("Could not parse as integer: ${params.save_overlapping}")
-
-    # Filter the genomes by the minimum number of overlapping minmers
-    overlapping = df.loc[
-        df["matching"].apply(lambda s: s.split('/')[0]).apply(int) >= min_val
-    ]
-
-    # If there are any overlapping
-    if overlapping.shape[0] > 0:
-
-        # Write out just the genome URIs as a text file
-        overlapping.reindex(columns=["genome_uri"]).to_csv("overlapping.txt", index=None, header=None)
+# Save a table for each query
+for query_name, query_df in df.groupby('ref'):
+    query_df.to_csv(f"{query_name}.dists.csv", index=None)

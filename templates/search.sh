@@ -3,14 +3,11 @@
 set -eu
 
 # Set up the path to the output
-OUTPUT_TSV="${genome_uri.replaceAll(/.*\//, '')}.${query_filename}.tsv"
-
-# Record the genome URI and query name in the TSV
-echo -n "${genome_uri}\t" > "\${OUTPUT_TSV}"
+OUTPUT_TSV="${query_msh.name.replaceAll(/.msh$/, '')}.${ref_msh.name.replaceAll(/.msh$/, '')}.tsv"
 
 # Append the MASH distance
 mash \
     dist \
     -p ${task.cpus} \
-    "${query_msh}" "${genome_msh}" >> \
+    "${ref_msh}" "${query_msh}" >> \
     "\${OUTPUT_TSV}"

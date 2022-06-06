@@ -8,24 +8,15 @@
             "wb_type": "file",
             "required": true
         },
-        "genomes": {
-            "help": "Folder containing the set of sketched genomes",
-            "wb_type": "folder",
+        "genome_sketches": {
+            "help": "Single file containing all of the genome sketches to search against",
+            "wb_type": "file",
             "required": true
-        },
-        "recursive": {
-            "help": "Include sketched genome files in subdirectories",
-            "wb_type": "bool",
-            "default": true
         },
         "search_results": {
             "help": "Folder used to write results",
             "wb_type": "folder",
             "default": "search_results"
-        },
-        "save_overlapping": {
-            "help": "If specified, copy all genome files which have at least this number of overlapping minmers",
-            "wb_type": "integer"
         },
         "kmer_size": {
             "help": "Length of k-mers used for sketching. Must match the value used to sketch genomes.",

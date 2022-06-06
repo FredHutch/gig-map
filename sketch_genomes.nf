@@ -8,7 +8,9 @@ GroovyShell shell = new GroovyShell()
 def helpers = shell.parse(new File("${workflow.projectDir}/helpers.gvy"))
 
 // Import sub-workflows
-include { find_orfs; sketch; collect } from './modules/sketch_genomes'
+include { find_orfs; sketch } from './modules/sketch_genomes'
+include { group_sketches as group_batches } from './modules/sketch_genomes' addParams(save_sketches: false)
+include { group_sketches as group_all } from './modules/sketch_genomes' addParams(save_sketches: true)
 
 // Standalone entrypoint
 workflow {
@@ -24,6 +26,7 @@ workflow {
         Parameters:
 
         --genomes           Folder containing the set of genome nucleotide FASTAs to sketch
+        --sketch_folder     Folder which should contain the combined sketches of all genomes (combined_genomes.msh)
         --recursive         Include files contained in subdirectories
                             (default: ${params.recursive})
         --minsize           Minimum size of open reading frames
@@ -40,6 +43,7 @@ workflow {
 
     // Make sure that the required parameters were provided
     helpers.require_param(params.genomes, "genomes")
+    helpers.require_param(params.sketch_folder, "sketch_folder")
 
     // Remove any trailing slash from the genome folder
     def genome_folder = params.genomes.replaceAll('/$', '')
@@ -59,7 +63,6 @@ workflow {
             "${path_base}.fa"
         ] )
         .ifEmpty { error "Cannot find any files in ${genome_folder}/" }
-        .map { it -> [it, "${it}"]}
         .set { genomes_ch }
 
     // Find the open reading frames in a genome
@@ -67,5 +70,19 @@ workflow {
 
     // Make a sketch from each set of kmers
     sketch(find_orfs.out)
+
+    // Group together the sketches in two rounds
+    group_batches(
+        sketch
+            .out
+            .collate(params.batchsize)
+    )
+
+    // Collect as a single queryable sketch
+    group_all(
+        group_batches
+            .out
+            .collect()
+    )
 
 }

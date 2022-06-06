@@ -8,6 +8,11 @@
             "wb_type": "folder",
             "required": true
         },
+        "sketch_folder": {
+            "help": "Folder which should contain the combined sketches of all genomes (combined_genomes.msh)",
+            "wb_type": "folder",
+            "required": true
+        },
         "recursive": {
             "help": "Include files in subdirectories",
             "wb_type": "bool",

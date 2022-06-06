@@ -10,10 +10,10 @@ process find_orfs {
     label "io_limited"
 
     input:
-    tuple path(genome), val(uri)
+    path genome
 
     output:
-    tuple path("${genome}.orfs.fasta"), val(uri)
+    path "${genome}.orfs.fasta"
 
     script:
     template "find_orfs.sh"
@@ -24,13 +24,12 @@ process find_orfs {
 process sketch {
     container "${params.container__mash}"
     label "mem_medium"
-    publishDir "${uri}.msh", saveAs: {"${uri}.msh"}, mode: 'copy', overwrite: true, enabled: params.save_sketches
 
     input:
-    tuple path(orfs), val(uri)
+    path orfs
 
     output:
-    tuple path("*.msh"), val(uri)
+    path "*.msh"
 
     script:
     template "sketch.sh"
@@ -43,10 +42,11 @@ process search {
     label "mem_medium"
 
     input:
-    tuple path(query_msh), val(query_filename), val(genome_uri), path(genome), path(genome_msh)
+    path query_msh
+    path ref_msh
 
     output:
-    tuple val(query_filename), path("*.tsv")
+    path "*.tsv"
 
     script:
     template "search.sh"
@@ -57,15 +57,14 @@ process search {
 process collect {
     container "${params.container__pandas}"
     label "io_limited"
-    publishDir "${params.search_results}/", mode: 'copy', overwrite: true, enabled: true, pattern: "*.csv"
+    publishDir "${params.search_results}/", mode: 'copy', overwrite: true, pattern: "*.csv"
 
     input:
     // Rename the inputs ordinally to prevent filename collisions
-    tuple val(query_filename), path("inputs/*.tsv")
+    path "inputs/?.tsv"
 
     output:
-    path "${query_filename}.csv", emit: csv
-    tuple val(query_filename), path("overlapping.txt"), optional: true, emit: overlapping
+    path "*.csv"
 
     script:
     template "collect.py"
@@ -90,5 +89,23 @@ process save_genomes {
     set -e
     ls -lahtr matching_genomes/
     """
+
+}
+
+// Combine a set of sketches into a single file
+process group_sketches {
+    container "${params.container__mash}"
+    label "io_limited"
+    publishDir "${params.sketch_folder}/", mode: 'copy', overwrite: true, enabled: params.save_sketches
+
+    input:
+    // Rename the inputs ordinally to prevent filename collisions
+    path "inputs/?.msh"
+
+    output:
+    path "combined_genomes.msh"
+
+    script:
+    template "group_sketches.sh"
 
 }

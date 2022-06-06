@@ -234,6 +234,7 @@
     # Specify the genes and reads to align
     wb run_dataset \
         --genomes ../download_genomes/genomes/ \
+        --sketch_folder genome_sketches/ \
         --task_limit 2 \
         --nxf_profile testing \
         --wait
@@ -243,7 +244,7 @@
     cat ._wb/error.txt
 
     # Make sure that the outputs were created
-    (( $(find ../download_genomes/genomes/ -name "*.msh" | wc -l) > 0 ))
+    (( $(find genome_sketches/ -name "combined_genomes.msh" | wc -l) == 1 ))
 
 }
 
@@ -259,10 +260,9 @@
 
     # Specify the genes and reads to align
     wb run_dataset \
-        --query ../download_genes/genes/GCA_002599625.1_ASM259962v1_protein.faa.gz \
-        --genomes ../download_genomes/genomes/ \
+        --query '../download_genes/genes/*.faa.gz' \
+        --genome_sketches ../sketch_genomes/genome_sketches/combined_genomes.msh \
         --search_results search_results \
-        --save_overlapping 100 \
         --task_limit 2 \
         --nxf_profile testing \
         --wait
