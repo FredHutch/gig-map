@@ -8,7 +8,7 @@ GroovyShell shell = new GroovyShell()
 def helpers = shell.parse(new File("${workflow.projectDir}/helpers.gvy"))
 
 // Import sub-workflows
-include { find_orfs; sketch } from './modules/sketch_genomes'
+include { find_orfs; sketch; collect } from './modules/sketch_genomes'
 
 // Standalone entrypoint
 workflow {

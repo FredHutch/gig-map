@@ -1,0 +1,52 @@
+{
+    "$schema": "https://raw.githubusercontent.com/FredHutch/bash-workbench/main/docs/schema.json",
+    "name": "Search sketches (gig-map)",
+    "description": "Search one or more protein queries (multi-FASTAs) against all of the sketched genomes contained in a folder",
+    "args": {
+        "query": {
+            "help": "Protein sequence(s) to search against those genomes (FASTA). Multiple queries may be specified with wildcard characters.",
+            "wb_type": "file",
+            "required": true
+        },
+        "genomes": {
+            "help": "Folder containing the set of sketched genomes",
+            "wb_type": "folder",
+            "required": true
+        },
+        "recursive": {
+            "help": "Include sketched genome files in subdirectories",
+            "wb_type": "bool",
+            "default": true
+        },
+        "search_results": {
+            "help": "Folder used to write results",
+            "wb_type": "folder",
+            "default": "search_results"
+        },
+        "save_overlapping": {
+            "help": "If specified, copy all genome files which have at least this number of overlapping minmers",
+            "wb_type": "integer"
+        },
+        "kmer_size": {
+            "help": "Length of k-mers used for sketching. Must match the value used to sketch genomes.",
+            "wb_type": "integer",
+            "default": "9"
+        },
+        "sketch_size": {
+            "help": "Number of minmers to include in the query for each sketch",
+            "wb_type": "integer",
+            "default": "1000"
+        },
+        "task_limit": {
+            "help": "If specified, limit the number of tasks being run at one time",
+            "wb_type": "integer",
+            "wb_env": "TASK_LIMIT"
+        },
+        "nxf_profile": {
+            "help": "Profile used for resource allocation (standard or testing)",
+            "wb_env": "PROFILE",
+            "wb_type": "string",
+            "default": "standard"
+        }
+    }
+}

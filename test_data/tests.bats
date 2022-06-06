@@ -246,3 +246,32 @@
     (( $(find ../download_genomes/genomes/ -name "*.msh" | wc -l) > 0 ))
 
 }
+
+@test "Search sketches" {
+
+    TOOL=search_sketches
+    rm -rf ${TOOL}
+    mkdir ${TOOL}
+    cd ${TOOL}
+
+    # Specify the tool and launcher to use
+    wb setup_dataset --tool ${TOOL} --launcher gigmap_docker
+
+    # Specify the genes and reads to align
+    wb run_dataset \
+        --query ../download_genes/genes/GCA_002599625.1_ASM259962v1_protein.faa.gz \
+        --genomes ../download_genomes/genomes/ \
+        --search_results search_results \
+        --save_overlapping 100 \
+        --task_limit 2 \
+        --nxf_profile testing \
+        --wait
+
+    # Print the logs
+    cat ._wb/output.txt
+    cat ._wb/error.txt
+
+    # Make sure that the outputs were created
+    (( $(find search_results -name "*.csv" | wc -l) > 0 ))
+
+}

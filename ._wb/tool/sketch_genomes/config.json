@@ -18,6 +18,11 @@
             "wb_type": "integer",
             "default": "1000"
         },
+        "kmer_size": {
+            "help": "Length of k-mers used for sketching",
+            "wb_type": "integer",
+            "default": "9"
+        },
         "gencode": {
             "help": "Genetic code to use for conceptual translation of genome sequences",
             "wb_type": "integer",
