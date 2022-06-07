@@ -85,4 +85,14 @@ workflow {
             .collect()
     )
 
+    // Write out all of the file paths of the genomes
+    // which were indexed
+    genomes_ch
+        .map { it -> "${it}" }
+        .collectFile(
+            newLine: true,
+            name: "combined_genomes.txt",
+            storeDir: "${params.sketch_folder}/"
+        )
+
 }
