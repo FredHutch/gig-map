@@ -41,5 +41,5 @@ df = df.assign(
 )
 
 # Save a table for each query
-for query_name, query_df in df.groupby('ref'):
+for query_name, query_df in df.groupby('query'):
     query_df.to_csv(f"{query_name}.dists.csv", index=None)
