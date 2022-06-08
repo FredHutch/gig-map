@@ -8,7 +8,7 @@ GroovyShell shell = new GroovyShell()
 def helpers = shell.parse(new File("${workflow.projectDir}/helpers.gvy"))
 
 // Import sub-workflows
-include { sketch; search; collect; save_genomes } from './modules/sketch_genomes' addParams(save_sketches: false)
+include { sketch; search; reformat } from './modules/sketch_genomes' addParams(save_sketches: false)
 
 // Standalone entrypoint
 workflow {
@@ -67,11 +67,9 @@ workflow {
         file("${params.genome_sketches}", checkIfExists: true)
     )
 
-    // Collect the results
-    collect(
-        search
-            .out
-            .toSortedList()
+    // Reformat the results
+    reformat(
+        search.out
     )
 
 }

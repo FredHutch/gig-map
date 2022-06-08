@@ -25,12 +25,15 @@ def read_tsv(fp):
     )
 
 # Read in all of the results
-df = pd.concat([
-    read_tsv(os.path.join('inputs', fp))
-    for fp in os.listdir('inputs')
-]).sort_values(
+for fp in os.listdir("."):
+    if fp.endswith('.tsv'):
+        df = read_tsv(fp)
+
+# Sort by distance
+df.sort_values(
     by="mash_distance",
-    ascending=True
+    ascending=True,
+    inplace=True
 )
 
 # Remove the .orfs.fasta from the genomes (if any)

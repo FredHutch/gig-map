@@ -53,21 +53,20 @@ process search {
 
 }
 
-// Collect the results
-process collect {
+// Reformat the results
+process reformat {
     container "${params.container__pandas}"
     label "io_limited"
     publishDir "${params.search_results}/", mode: 'copy', overwrite: true, pattern: "*.csv"
 
     input:
-    // Rename the inputs ordinally to prevent filename collisions
-    path "inputs/?.tsv"
+    path tsv
 
     output:
     path "*.csv"
 
     script:
-    template "collect.py"
+    template "reformat.py"
 
 }
 

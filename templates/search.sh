@@ -3,7 +3,7 @@
 set -eu
 
 # Set up the path to the output
-OUTPUT_TSV="${query_msh.name.replaceAll(/.msh$/, '')}.${ref_msh.name.replaceAll(/.msh$/, '')}.tsv"
+OUTPUT_TSV="${query_msh.name.replaceAll(/.msh$/, '')}.tsv"
 
 # Append the MASH distance
 mash \
