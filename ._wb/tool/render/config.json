@@ -41,8 +41,8 @@
             "wb_type": "string",
             "default": "blues"
         },
-        "genomeAnnot_color_palette_catgorical": {
-            "help": "Color palette used for catgorical variables in the marginal genome annotations",
+        "genomeAnnot_color_palette_categorical": {
+            "help": "Color palette used for categorical variables in the marginal genome annotations",
             "wb_type": "string",
             "default": "jet"
         },
