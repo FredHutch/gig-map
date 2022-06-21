@@ -36,6 +36,16 @@
             "help": "Column in the genome annotation file used for color labeling of genomes (multiple columns may be used with a comma delimiter, e.g. 'species,strain')",
             "wb_type": "string"
         },
+        "genomeAnnot_color_palette_continuous": {
+            "help": "Color palette used for continuous variables in the marginal genome annotations",
+            "wb_type": "string",
+            "default": "blues"
+        },
+        "genomeAnnot_color_palette_catgorical": {
+            "help": "Color palette used for catgorical variables in the marginal genome annotations",
+            "wb_type": "string",
+            "default": "jet"
+        },
         "geneAnnot_label_col": {
             "help": "Column in the gene annotation file used to label genes",
             "wb_type": "string"
@@ -43,6 +53,16 @@
         "geneAnnot_color_col": {
             "help": "Column in the gene annotation file used for color labeling of genes (multiple columns may be used with a comma delimiter, e.g. 'function,expressed')",
             "wb_type": "string"
+        },
+        "geneAnnot_color_palette_continuous": {
+            "help": "Color palette used for continuous variables in the marginal gene annotations",
+            "wb_type": "string",
+            "default": "blues"
+        },
+        "geneAnnot_color_palette_catgorical": {
+            "help": "Color palette used for catgorical variables in the marginal gene annotations",
+            "wb_type": "string",
+            "default": "jet"
         },
         "nxf_profile": {
             "help": "Profile used for resource allocation (standard or testing)",
