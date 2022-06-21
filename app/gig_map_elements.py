@@ -694,9 +694,15 @@ class AxisAnnot(FigureElement):
                     description="Column from the CSV used marginal annotation; Multiple columns should be indicated with a comma-separated list"
                 ),
                 FigureArgument(
-                    key=f"color-palette",
-                    description="Color palette used for marginal annotation; Default: 'auto', uses 'blues' for numeric data and 'jet' for categorical strings.",
-                    default="auto",
+                    key=f"color-palette-continuous",
+                    description="Color palette used for marginal annotation of continuous data; Default: 'blues'",
+                    default="blues",
+                    type=str
+                ),
+                FigureArgument(
+                    key=f"color-palette-categorical",
+                    description="Color palette used for marginal annotation of categorical data; Default: 'jet'",
+                    default="jet",
                     type=str
                 ),
                 FigureArgument(
@@ -725,7 +731,8 @@ class AxisAnnot(FigureElement):
         index_col=None,
         label_col=None,
         color_col=None,
-        color_palette=None,
+        color_palette_continuous=None,
+        color_palette_categorical=None,
         color_map=None,
         max_label_len=None,
         order=None
@@ -842,7 +849,8 @@ class AxisAnnot(FigureElement):
             self.df = df.reindex(columns=self.color_columns)
 
             # Attach the color palette selected
-            self.palette = color_palette
+            self.palette_categorical = color_palette_categorical
+            self.palette_continuous = color_palette_continuous
 
         # If an explicit color mapping file was provided
         if color_map is not None:
@@ -945,17 +953,8 @@ class AxisAnnot(FigureElement):
             # Check if the values are all numeric
             if self.all_numeric(plot_df):
 
-                # If the color palette is 'auto'
-                if self.palette == 'auto':
-
-                    # Use the 'blues' palette
-                    plot_palette = "blues"
-
-                # Otherwise
-                else:
-
-                    # Use the provided palette
-                    plot_palette = self.palette
+                # Use the selected palette for continuous data
+                plot_palette = self.palette_continuous
 
                 # For numeric values, the Z is not transformed
                 z_df = plot_df
@@ -963,17 +962,8 @@ class AxisAnnot(FigureElement):
             # If the values are not all numeric
             else:
 
-                # If the color palette is 'auto'
-                if self.palette == 'auto':
-
-                    # Use the 'rainbow' palette
-                    plot_palette = "rainbow"
-
-                # Otherwise
-                else:
-
-                    # Use the provided palette
-                    plot_palette = self.palette
+                # Use the selected palette for categorical data
+                plot_palette = self.palette_categorical
 
                 # The z values will map to the ordered list of all values for each column
                 z_map = {
