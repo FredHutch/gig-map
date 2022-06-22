@@ -49,7 +49,7 @@ def download_path(remote_path:str, skip_missing_ftp=True):
 
 
 # If we can't download the first option
-if not download_path(remote_path, skip_missing_ftp=False):
+if not download_path(remote_path, skip_missing_ftp=True):
 
     # Try the second option
     print(f"Trying backup path: {backup_path}")
