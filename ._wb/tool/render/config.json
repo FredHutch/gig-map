@@ -59,8 +59,8 @@
             "wb_type": "string",
             "default": "blues"
         },
-        "geneAnnot_color_palette_catgorical": {
-            "help": "Color palette used for catgorical variables in the marginal gene annotations",
+        "geneAnnot_color_palette_categorical": {
+            "help": "Color palette used for categorical variables in the marginal gene annotations",
             "wb_type": "string",
             "default": "jet"
         },
