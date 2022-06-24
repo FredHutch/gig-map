@@ -54,6 +54,22 @@ process diamond {
 
 }
 
+// Filter out any samples which have an insufficient number of alignments
+process filter_aln {
+    container "${params.container__pandas}"
+    label 'io_limited'
+    
+    input:
+    tuple val(sample_name), path(aln)
+    
+    output:
+    tuple val(sample_name), path(aln), optional: true
+
+    shell:
+    template "filter_aln.py"
+
+}
+
 // Filter the alignments with the FAMLI algorithm
 process famli {
     container "${params.container__famli}"

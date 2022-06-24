@@ -3,6 +3,7 @@
 include {
     count_reads;
     diamond;
+    filter_aln;
     famli;
     gather
 } from './processes/align_reads'
@@ -33,8 +34,13 @@ workflow align_reads {
         fastq_ch
     )
 
+    // Filter out any samples which have an insufficient number of alignments
+    filter_aln(
+        diamond.out
+    )
+
     // Filter the alignments and resolve multi-mapping reads with FAMLI
-    famli(diamond.out)
+    famli(filter_aln.out)
 
     // Gather all of the alignment information into a single CSV
     gather(
