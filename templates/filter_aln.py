@@ -3,6 +3,8 @@
 import gzip
 import os
 
+print("Processing sample: ${sample_name}")
+
 # File containing the alignments
 aln = "${aln}"
 assert os.path.exists(aln), f"Did not find expected file {aln}"

@@ -63,9 +63,9 @@ process filter_aln {
     tuple val(sample_name), path(aln)
     
     output:
-    tuple val(sample_name), path(aln), optional: true
+    tuple val(sample_name), path("${aln}"), optional: true
 
-    shell:
+    script:
     template "filter_aln.py"
 
 }
