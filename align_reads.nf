@@ -57,6 +57,7 @@ workflow {
         // Get reads as pairs of files which differ only by containing '1' vs '2'
         Channel
                 .fromFilePairs([
+                    "${params.reads}**{1,2}${params.reads_suffix}",
                     "${params.reads}**{1,2}*${params.reads_suffix}",
                     "${params.reads}**R{1,2}*${params.reads_suffix}",
                     "${params.reads}**R{1,2}_001${params.reads_suffix}",
