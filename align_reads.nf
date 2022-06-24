@@ -51,17 +51,13 @@ workflow {
     helpers.require_param(params.reads, "reads")
     helpers.require_param(params.genes, "genes")
 
-    // Remove the trailing / from the reads folder, if there is one
-    reads_folder = "${params.reads}".replace(/\/$/, "")
-
     // If the input is paired-end
     if ( "${params.paired}" != "false" ) {
 
-
         // Get reads as pairs of files which differ only by containing '1' vs '2'
         Channel
-                .fromFilePairs("${reads_folder}/*{1,2}*${params.reads_suffix}")
-                .ifEmpty { error "No reads found at ${reads_folder}/*{1,2}*${params.reads_suffix}"}
+                .fromFilePairs("${params.reads}**{1,2}*${params.reads_suffix}")
+                .ifEmpty { error "No reads found at ${params.reads}**{1,2}*${params.reads_suffix}"}
                 .set { fastq_ch }
 
         join_read_pairs(fastq_ch)
@@ -72,7 +68,7 @@ workflow {
         // Get reads as any file with the expected ending
         // and add the name (without the suffix) to match the output of join_read_pairs
         reads_ch = Channel
-            .fromPath("${reads_folder}/*${params.reads_suffix}")
+            .fromPath("${params.reads}**${params.reads_suffix}")
             .map {
                 it -> [it.name.substring(0, it.name.length() - "${params.reads_suffix}".length()), it]
             }
