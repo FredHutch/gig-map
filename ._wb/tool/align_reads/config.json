@@ -24,6 +24,11 @@
             "wb_type": "bool",
             "default": false
         },
+        "read_pairing_pattern": {
+            "help": "For paired-end reads, specify the glob pattern used to identify pairs",
+            "wb_type": "string",
+            "default": "**{1,2}"
+        },
         "min_coverage": {
             "help": "Minimum proportion of a gene which must align in order to retain the alignment",
             "wb_env": "MIN_COVERAGE",

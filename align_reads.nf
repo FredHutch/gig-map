@@ -56,13 +56,10 @@ workflow {
 
         // Get reads as pairs of files which differ only by containing '1' vs '2'
         Channel
-                .fromFilePairs([
-                    "${params.reads}**{1,2}${params.reads_suffix}",
-                    "${params.reads}**{1,2}*${params.reads_suffix}",
-                    "${params.reads}**R{1,2}*${params.reads_suffix}",
-                    "${params.reads}**R{1,2}_001${params.reads_suffix}",
-                ])
-                .ifEmpty { error "No reads found at ${params.reads}**{1,2}*${params.reads_suffix}"}
+                .fromFilePairs(
+                    "${params.reads}${params.read_pairing_pattern}${params.reads_suffix}"
+                )
+                .ifEmpty { error "No reads found at ${params.reads}${params.read_pairing_pattern}${params.reads_suffix}, consider modifying --reads, --read_pairing_pattern, or --reads_suffix"}
                 .set { fastq_ch }
 
         join_read_pairs(fastq_ch)
