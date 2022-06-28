@@ -17,7 +17,7 @@
         "reads_suffix": {
             "help": "File ending for all reads",
             "wb_type": "string",
-            "default": ".fastq.gz"
+            "default": "fastq.gz"
         },
         "paired": {
             "help": "Specify if reads are paired-end",
@@ -25,9 +25,9 @@
             "default": false
         },
         "read_pairing_pattern": {
-            "help": "For paired-end reads, specify the glob pattern used to identify pairs",
+            "help": "For paired-end reads, specify the glob pattern used to identify pairs (e.g. {R1,R2})",
             "wb_type": "string",
-            "default": "**{1,2}"
+            "default": "{1,2}"
         },
         "min_coverage": {
             "help": "Minimum proportion of a gene which must align in order to retain the alignment",

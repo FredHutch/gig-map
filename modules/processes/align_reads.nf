@@ -7,11 +7,11 @@ process join_read_pairs {
     tuple val(sample_name), path("inputs/")
     
     output:
-    tuple val(sample_name), path("${sample_name}${params.reads_suffix}")
+    tuple val(sample_name), path("${sample_name}.${params.reads_suffix}")
 
     """#!/bin/bash
 set -e
-cat inputs/* > "${sample_name}${params.reads_suffix}"
+cat inputs/* > "${sample_name}.${params.reads_suffix}"
     """
 }
 
