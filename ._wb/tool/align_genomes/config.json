@@ -51,6 +51,11 @@
             "wb_type": "integer",
             "default": 50
         },
+        "pick_marker_genes": {
+            "help": "Number of marker genes to select",
+            "wb_type": "integer",
+            "default": 10
+        },
         "query_gencode": {
             "help": "Genetic code used for conceptual translation of gnvenome sequences",
             "wb_env": "QUERY_GENCODE",
