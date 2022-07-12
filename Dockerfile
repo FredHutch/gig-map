@@ -11,6 +11,7 @@ RUN python3.8 -m pip install --upgrade pip && \
     dash-table==4.6.2 \
     dash==1.11.0 \
     direct-redis \
+    kaleido \
     matplotlib \
     numpy==1.19.5 \
     pandas>=1.3.0 \
