@@ -86,6 +86,11 @@ for marker_name, marker_df in df.groupby("marker_name"):
 
     print(f"Reorganizing genes for {marker_name}")
 
+    # If there is only one sequence, skip it
+    if marker_df.shape[0] == 1:
+        print("There is only one sequence present, skipping")
+        continue
+
     # Make sure that we only write out a single sequence for each genome
     # This should only be an edge case that comes up when the user provides
     # a marker gene which is also the one selected automatically
