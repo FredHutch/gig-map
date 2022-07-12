@@ -27,3 +27,9 @@ if __name__ == "__main__":
         f"{gigmap_figure.params['global']['output_prefix']}.html",
         with_interactivity=True
     )
+
+    # Save to PNG and PDF
+    for ext in ["png", "pdf"]:
+        gigmap_figure.write_image(
+            f"{gigmap_figure.params['global']['output_prefix']}.{ext}"
+        )
