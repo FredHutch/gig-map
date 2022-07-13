@@ -2,6 +2,7 @@
 """Standalone script to render a gig-map as static files."""
 
 from gig_map_elements import GigMapFigure
+import plotly.io as pio
 
 # Define the figure being used to render the display
 gigmap_figure = GigMapFigure()
@@ -29,6 +30,8 @@ if __name__ == "__main__":
     )
 
     # Save to PNG and PDF
+    # First disable the use of temp space
+    pio.kaleido.scope.chromium_args = tuple([arg for arg in pio.kaleido.scope.chromium_args if arg != "--disable-dev-shm-usage"])
     for ext in ["png", "pdf"]:
         gigmap_figure.write_image(
             f"{gigmap_figure.params['global']['output_prefix']}.{ext}"
