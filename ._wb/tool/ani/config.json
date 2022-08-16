@@ -1,0 +1,20 @@
+{
+    "$schema": "https://raw.githubusercontent.com/FredHutch/bash-workbench/main/docs/schema.json",
+    "name": "Compute genome ANI (gig-map)",
+    "description": "Compare the average nucleotide identity (ANI) for a set of genomes.",
+    "args": {
+        "genomes": {
+            "help": "Folder containing all genomes to align against (gzip-compressed FASTA format).",
+            "wb_env": "GENOMES",
+            "wb_type": "folder",
+            "required": true
+        },
+        "nxf_profile": {
+            "help": "Profile used for resource allocation (standard or testing)",
+            "wb_env": "PROFILE",
+            "wb_type": "select",
+            "wb_choices": ["standard", "testing"],
+            "default": "standard"
+        }
+    }
+}

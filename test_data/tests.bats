@@ -109,6 +109,30 @@
 
 }
 
+@test "Genome ANI" {
+    TOOL=ani
+    rm -rf ${TOOL}
+    mkdir ${TOOL}
+    cd ${TOOL}
+
+    # Specify the tool and launcher to use
+    wb setup_dataset --tool ${TOOL} --launcher gigmap_docker
+
+    # Specify the genes and genomes to align
+    wb run_dataset \
+        --genomes ../download_genomes/genomes \
+        --nxf_profile testing \
+        --wait
+
+    # Print the logs
+    cat ._wb/output.txt
+    cat ._wb/error.txt
+
+    # Make sure that the outputs were created
+    [ -s distances.csv.gz ]
+
+}
+
 @test "Collect results" {
 
     TOOL=collect
