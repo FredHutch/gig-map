@@ -17,6 +17,13 @@ if __name__ == "__main__":
     # Parse arguments from the command line
     gigmap_figure.parse_args()
 
+    # Parse the suffixes which have been specified for the outputs
+    output_suffix = gigmap_figure.params['global']['output_suffix'].split(",")
+    
+    # Make sure that all of the suffixes are allowed
+    for ext in output_suffix:
+        assert ext in ['html', 'png', 'pdf'], f"Allowed output suffix options are html, png, and pdf, not '{ext}'"
+
     # Read input data
     gigmap_figure.read_data()
 
@@ -24,15 +31,17 @@ if __name__ == "__main__":
     gigmap_figure.make_plots()
 
     # Save to HTML
-    gigmap_figure.write_html(
-        f"{gigmap_figure.params['global']['output_prefix']}.html",
-        with_interactivity=True
-    )
+    if 'html' in output_suffix:
+        gigmap_figure.write_html(
+            f"{gigmap_figure.params['global']['output_prefix']}.html",
+            with_interactivity=True
+        )
 
     # Save to PNG and PDF
     # First disable the use of temp space
     pio.kaleido.scope.chromium_args = tuple([arg for arg in pio.kaleido.scope.chromium_args if arg != "--disable-dev-shm-usage"])
     for ext in ["png", "pdf"]:
-        gigmap_figure.write_image(
-            f"{gigmap_figure.params['global']['output_prefix']}.{ext}"
-        )
+        if ext in output_suffix:
+            gigmap_figure.write_image(
+                f"{gigmap_figure.params['global']['output_prefix']}.{ext}"
+            )

@@ -28,6 +28,11 @@ class GigMapFigure(FigureBuilder):
                     default="gigmap-render"
                 ),
                 FigureArgument(
+                    key="output-suffix",
+                    description="Comma delimited list of suffixes to use for outputs (default: html, optional: html,pdf,png)",
+                    default="html"
+                ),
+                FigureArgument(
                     key="output-folder",
                     description="Folder for output file (default: ./)",
                     default="./"
