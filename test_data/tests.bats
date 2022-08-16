@@ -95,6 +95,7 @@
     wb run_dataset \
         --genes ../deduplicate_genes/centroids.faa.gz \
         --genomes ../download_genomes/genomes \
+        --pick_marker_genes 1 \
         --nxf_profile testing \
         --wait
 

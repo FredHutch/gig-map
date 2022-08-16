@@ -9,6 +9,7 @@ output*
 deduplicate_genomes/
 test_data/._workbench
 test_data/._wb
+test_data/ani
 test_data/example_projects
 test_data/collect
 test_data/download_genes
