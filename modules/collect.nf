@@ -11,7 +11,7 @@ include { ani } from './ani'
 include { aggregate } from './aggregate'
 include { render } from './render'
 
-include { clean_genomes } from './processes/align_genomes'
+include { clean_genomes; order_genes } from './processes/align_genomes'
 
 workflow collect {
 
@@ -19,11 +19,15 @@ workflow collect {
 
         genomes_ch
         genome_aln
-        gene_order
         marker_genes
 
 
     main:
+
+    // Order the genes based on the genomes they align to
+    order_genes(
+        genome_aln
+    )
 
     // Clean up the genome formatting
     clean_genomes(
@@ -51,7 +55,7 @@ workflow collect {
         genome_aln,
         ani.out.distances,
         align_markers.out.distmat,
-        gene_order
+        order_genes.out
     )
 
     // Render the results as an interactive figure
@@ -59,7 +63,7 @@ workflow collect {
         genome_aln,
         aggregate.out.genome_annot,
         ani.out.distances,
-        gene_order,
+        order_genes.out,
         aggregate.out.gene_annot,
         Channel.fromPath(params.render_options, checkIfExists: true)
     )

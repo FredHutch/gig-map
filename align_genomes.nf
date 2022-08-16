@@ -78,7 +78,6 @@ workflow {
         collect(
             genomes_ch,
             align_genomes.out.concat_alignments,
-            align_genomes.out.gene_order,
             align_genomes.out.markers.collect()
         )
 

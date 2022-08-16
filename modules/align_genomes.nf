@@ -9,7 +9,6 @@ include {
     makedb_diamond;
     add_genome_name;
     concatenate_alignments;
-    order_genes;
     select_markers;
     extract_genes;
     reorganize_fastas;
@@ -88,11 +87,6 @@ workflow align_genomes {
         centroids_faa
     )
 
-    // Order the genes based on the genomes they align to
-    order_genes(
-        concatenate_alignments.out
-    )
-
     // Extract the aligned regions for all genes
     extract_genes(
         alignments_output.join(
@@ -116,6 +110,5 @@ workflow align_genomes {
     markers = select_markers.out
     clean_genomes = clean_genomes.out
     concat_alignments = concatenate_alignments.out
-    gene_order = order_genes.out
 
 }
