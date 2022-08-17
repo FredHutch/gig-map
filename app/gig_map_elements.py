@@ -57,11 +57,13 @@ class GigMapFigure(FigureBuilder):
         self,
         fb,  # FigureBuilder instance
         output_prefix=None,
+        output_suffix=None,
         output_folder=None
     ):
         """Read in the data for gig-map in the global namespace."""
 
         self.output_prefix = output_prefix
+        self.output_suffix = output_suffix
         self.output_folder = output_folder
 
     def plot_f(self, fb):
