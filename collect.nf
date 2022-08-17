@@ -26,7 +26,6 @@ workflow {
         --output            Folder where output files will be written
         --genomes           Wildcard path indicating a set of genome nucleotide FASTAs
         --genome_aln        CSV file containing genome alignments
-        --gene_order        TXT file containing the ordered list of genes
         --marker_genes      FASTA file containing marker gene sequences
 
         --query_gencode     Genetic code used for conceptual translation of genome sequences
@@ -44,7 +43,6 @@ workflow {
     // Make sure that the required parameters were provided
     helpers.require_param(params.output, "output")
     helpers.require_param(params.genomes, "genomes")
-    helpers.require_param(params.gene_order, "gene_order")
     helpers.require_param(params.marker_genes, "marker_genes")
 
     // Remove any trailing slash from the genome folder
@@ -59,15 +57,13 @@ workflow {
     // The genome alignment file must exist
     genome_aln = Channel.fromPath(params.genome_aln, checkIfExists: true)
 
-    // The gene order and marker genes must also exist
-    gene_order = Channel.fromPath(params.gene_order, checkIfExists: true)
+    // The marker genes must also exist
     marker_genes = file(params.marker_genes, checkIfExists: true)
 
     // Run the collect sub-workflow
     collect(
         genomes_ch,
         genome_aln,
-        gene_order,
         marker_genes
     )
 

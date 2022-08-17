@@ -148,7 +148,6 @@
     wb run_dataset \
         --genomes ../download_genomes/genomes \
         --genome_aln ../align_genomes/genomes.aln.csv.gz \
-        --gene_order ../align_genomes/genomes.gene.order.txt.gz \
         --marker_genes ../align_genomes/markers.fasta.gz \
         --nxf_profile testing \
         --wait

@@ -15,12 +15,6 @@
             "wb_type": "file",
             "required": true
         },
-        "gene_order": {
-            "help": "Ordered list of genes (TXT)",
-            "wb_env": "GENE_ORDER",
-            "wb_type": "file",
-            "required": true
-        },
         "marker_genes": {
             "help": "Sequences of marker genes (FASTA)",
             "wb_env": "MARKER_GENES",

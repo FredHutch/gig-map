@@ -44,6 +44,9 @@ workflow {
     // Clean all of those genomes
     clean_genomes(
         genomes_ch
+            .map {
+                it -> [it.name, it]
+            }
     )
 
     // Calculate the ANI for all of those genomes
