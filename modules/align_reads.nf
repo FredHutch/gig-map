@@ -6,6 +6,7 @@ include {
     gather_logs;
     filter_aln;
     famli;
+    famli_logs;
     gather
 } from './processes/align_reads'
 
@@ -48,9 +49,14 @@ workflow align_reads {
     // Filter the alignments and resolve multi-mapping reads with FAMLI
     famli(filter_aln.out)
 
+    // Summarize the amount of time used for FAMLI
+    famli_logs(
+        famli.out.log.toSortedList()
+    )
+
     // Gather all of the alignment information into a single CSV
     gather(
-        famli.out.toSortedList(),
+        famli.out.json.toSortedList(),
         count_reads.out.toSortedList()
     )
 

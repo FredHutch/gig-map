@@ -98,10 +98,27 @@ process famli {
     tuple val(sample_name), file(input_aln)
     
     output:
-    path "${sample_name}.json.gz"
+    path "${sample_name}.json.gz", emit: json
+    path "${sample_name}.log", emit: log
 
     script:
     template "famli.sh"
+}
+
+// Summarize the amount of time used for FAMLI
+process famli_logs {
+    container "${params.container__pandas}"
+    label 'io_limited'
+    publishDir "${params.output}", mode: "copy", overwrite: true
+    
+    input:
+    path "*"
+    
+    output:
+    path "famli_logs.csv"
+
+    script:
+    template "famli_logs.py"
 }
 
 
