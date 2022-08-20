@@ -47,10 +47,28 @@ process diamond {
     tuple val(sample_name), path("input/input*.fastq.gz")
     
     output:
-    tuple val(sample_name), path("${sample_name}.aln.gz")
+    tuple val(sample_name), path("${sample_name}.aln.gz"), emit: aln
+    path "*.log", emit: log
 
     shell:
     template "align_reads.sh"
+
+}
+
+// Group together a collection of DIAMOND logs
+process gather_logs {
+    container "${params.container__pandas}"
+    label 'io_limited'
+    publishDir "${params.output}", mode: 'copy', overwrite: true
+   
+    input:
+    path "*"
+
+    output:
+    path "alignment_logs.csv"
+
+    script:
+    template "gather_logs.py"
 
 }
 

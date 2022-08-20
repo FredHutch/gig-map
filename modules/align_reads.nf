@@ -3,6 +3,7 @@
 include {
     count_reads;
     diamond;
+    gather_logs;
     filter_aln;
     famli;
     gather
@@ -34,9 +35,14 @@ workflow align_reads {
         fastq_ch
     )
 
+    // Summarize the time of execution for each alignment
+    gather_logs(
+        diamond.out.log.toSortedList()
+    )
+
     // Filter out any samples which have an insufficient number of alignments
     filter_aln(
-        diamond.out
+        diamond.out.aln
     )
 
     // Filter the alignments and resolve multi-mapping reads with FAMLI

@@ -215,6 +215,7 @@
 
     # Make sure that the outputs were created
     (( $(find ./ -name "read_alignments.csv.gz" | wc -l) > 0 ))
+    [ -s alignment_logs.csv ]
 
 }
 

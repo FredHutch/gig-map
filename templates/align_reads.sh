@@ -35,7 +35,8 @@ for fp in input/*.fastq.gz; do
         --block-size !{task.memory.toMega() / (1024 * 6 * task.attempt)} \
         --query-gencode !{params.query_gencode} \
         --compress 1 \
-        --unal 0
+        --unal 0 \
+        2> !{sample_name}.$index.log
 
     # Add the output file to the aggregate, and then delete the shard
     cat $index.aln.gz >> !{sample_name}.aln.gz
