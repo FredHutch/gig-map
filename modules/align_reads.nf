@@ -3,7 +3,7 @@
 include {
     count_reads;
     diamond;
-    gather_logs;
+    diamond_logs;
     filter_aln;
     famli;
     famli_logs;
@@ -37,7 +37,7 @@ workflow align_reads {
     )
 
     // Summarize the time of execution for each alignment
-    gather_logs(
+    diamond_logs(
         diamond.out.log.toSortedList()
     )
 

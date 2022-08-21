@@ -13,7 +13,7 @@ for fp in os.listdir("."):
             for line in handle:
                 line = line.rstrip("\\n").split("[FAMLI parse] ", 1)[1]
                 if line.startswith("Time elapsed: "):
-                    dat[sample]["seconds"] = float(line[len("Time elapsed: "):])
+                    dat[sample]["seconds"] = float(line[len("Time elapsed: "):].replace(",", ""))
                 elif line.startswith("Results: assigned "):
                     line = line[len("Results: assigned "):]
                     assert line.endswith(" subjects")

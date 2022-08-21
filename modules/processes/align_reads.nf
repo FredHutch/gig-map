@@ -56,7 +56,7 @@ process diamond {
 }
 
 // Group together a collection of DIAMOND logs
-process gather_logs {
+process diamond_logs {
     container "${params.container__pandas}"
     label 'io_limited'
     publishDir "${params.output}", mode: 'copy', overwrite: true
@@ -68,7 +68,7 @@ process gather_logs {
     path "alignment_logs.csv"
 
     script:
-    template "gather_logs.py"
+    template "diamond_logs.py"
 
 }
 
