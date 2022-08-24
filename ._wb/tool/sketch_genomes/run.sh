@@ -15,6 +15,12 @@ if [ -z ${TASK_LIMIT} ]; then
 
 fi
 
+# Log the parameters being used
+echo PARAMETERS
+echo
+cat ._wb/tool/params.json
+echo
+
 # Run the workflow
 echo Starting workflow
 nextflow \

@@ -7,6 +7,12 @@ echo
 echo "Running workflow from ${PWD}"
 echo
 
+# Log the parameters being used
+echo PARAMETERS
+echo
+cat ._wb/tool/params.json
+echo
+
 # Run the workflow
 echo Starting workflow
 nextflow \
