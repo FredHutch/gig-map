@@ -29,13 +29,13 @@
             "wb_type": "string",
             "default": "{1,2}"
         },
-        "min_coverage": {
-            "help": "Minimum proportion of a gene which must align in order to retain the alignment",
+        "min_coverage_reads": {
+            "help": "Minimum proportion of a read which must align in order to retain the alignment",
             "wb_env": "MIN_COVERAGE",
             "wb_type": "integer",
             "default": 90
         },
-        "min_identity": {
+        "min_pctiden_reads": {
             "help": "Minimum percent identity of the amino acid alignment required to retain the alignment",
             "wb_env": "MIN_IDENTITY",
             "wb_type": "integer",
