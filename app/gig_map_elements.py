@@ -497,6 +497,11 @@ class GenomeTree(FigureElement):
                 FigureArgument(
                     key="distmat",
                     description="Distance matrix used to generate genome dendrogram (optional)"
+                ),
+                FigureArgument(
+                    key="width",
+                    description="Width of the genome tree relative to the heatmap (proportion ranging 0-1, default: 0.5)",
+                    default=0.5
                 )
             ]
         )
@@ -508,9 +513,13 @@ class GenomeTree(FigureElement):
         self,
         fb,  # FigureBuilder instance
         distmat=None,
+        width=0.5,
         **kwargs
     ):
         """Read in data needed for the genome tree."""
+
+        # Save the intended width
+        self.width = float(width)
 
         # If the user did not provide a distmat file path
         if distmat is None:
@@ -570,7 +579,7 @@ class GenomeTree(FigureElement):
             # Ordinal position on the vertial axis
             y_index=self.y_index,
             # Only take up half the width relative to the heatmap
-            x_span=0.5,
+            x_span=self.width,
         )
         
         # Make an object to map the neighbor joining tree on a cartesian plot
