@@ -301,3 +301,30 @@
     (( $(find search_results -name "*.csv" | wc -l) > 0 ))
 
 }
+
+@test "Test Reads" {
+
+    TOOL=test_reads
+    rm -rf ${TOOL}
+    mkdir ${TOOL}
+    cd ${TOOL}
+
+    # Specify the tool and launcher to use
+    wb setup_dataset --tool ${TOOL} --launcher gigmap_docker
+
+    # Specify the gene abundances, manifest, and columns to test
+    wb run_dataset \
+        --gene_abund ../align_reads/read_alignments.csv.gz \
+        --manifest ../read_manifest.csv \
+        --formula GROUP \
+        --nxf_profile testing \
+        --wait
+
+    # Print the logs
+    cat ._wb/output.txt
+    cat ._wb/error.txt
+
+    # Make sure that the outputs were created
+    (( $(find ./ -name "mu.GROUP.results.csv.gz" | wc -l) > 0 ))
+
+}

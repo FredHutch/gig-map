@@ -1,0 +1,39 @@
+{
+    "$schema": "https://raw.githubusercontent.com/FredHutch/bash-workbench/main/docs/schema.json",
+    "name": "Test reads (gig-map)",
+    "description": "Test for differences in the relative abundance of genes between groups of specimens.",
+    "args": {
+        "gene_abund": {
+            "help": "Read alignment data output by the `align_reads` tool",
+            "wb_type": "file",
+            "required": true
+        },
+        "manifest": {
+            "help": "Table describing the experimental design, with `specimen` values matching the gene abundance table (CSV)",
+            "wb_type": "file",
+            "required": true
+        },
+        "formula": {
+            "help": "Formula to test, using manifest column names as variables (e.g. TREATMENT + GROUP)",
+            "wb_type": "string",
+            "required": true
+        },
+        "shard_size": {
+            "help": "Number of genes to test in each batch",
+            "wb_type": "integer",
+            "default": "1000"
+        },
+        "task_limit": {
+            "help": "If specified, limit the number of tasks being run at one time",
+            "wb_type": "integer",
+            "wb_env": "TASK_LIMIT",
+            "default": "1000"
+        },
+        "nxf_profile": {
+            "help": "Profile used for resource allocation (standard or testing)",
+            "wb_env": "PROFILE",
+            "wb_type": "string",
+            "default": "standard"
+        }
+    }
+}

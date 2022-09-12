@@ -18,6 +18,7 @@ test_data/deduplicate_genes
 test_data/align_genomes
 test_data/render
 test_data/align_reads
+test_data/test_reads
 test_data/sketch_genomes
 test_data/search_sketches
 ._workbench/*
