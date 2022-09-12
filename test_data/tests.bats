@@ -196,8 +196,8 @@
 
     TOOL=align_reads
     rm -rf ${TOOL}
-    mkdir ${TOOL}
-    cd ${TOOL}
+    mkdir ${TOOL}_single
+    cd ${TOOL}_single
 
     # Specify the tool and launcher to use
     wb setup_dataset --tool ${TOOL} --launcher gigmap_docker
@@ -224,8 +224,8 @@
 
     TOOL=align_reads
     rm -rf ${TOOL}
-    mkdir ${TOOL}
-    cd ${TOOL}
+    mkdir ${TOOL}_paired
+    cd ${TOOL}_paired
 
     # Specify the tool and launcher to use
     wb setup_dataset --tool ${TOOL} --launcher gigmap_docker
@@ -314,7 +314,7 @@
 
     # Specify the gene abundances, manifest, and columns to test
     wb run_dataset \
-        --gene_abund ../align_reads/read_alignments.csv.gz \
+        --gene_abund ../align_reads_single/read_alignments.csv.gz \
         --manifest ../read_manifest.csv \
         --formula GROUP \
         --nxf_profile testing \
