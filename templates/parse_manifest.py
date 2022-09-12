@@ -16,7 +16,9 @@ assert "id" in gene_abund.columns.values, "ERROR: gene abundance CSV must contai
 
 # Get the set of specimens in the manifest and abundance tables
 manifest_specimens = set(manifest["specimen"].values)
+print(f"Specimens in the manifest: {', '.join(list(manifest_specimens))}")
 gene_abund_specimens = set(gene_abund["specimen"].values)
+print(f"Specimens in the gene abundance CSV: {', '.join(list(gene_abund_specimens))}")
 
 # All of the specimens in the manifest must be in the gene abundances
 missing_specimens = manifest_specimens - gene_abund_specimens
