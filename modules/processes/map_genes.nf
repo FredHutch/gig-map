@@ -4,8 +4,8 @@ process map_genes_blast {
     label 'mem_medium'
     
     input:
-    path query_fasta
-    path ref_fasta
+    path "queries.fasta.gz"
+    path "refs.fasta.gz"
 
     output:
     path "unfiltered_gene_mapping.csv.gz"
@@ -20,8 +20,8 @@ process map_genes_diamond {
     label 'mem_medium'
     
     input:
-    path query_fasta
-    path ref_fasta
+    path "queries.fasta.gz"
+    path "refs.fasta.gz"
 
     output:
     path "unfiltered_gene_mapping.csv.gz"

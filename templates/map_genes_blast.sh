@@ -3,8 +3,8 @@
 set -e
 
 blastp \
-    -query <(gunzip -c ${query_fasta}) \
-    -subject <(gunzip -c ${ref_fasta}) \
+    -query <(gunzip -c queries.fasta.gz) \
+    -subject <(gunzip -c refs.fasta.gz) \
     -evalue ${params.max_evalue} \
     -outfmt '6 delim=, ${params.aln_fmt}' \
     -num_threads ${task.cpus} \

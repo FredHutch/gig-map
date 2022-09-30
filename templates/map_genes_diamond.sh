@@ -4,7 +4,7 @@ set -e
 
 diamond \
     makedb \
-    --in ${ref_fasta} \
+    --in refs.fasta.gz \
     --db database.dmnd \
     --threads ${task.cpus}
 
@@ -14,7 +14,7 @@ diamond \
     --db database.dmnd \
     --out unfiltered_gene_mapping.csv.gz \
     --outfmt 6 ${params.aln_fmt} \
-    --query ${query_fasta} \
+    --query queries.fasta.gz \
     --unal 0 \
     --max-target-seqs 100000 \
     --evalue ${params.max_evalue} \
