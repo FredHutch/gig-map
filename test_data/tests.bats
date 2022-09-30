@@ -328,8 +328,6 @@
     (( $(find ./ -name "mu.GROUP.results.csv.gz" | wc -l) > 0 ))
 
 }
-<<<<<<< HEAD
-=======
 
 @test "Map Genes - blast" {
 
@@ -384,4 +382,3 @@
     [ -s gene_mapping.csv.gz ]
 
 }
->>>>>>> test_reads
