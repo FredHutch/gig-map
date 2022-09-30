@@ -195,7 +195,7 @@
 @test "Align Reads" {
 
     TOOL=align_reads
-    rm -rf ${TOOL}
+    rm -rf ${TOOL}_single
     mkdir ${TOOL}_single
     cd ${TOOL}_single
 
@@ -223,7 +223,7 @@
 @test "Align Paired Reads" {
 
     TOOL=align_reads
-    rm -rf ${TOOL}
+    rm -rf ${TOOL}_paired
     mkdir ${TOOL}_paired
     cd ${TOOL}_paired
 
