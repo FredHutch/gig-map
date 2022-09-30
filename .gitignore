@@ -22,6 +22,8 @@ test_data/align_reads_paired
 test_data/test_reads
 test_data/sketch_genomes
 test_data/search_sketches
+test_data/map_genes-blast
+test_data/map_genes-diamond
 ._workbench/*
 
 # C extensions

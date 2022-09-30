@@ -328,3 +328,60 @@
     (( $(find ./ -name "mu.GROUP.results.csv.gz" | wc -l) > 0 ))
 
 }
+<<<<<<< HEAD
+=======
+
+@test "Map Genes - blast" {
+
+    TOOL=map_genes
+    rm -rf ${TOOL}-blast
+    mkdir ${TOOL}-blast
+    cd ${TOOL}-blast
+
+    # Specify the tool and launcher to use
+    wb setup_dataset --tool ${TOOL} --launcher gigmap_docker
+
+    # Specify the gene abundances, manifest, and columns to test
+    wb run_dataset \
+        --references ../deduplicate_genes/centroids.faa.gz \
+        --queries ../download_genes/genes/GCA_002599625.1_ASM259962v1_protein.faa.gz \
+        --aligner blast \
+        --nxf_profile testing \
+        --wait
+
+    # Print the logs
+    cat ._wb/output.txt
+    cat ._wb/error.txt
+
+    # Make sure that the outputs were created
+    [ -s gene_mapping.csv.gz ]
+
+}
+
+@test "Map Genes - diamond" {
+
+    TOOL=map_genes
+    rm -rf ${TOOL}-diamond
+    mkdir ${TOOL}-diamond
+    cd ${TOOL}-diamond
+
+    # Specify the tool and launcher to use
+    wb setup_dataset --tool ${TOOL} --launcher gigmap_docker
+
+    # Specify the gene abundances, manifest, and columns to test
+    wb run_dataset \
+        --references ../deduplicate_genes/centroids.faa.gz \
+        --queries ../download_genes/genes/GCA_002599625.1_ASM259962v1_protein.faa.gz \
+        --aligner diamond \
+        --nxf_profile testing \
+        --wait
+
+    # Print the logs
+    cat ._wb/output.txt
+    cat ._wb/error.txt
+
+    # Make sure that the outputs were created
+    [ -s gene_mapping.csv.gz ]
+
+}
+>>>>>>> test_reads
