@@ -1,7 +1,7 @@
 // Align two gene collections against each other with BLAST
 process map_genes_blast {
     container "${params.container__blast}"
-    label 'mem_medium'
+    label 'mem_veryhigh'
     
     input:
     path "queries.fasta.gz"
@@ -17,7 +17,7 @@ process map_genes_blast {
 // Align two gene collections against each other with DIAMOND
 process map_genes_diamond {
     container "${params.container__diamond}"
-    label 'mem_medium'
+    label 'mem_veryhigh'
     
     input:
     path "queries.fasta.gz"
