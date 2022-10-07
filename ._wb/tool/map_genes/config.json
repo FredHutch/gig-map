@@ -31,6 +31,12 @@
             "wb_type": "float",
             "default": 0.001
         },
+        "map_batchsize": {
+            "help": "Number of genes to align in a batch",
+            "wb_env": "MAP_BATCHSIZE",
+            "wb_type": "integer",
+            "default": 100000
+        },
         "aligner": {
             "help": "Algorithm used for alignment (default: diamond, options: diamond, blast)",
             "wb_env": "ALIGNER",

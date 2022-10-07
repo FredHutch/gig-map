@@ -343,6 +343,7 @@
     wb run_dataset \
         --references ../deduplicate_genes/centroids.faa.gz \
         --queries ../download_genes/genes/GCA_002599625.1_ASM259962v1_protein.faa.gz \
+        --map_batchsize 50 \
         --aligner blast \
         --nxf_profile testing \
         --wait
@@ -370,6 +371,7 @@
     wb run_dataset \
         --references ../deduplicate_genes/centroids.faa.gz \
         --queries ../download_genes/genes/GCA_002599625.1_ASM259962v1_protein.faa.gz \
+        --map_batchsize 50 \
         --aligner diamond \
         --nxf_profile testing \
         --wait

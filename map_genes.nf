@@ -9,9 +9,11 @@ def helpers = shell.parse(new File("${workflow.projectDir}/helpers.gvy"))
 
 // Import the process to run
 include {
+    shard;
     map_genes_blast;
     map_genes_diamond;
-    filter
+    filter;
+    join
 } from './modules/processes/map_genes'
 
 // Standalone entrypoint
@@ -40,6 +42,8 @@ workflow {
                             (default: ${params.min_identity}, ranges 0-100)
         --max_evalue        Maximum E-value threshold used to filter all alignments
                             (default: ${params.max_evalue})
+        --map_batchsize     Number of genes to align in a batch
+                            (default: ${params.map_batchsize})
         --aligner           Algorithm used for alignment (default: ${params.aligner}, options: diamond, blast)
         --aln_fmt           Column headings used for alignment outputs (see DIAMOND documentation for details)
                             (default: ${params.aln_fmt})
@@ -53,17 +57,22 @@ workflow {
     helpers.require_param(params.queries, "queries")
     helpers.require_param(params.references, "references")
 
+    // Shard the genes
+    shard(
+        file(params.queries, checkIfExists: true, glob: false)
+    )
+
     // Run the alignment
     if ( "${params.aligner}" == "blast" ){
         map_genes_blast(
-            file(params.queries, checkIfExists: true, glob: false),
+            shard.out.flatten(),
             file(params.references, checkIfExists: true, glob: false)
         )
         unfiltered_aln = map_genes_blast.out
     }else{
         if ( "${params.aligner}" == "diamond" ){
             map_genes_diamond(
-                file(params.queries, checkIfExists: true, glob: false),
+                shard.out.flatten(),
                 file(params.references, checkIfExists: true, glob: false)
             )
             unfiltered_aln = map_genes_diamond.out
@@ -72,5 +81,10 @@ workflow {
         }
     }
 
+    // Filter down to just the top alignment per query
     filter(unfiltered_aln)
+
+    // Join the shards
+    join(filter.out.toSortedList())
+
 }
