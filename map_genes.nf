@@ -62,19 +62,28 @@ workflow {
         file(params.queries, checkIfExists: true, glob: false)
     )
 
+    // Combine with the references
+    shard
+        .out
+        .flatten()
+        .combine(
+            Channel.of(
+                file(
+                    params.references,
+                    checkIfExists: true,
+                    glob: false
+                )
+            )
+        )
+        .set { joined }
+
     // Run the alignment
     if ( "${params.aligner}" == "blast" ){
-        map_genes_blast(
-            shard.out.flatten(),
-            file(params.references, checkIfExists: true, glob: false)
-        )
+        map_genes_blast(joined)
         unfiltered_aln = map_genes_blast.out
     }else{
         if ( "${params.aligner}" == "diamond" ){
-            map_genes_diamond(
-                shard.out.flatten(),
-                file(params.references, checkIfExists: true, glob: false)
-            )
+            map_genes_diamond(joined)
             unfiltered_aln = map_genes_diamond.out
         }else{
             error "Parameter 'aligner' must be diamond or blast, not ${params.aligner}"

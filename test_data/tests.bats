@@ -384,3 +384,31 @@
     [ -s gene_mapping.csv.gz ]
 
 }
+
+@test "Pairwise Similarity" {
+
+    TOOL=pdist
+    rm -rf ${TOOL}-diamond
+    mkdir ${TOOL}-diamond
+    cd ${TOOL}-diamond
+
+    # Specify the tool and launcher to use
+    wb setup_dataset --tool ${TOOL} --launcher gigmap_docker
+
+    # Specify the gene abundances, manifest, and columns to test
+    wb run_dataset \
+        --genes ../deduplicate_genes/centroids.faa.gz \
+        --map_batchsize 50 \
+        --min_coverage 10 \
+        --aligner diamond \
+        --nxf_profile testing \
+        --wait
+
+    # Print the logs
+    cat ._wb/output.txt
+    cat ._wb/error.txt
+
+    # Make sure that the outputs were created
+    [ -s gene_pdist.json.gz ]
+
+}

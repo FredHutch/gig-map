@@ -19,8 +19,7 @@ process map_genes_blast {
     label 'mem_veryhigh'
     
     input:
-    path "queries.fasta.gz"
-    path "refs.fasta.gz"
+    tuple path("queries.fasta.gz"), path("refs.fasta.gz")
 
     output:
     path "unfiltered_gene_mapping.csv.gz"
@@ -35,8 +34,7 @@ process map_genes_diamond {
     label 'mem_veryhigh'
     
     input:
-    path "queries.fasta.gz"
-    path "refs.fasta.gz"
+    tuple path("queries.fasta.gz"), path("refs.fasta.gz")
 
     output:
     path "unfiltered_gene_mapping.csv.gz"
@@ -74,4 +72,35 @@ process join {
 
     script:
     template "map_genes_join.py"
+}
+
+// Combine a batch of pairwise comparisons
+process join_pdist {
+    container "${params.container__pandas}"
+    label 'io_limited'
+   
+    input:
+    path "*.gene_mapping.csv.gz"
+
+    output:
+    path "gene_pdist.json.gz"
+
+    script:
+    template "join_pdist.py"
+}
+
+// Combine all pairwise comparisons
+process collect_pdist {
+    container "${params.container__pandas}"
+    label 'io_limited'
+    publishDir "${params.output}", mode: 'copy', overwrite: true
+   
+    input:
+    path "gene_pdist.*.json.gz"
+
+    output:
+    path "gene_pdist.json.gz"
+
+    script:
+    template "collect_pdist.py"
 }
