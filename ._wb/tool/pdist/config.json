@@ -1,0 +1,44 @@
+{
+    "$schema": "https://raw.githubusercontent.com/FredHutch/bash-workbench/main/docs/schema.json",
+    "name": "Pairwise Similarity (gig-map)",
+    "description": "Calculate the pairwise amino acid similarity for all pairs of genes in a collection",
+    "args": {
+        "genes": {
+            "help": "File containing all genes to be compared, in amino acid FASTA format (gzip-compressed).",
+            "wb_type": "file",
+            "required": true
+        },
+        "min_coverage": {
+            "help": "Minimum proportion of a gene which must align in order to retain the alignment",
+            "wb_env": "MIN_COVERAGE",
+            "wb_type": "integer",
+            "default": 90
+        },
+        "max_evalue": {
+            "help": "Maximum E-value threshold used to filter all alignments",
+            "wb_env": "MAX_EVALUE",
+            "wb_type": "float",
+            "default": 0.1
+        },
+        "map_batchsize": {
+            "help": "Number of genes to align in a batch",
+            "wb_env": "MAP_BATCHSIZE",
+            "wb_type": "integer",
+            "default": 100000
+        },
+        "aligner": {
+            "help": "Algorithm used for alignment (default: diamond, options: diamond, blast)",
+            "wb_env": "ALIGNER",
+            "wb_type": "select",
+            "wb_choices": ["diamond", "blast"],
+            "default": "diamond"
+        },
+        "nxf_profile": {
+            "help": "Profile used for resource allocation (standard or testing)",
+            "wb_env": "PROFILE",
+            "wb_type": "select",
+            "wb_choices": ["standard", "testing"],
+            "default": "standard"
+        }
+    }
+}

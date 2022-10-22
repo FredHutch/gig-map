@@ -14,6 +14,7 @@ test_data/example_projects
 test_data/collect
 test_data/download_genes
 test_data/download_genomes
+test_data/pdist-diamond
 test_data/deduplicate_genes
 test_data/align_genomes
 test_data/render
