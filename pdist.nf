@@ -15,7 +15,9 @@ include {
     join_pdist;
     collect_pdist as batch_pdist;
     collect_pdist;
-} from './modules/processes/map_genes'
+} from './modules/processes/map_genes' addParams(
+    min_identity: 1
+)
 
 // Standalone entrypoint
 workflow {
