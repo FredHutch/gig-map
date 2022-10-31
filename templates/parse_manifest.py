@@ -9,7 +9,7 @@ print(f"Read in {manifest.shape[0]:,} lines from ${params.manifest}")
 assert "specimen" in manifest.columns.values, "ERROR: manifest must contain 'specimen' column"
 
 print("Reading in the CSV file specified by --gene_abund (${params.gene_abund})")
-gene_abund = pd.read_csv("read_alignments.csv.gz")
+gene_abund = pd.read_csv("read_alignments.csv.gz", usecols=["specimen", "id"])
 print(f"Read in {gene_abund.shape[0]:,} lines from ${params.gene_abund}")
 assert "specimen" in gene_abund.columns.values, "ERROR: gene abundance CSV must contain 'specimen' column"
 assert "id" in gene_abund.columns.values, "ERROR: gene abundance CSV must contain 'id' column"
