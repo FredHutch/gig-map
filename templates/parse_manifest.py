@@ -20,10 +20,10 @@ print(f"Specimens in the manifest: {', '.join(list(manifest_specimens))}")
 gene_abund_specimens = set(gene_abund["specimen"].values)
 print(f"Specimens in the gene abundance CSV: {', '.join(list(gene_abund_specimens))}")
 
-# All of the specimens in the manifest must be in the gene abundances
+# Warn if there are specimens in the manifest which do not have gene abundances
 missing_specimens = manifest_specimens - gene_abund_specimens
-msg = f"ERROR: All specimens in the manifest must be in the gene abundance CSV ({', '.join(list(missing_specimens))})"
-assert len(missing_specimens) == 0, msg
+msg = f"ERROR: All specimens in the manifest which lack data in the gene abundance CSV ({', '.join(list(missing_specimens))})"
+print(msg)
 
 # Get the columns listed in the formula
 formula = "${params.formula}"
