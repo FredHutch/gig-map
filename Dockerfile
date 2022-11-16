@@ -3,6 +3,7 @@ RUN apt-get update && \
     apt-get install -y python3.8 python3-pip python3.8-dev wget curl jq
 RUN python3.8 -m pip install --upgrade pip && \
     python3.8 -m pip install \
+    click \
     dash-bootstrap-components==0.9.2 \
     dash-core-components==1.9.1 \
     dash-extensions \
