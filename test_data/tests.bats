@@ -158,6 +158,7 @@
 
     # Make sure that the outputs were created
     [ -s gigmap.rdb ]
+    (( $(find ./ -name "gigmap*.feather" | wc -l) > 0 ))
 
 }
 
@@ -189,6 +190,7 @@
 
     # Make sure that the outputs were created
     (( $(find ./ -name "gigmap*.html" | wc -l) > 0 ))
+    (( $(find ./ -name "gigmap*.feather" | wc -l) > 0 ))
 
 }
 

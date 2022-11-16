@@ -68,4 +68,14 @@ workflow collect {
         Channel.fromPath(params.render_options, checkIfExists: true)
     )
 
+    // Serialize the outputs as feather
+    serialize(
+        genome_aln,
+        aggregate.out.genome_annot,
+        ani.out.distances,
+        order_genes.out,
+        aggregate.out.gene_annot,
+        Channel.fromPath(params.render_options, checkIfExists: true)
+    )
+
 }

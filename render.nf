@@ -8,7 +8,7 @@ GroovyShell shell = new GroovyShell()
 def helpers = shell.parse(new File("${workflow.projectDir}/helpers.gvy"))
 
 // Import sub-workflow
-include { render } from './modules/render'
+include { render; serialize } from './modules/render'
 
 // Standalone entrypoint
 workflow {
@@ -53,6 +53,16 @@ workflow {
 
     // Run the collect sub-workflow
     render(
+        genome_aln,
+        genome_annot,
+        genome_distmat,
+        gene_order,
+        gene_annot,
+        render_options
+    )
+
+    // Save the files to disk
+    serialize(
         genome_aln,
         genome_annot,
         genome_distmat,
