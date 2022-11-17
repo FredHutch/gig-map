@@ -60,6 +60,7 @@ process serialize {
 
     output:
     path "*.feather"
+    path "*.txt.gz"
 
     script:
     """#!/bin/bash

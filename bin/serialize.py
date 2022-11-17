@@ -1,6 +1,7 @@
 #!/usr/bin/env python3.8
 
 import click
+import gzip
 import json
 import pandas as pd
 from scipy.cluster import hierarchy
@@ -81,14 +82,33 @@ def serialize(
     # Only columns will be labeled
     # The order of columns on the distance matrix will match the order of rows on the gene table
     dm_fp = f"{output_folder.rstrip('/')}/{output_prefix}.dm.feather"
-    print(f"Writing out to {dm_fp}")
-    data['distmat'].reset_index(drop=True).to_feather(dm_fp)
+    write_feather(data['distmat'], dm_fp)
 
     genes_fp = f"{output_folder.rstrip('/')}/{output_prefix}.genes.feather"
-    print(f"Writing out to {genes_fp}")
-    wide_df.reset_index(drop=True).to_feather(genes_fp)
+    write_feather(wide_df, genes_fp)
 
     print("Done")
+
+
+def write_feather(df, fp):
+    if not fp.endswith(".feather"):
+        fp = fp + ".feather"
+
+    # Get the column names
+    cnames = df.columns.values
+    
+    # Write out the column names
+    cnames_fp = fp.replace(".feather", ".columns.txt.gz")
+    print(f"Writing to {cnames_fp}")
+    with gzip.open(cnames_fp, "wt") as handle:
+        handle.write("\n".join(cnames))
+
+    # Override the DataFrame columns
+    df.columns = list(map(str, range(df.shape[1])))
+
+    # Write the feather file
+    print(f"Writing to {fp}")
+    df.reset_index(drop=True).to_feather(fp)
 
 
 def order_genomes(data, method="average"):
