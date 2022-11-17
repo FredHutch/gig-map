@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 
 @test "Download genomes" {
-    tree -lah
+    tree -lh
     TOOL=download_genomes
     rm -rf ${TOOL}
     mkdir ${TOOL}
@@ -28,7 +28,7 @@
 }
 
 @test "Download genes" {
-    tree -lah
+    tree -lh
     TOOL=download_genes
     rm -rf ${TOOL}
     mkdir ${TOOL}
@@ -55,7 +55,7 @@
 }
 
 @test "Deduplicate genes" {
-    tree -lah
+    tree -lh
     TOOL=deduplicate_genes
     rm -rf ${TOOL}
     mkdir ${TOOL}
@@ -86,7 +86,7 @@
 }
 
 @test "Align genomes" {
-    tree -lah
+    tree -lh
     TOOL=align_genomes
     rm -rf ${TOOL}
     mkdir ${TOOL}
@@ -115,7 +115,7 @@
 }
 
 @test "Genome ANI" {
-    tree -lah
+    tree -lh
     TOOL=ani
     rm -rf ${TOOL}
     mkdir ${TOOL}
@@ -140,7 +140,7 @@
 }
 
 @test "Collect results" {
-    tree -lah
+    tree -lh
 
     TOOL=collect
     rm -rf ${TOOL}
@@ -169,7 +169,7 @@
 }
 
 @test "Render HTML" {
-    tree -lah
+    tree -lh
 
     TOOL=render
     rm -rf ${TOOL}
@@ -202,7 +202,7 @@
 }
 
 @test "Align Reads" {
-    tree -lah
+    tree -lh
 
     TOOL=align_reads
     rm -rf ${TOOL}_single
@@ -231,7 +231,7 @@
 }
 
 @test "Align Paired Reads" {
-    tree -lah
+    tree -lh
 
     TOOL=align_reads
     rm -rf ${TOOL}_paired
@@ -259,7 +259,7 @@
 }
 
 @test "Sketch genomes" {
-    tree -lah
+    tree -lh
 
     TOOL=sketch_genomes
     rm -rf ${TOOL}
@@ -287,7 +287,7 @@
 }
 
 @test "Search sketches" {
-    tree -lah
+    tree -lh
 
     TOOL=search_sketches
     rm -rf ${TOOL}
@@ -316,7 +316,7 @@
 }
 
 @test "Test Reads" {
-    tree -lah
+    tree -lh
 
     TOOL=test_reads
     rm -rf ${TOOL}
@@ -344,7 +344,7 @@
 }
 
 @test "Map Genes - blast" {
-    tree -lah
+    tree -lh
 
     TOOL=map_genes
     rm -rf ${TOOL}-blast
@@ -373,7 +373,7 @@
 }
 
 @test "Map Genes - diamond" {
-    tree -lah
+    tree -lh
 
     TOOL=map_genes
     rm -rf ${TOOL}-diamond
@@ -402,7 +402,7 @@
 }
 
 @test "Pairwise Similarity" {
-    tree -lah
+    tree -lh
 
     TOOL=pdist
     rm -rf ${TOOL}-diamond

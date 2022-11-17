@@ -9,7 +9,7 @@ nextflow.enable.dsl=2
 include { align_markers } from './align_markers'
 include { ani } from './ani'
 include { aggregate } from './aggregate'
-include { render } from './render'
+include { render; serialize } from './render'
 
 include { clean_genomes; order_genes } from './processes/align_genomes'
 
