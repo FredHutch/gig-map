@@ -19,6 +19,7 @@ RUN python3.8 -m pip install --upgrade pip && \
     plotly \
     plotnine>=0.8.0 \
     psutil \
+    pyarrow \
     seaborn==0.11.1 && \
     python3.8 -m pip install \
     scikit-bio==0.5.6 \
