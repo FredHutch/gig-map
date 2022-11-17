@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.8
 
 import click
 import json
@@ -15,7 +15,6 @@ from scipy.spatial import distance
 @click.option("--output_folder")
 @click.option("--output_prefix")
 @click.option("--options_json")
-
 def serialize(
     distmat,
     alignments,
