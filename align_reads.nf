@@ -28,6 +28,7 @@ workflow {
         --reads             Folder containing the set of FASTQ files to align against those genes
         --reads_suffix      File ending for all reads (default: ${params.reads_suffix})
         --paired            Set to true if input folder contains paired-end FASTQ files (default: false)
+        --samplesheet       Optional file listing the FASTQ inputs to process (headers: sample,R1,R2)
         --output            Folder where output files will be written
 
         --min_score_reads   Minimum alignment score (default: ${params.min_score_reads})
@@ -48,36 +49,67 @@ workflow {
 
     // Make sure that the required parameters were provided
     helpers.require_param(params.output, "output")
-    helpers.require_param(params.reads, "reads")
     helpers.require_param(params.genes, "genes")
 
-    // Remove any trailing slash from the reads folder
-    reads_folder = params.reads.replaceAll('/$', '')
-
-    // If the input is paired-end
-    if ( "${params.paired}" != "false" ) {
-
-        // Get reads as pairs of files which differ only by containing '1' vs '2'
+    // If a samplesheet was provided
+    if ( "${params.samplesheet}" != "false" ){
         Channel
-                .fromFilePairs(
-                    "${reads_folder}/**${params.read_pairing_pattern}*${params.reads_suffix}"
+            .from(
+                file(
+                    "${params.samplesheet}",
+                    checkIfExists: true
                 )
-                .ifEmpty { error "No reads found at ${reads_folder}/**${params.read_pairing_pattern}*${params.reads_suffix}, consider modifying --reads, --read_pairing_pattern, or --reads_suffix"}
-                .set { fastq_ch }
+            )
+            .splitCsv(
+                header: true,
+                split: ','
+            )
+            .map {
+                it -> [
+                    it['sample'],
+                    [
+                        file(it['R1'], checkIfExists: true),
+                        file(it['R2'], checkIfExists: true)
+                    ]
+                ]
+            }
+            .set { fastq_ch }
 
-        join_read_pairs(fastq_ch)
-        reads_ch = join_read_pairs.out
+            join_read_pairs(fastq_ch)
+            reads_ch = join_read_pairs.out
 
     } else {
 
-        // Get reads as any file with the expected ending
-        // and add the name (without the suffix) to match the output of join_read_pairs
-        reads_ch = Channel
-            .fromPath("${reads_folder}/**${params.reads_suffix}")
-            .map {
-                it -> [it.name.substring(0, it.name.length() - ("${params.reads_suffix}".length() + 1)), it]
-            }
+        // Requre the reads parameter
+        helpers.require_param(params.reads, "reads")
+        // Remove any trailing slash from the reads folder
+        reads_folder = params.reads.replaceAll('/$', '')
 
+        // If the input is paired-end
+        if ( "${params.paired}" != "false" ) {
+
+            // Get reads as pairs of files which differ only by containing '1' vs '2'
+            Channel
+                    .fromFilePairs(
+                        "${reads_folder}/**${params.read_pairing_pattern}*${params.reads_suffix}"
+                    )
+                    .ifEmpty { error "No reads found at ${reads_folder}/**${params.read_pairing_pattern}*${params.reads_suffix}, consider modifying --reads, --read_pairing_pattern, or --reads_suffix"}
+                    .set { fastq_ch }
+
+            join_read_pairs(fastq_ch)
+            reads_ch = join_read_pairs.out
+
+        } else {
+
+            // Get reads as any file with the expected ending
+            // and add the name (without the suffix) to match the output of join_read_pairs
+            reads_ch = Channel
+                .fromPath("${reads_folder}/**${params.reads_suffix}")
+                .map {
+                    it -> [it.name.substring(0, it.name.length() - ("${params.reads_suffix}".length() + 1)), it]
+                }
+
+        }
     }
 
     // Align those reads against the centroids
