@@ -5,8 +5,16 @@ import gzip
 fpi = "${fasta}"
 fpo = "${fasta}.annot.csv.gz"
 
+
+def safe_open(fp):
+    if fp.endswith(".gz"):
+        return gzip.open(fp, "rt")
+    else:
+        return open(fp, "r")
+
+
 # Open both file paths, input and output
-with gzip.open(fpi, "rt") as i, gzip.open(fpo, "wt") as o:
+with safe_open(fpi) as i, gzip.open(fpo, "wt") as o:
 
     # Write a header line
     o.write("gene_id,combined_name\\n")
