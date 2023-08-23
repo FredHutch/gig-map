@@ -62,7 +62,7 @@ workflow {
             )
             .splitCsv(
                 header: true,
-                split: ','
+                strip: true
             )
             .map {
                 it -> [
