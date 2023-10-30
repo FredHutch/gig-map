@@ -7,35 +7,37 @@ import os
 import gzip
 import pandas as pd
 
+
 def select_markers(
-    alignments,
+    alignments: pd.DataFrame,
     min_coverage=50.,
     max_n=10
 ):
+    logger = logging.getLogger('gig-map')
 
     # Calculate the coverage
     alignments = alignments.assign(
-        coverage = 100 * alignments.length / alignments.slen
+        coverage=100 * alignments.length / alignments.slen
     )
 
     # Filter by coverage
     alignments = alignments.query(
         f"coverage >= {min_coverage}"
     )
+    logger.info(f"Rows after filering by coverage: {alignments.shape[0]:,}")
 
     # Summarize each gene
     gene_df = alignments.groupby("sseqid").apply(summarize_gene)
+    logger.info(f"Gene Summary:\n{gene_df.head().to_csv()}")
 
     # Calculate the score for each gene
     gene_df = gene_df.assign(
-        score = \
-            gene_df.avg_iden * \
-            (gene_df.n_genomes / gene_df.n_genomes.max()) * \
-            (gene_df.gene_len / gene_df.gene_len.median()).clip(upper=1)
+        score=calc_score(gene_df)
     ).sort_values(
         by=["score", "gene_len"],
         ascending=False
     )
+    logger.info(f"Scored & Sorted:\n{gene_df.head().to_csv()}")
 
     # Select the top N genes which are found in at least 3 genomes
     marker_genes = gene_df.query(
@@ -45,6 +47,23 @@ def select_markers(
     ).index.values
 
     return marker_genes
+
+
+def calc_score(gene_df: pd.Series) -> float:
+    logger = logging.getLogger('gig-map')
+    n_max = gene_df.n_genomes.max()
+    logger.info(f"Maximum number of genomes aligned: {n_max}")
+    gl_m = gene_df.gene_len.median()
+    logger.info(f"Median gene length: {gl_m}")
+    return (
+        gene_df
+        .apply(
+            lambda r: r.avg_iden * (r.n_genomes / n_max) * (r.gene_len / gl_m),
+            axis=1
+        )
+        .clip(upper=1)
+    )
+
 
 def summarize_gene(df):
 
@@ -56,7 +75,7 @@ def summarize_gene(df):
 
     # Get the gene length
     gene_len = df.slen.values[0]
-    
+
     return pd.Series(
         dict(
             n_genomes=n_genomes,
@@ -64,6 +83,7 @@ def summarize_gene(df):
             gene_len=gene_len
         )
     )
+
 
 def subset_fasta(gene_list, fasta_in, fasta_out):
     """Filter a FASTA file to just those sequences in the provided list"""
@@ -82,10 +102,10 @@ def subset_fasta(gene_list, fasta_in, fasta_out):
 
 def fasta_parser(handle):
     """Parse a file handle in FASTA format."""
-    
+
     header = None
     seq = []
-    
+
     for line in handle:
         if line[0] == ">":
             if header is not None and len(seq) > 0:
@@ -95,7 +115,7 @@ def fasta_parser(handle):
         else:
             if len(line) > 1:
                 seq.append(line.rstrip("\n"))
-                    
+
     if header is not None and len(seq) > 0:
         yield header, "".join(seq)
 
@@ -175,6 +195,7 @@ if __name__ == "__main__":
     assert os.path.exists(args.input)
     logger.info(f"Reading from {args.input}")
     alignments = pd.read_csv(args.input)
+    logger.info(f"Read in {alignments.shape[0]:,} rows")
 
     # Filter down to the selected markers
     marker_genes = select_markers(
