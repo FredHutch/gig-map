@@ -37,8 +37,8 @@ workflow {
 
     // Parse the CSV and raise an error if the path is not valid
     Channel
-        .fromPath( params.genome_csv )
-        .ifEmpty { error "Cannot find any file at '${params.genome_csv}'" }
+        .fromPath( params.genome_csv.split(',').toList() )
+        .ifEmpty { error "Cannot find any file(s) at '${params.genome_csv}'" }
         .set { gene_manifest }
 
     // Download the genes for each genome

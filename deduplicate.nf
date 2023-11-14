@@ -45,7 +45,7 @@ workflow {
 
     // Get all of the files in the specified folder
     Channel
-        .fromPath("${gene_folder}/*")
+        .fromPath("${gene_folder}/**")
         .ifEmpty { error "Cannot find any files at ${gene_folder}/*" }
         .set { gene_ch }
 
