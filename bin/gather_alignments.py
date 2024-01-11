@@ -4,6 +4,7 @@ import gzip
 import json
 import logging
 import os
+from typing import Dict
 import pandas as pd
 
 # Set up logging
@@ -19,7 +20,7 @@ consoleHandler.setFormatter(logFormatter)
 logger.addHandler(consoleHandler)
 
 
-def gather_from_folder(input_folder, suffix, read_f):
+def gather_from_folder(input_folder, suffix, read_f) -> Dict[str, pd.DataFrame]:
     """Read in a set of files from a folder and return a dict."""
 
     # If the folder does not exist
@@ -58,6 +59,7 @@ def gather_famli(input_folder="famli", suffix=".json.gz"):
         read_famli
     )
 
+
 def read_famli(fp):
     """Read a single FAMLI output file."""
 
@@ -65,7 +67,7 @@ def read_famli(fp):
         df = pd.DataFrame(
             json.load(handle)
         )
-    
+
     logger.info(f"Read in alignments to {df.shape[0]:,} genes")
     return df
 
@@ -111,6 +113,7 @@ def gather_alignments():
 
     # Write it out as a CSV
     df.to_csv("read_alignments.csv.gz", index=None)
+
 
 if __name__ == "__main__":
 
