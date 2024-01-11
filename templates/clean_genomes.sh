@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -Eeuo pipefail
+set -euo pipefail
 
 # Function to clean input genomes
 clean_genome(){

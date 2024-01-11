@@ -12,7 +12,7 @@ process annotate_genes {
 
 """#!/bin/bash
 
-set -Eeuo pipefail
+set -euo pipefail
 
 format_geneshot_annotations.py \
     --input "${geneshot_results_hdf}" \
@@ -37,7 +37,7 @@ process annotate_genes_with_abundances {
 
 """#!/bin/bash
 
-set -Eeuo pipefail
+set -euo pipefail
 
 format_geneshot_annotations.py \
     --input "${geneshot_results_hdf}" \

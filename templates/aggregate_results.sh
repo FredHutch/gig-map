@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -Eeuo pipefail
+set -euo pipefail
 
 # Start a redis server in the background
 redis-server \

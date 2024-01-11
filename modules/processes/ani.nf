@@ -12,7 +12,7 @@ process mash_sketch {
 """
 #!/bin/bash
 
-set -Eeuo pipefail
+set -euo pipefail
 
 mash \
     sketch \
@@ -35,7 +35,7 @@ process mash_join {
 """
 #!/bin/bash
 
-set -Eeuo pipefail
+set -euo pipefail
 
 mash \
     paste \
@@ -59,7 +59,7 @@ process mash_dist {
 """
 #!/bin/bash
 
-set -Eeuo pipefail
+set -euo pipefail
 
 mash \
     dist \

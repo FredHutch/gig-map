@@ -33,7 +33,7 @@ process cluster_genomes {
 
 """#!/bin/bash
 
-set -Eeuo pipefail
+set -euo pipefail
 
 cluster_genomes.py \
     --alignments "${alignments_csv_gz}" \

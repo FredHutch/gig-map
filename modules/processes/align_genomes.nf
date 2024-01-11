@@ -110,7 +110,7 @@ process makedb_blast {
     script:
     """#!/bin/bash
 
-set -Eeuo pipefail
+set -euo pipefail
 
 # Iterate over the inputs
 for f in inputs/*; do
@@ -182,7 +182,7 @@ process add_genome_name {
 
 """#!/bin/bash
 
-set -Eeuo pipefail
+set -euo pipefail
 
 gunzip -c "${alignments_gz}" \
     | while read line; do echo -e "\$line\\t${genome_name}"; done \
@@ -198,7 +198,7 @@ process concatenate_alignments {
     container "${params.container__pandas}"
     label 'io_limited'
     publishDir "${params.output}", mode: 'copy', overwrite: true
-   
+
     input:
     path "inputs/*.tsv.gz"
 
@@ -207,7 +207,7 @@ process concatenate_alignments {
 
 """#!/bin/bash
 
-set -Eeuo pipefail
+set -euo pipefail
 
 echo "${params.aln_fmt} genome" | tr ' ' ',' > "genomes.aln.csv"
 
