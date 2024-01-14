@@ -4,6 +4,7 @@ from typing import List
 import pandas as pd
 from pathlib import Path
 import plotly.express as px
+from scipy.cluster import hierarchy
 import logging
 
 logger = logging.getLogger(__name__)
@@ -28,8 +29,17 @@ def run():
     # Plot the number of genomes each gene was aligned to
     gene_frequency_bars(aln)
 
+    # Plot the number of genomes each gene was aligned to
+    genome_frequency_bars(aln)
+
     # Plot the distribution of alignment coverage and identity metrics
     alignment_qc_metrics(aln)
+
+    # Plot a heatmap of all aligned genes
+    alignment_heatmap(aln)
+
+    # Count up the number of genes per genome, given different thresholds
+    gene_frequency_genome_size(aln)
 
 
 def read_aln() -> pd.DataFrame:
@@ -83,6 +93,29 @@ def gene_frequency_bars(aln: pd.DataFrame):
     fig.write_html("gene_frequency_bars.html")
 
 
+def genome_frequency_bars(aln: pd.DataFrame):
+
+    # Count up the number of genes each genome contains
+    vc = (
+        aln
+        .reindex(columns=["genome", "sseqid"])
+        .drop_duplicates()
+        ["genome"]
+        .value_counts()
+        .reset_index()
+    )
+
+    # Make a bargraph
+    fig = px.bar(
+        data_frame=vc,
+        x="index",
+        y="genome",
+        labels=dict(genome="Number of Genes", index="Genome"),
+        title="Genome Size Distribution"
+    )
+    fig.write_html("genome_frequency_bars.html")
+
+
 def alignment_qc_metrics(aln: pd.DataFrame):
 
     colorscale = [
@@ -109,6 +142,92 @@ def alignment_qc_metrics(aln: pd.DataFrame):
         color_continuous_scale=colorscale
     )
     fig.write_html("alignment_qc_metrics.html")
+    
+
+def alignment_heatmap(aln: pd.DataFrame):
+
+    # Make a wide DataFrame
+    wide_df = aln.pivot_table(
+        index="genome",
+        columns="sseqid",
+        values="pident",
+        aggfunc=max
+    ).fillna(0)
+
+    # Sort the rows and columns (default is euclidean distance)
+    wide_df = sort(wide_df)
+    wide_df = sort(wide_df.T).T
+
+    fig = px.imshow(
+        img=wide_df,
+        aspect='auto',
+        color_continuous_scale="Blues",
+        labels=dict(sseqid="Gene", genome="Genome")
+    )
+    fig.write_html("alignment_heatmap.html")
+
+
+def gene_frequency_genome_size(aln: pd.DataFrame):
+
+    # Make a wide DataFrame
+    wide_df = (
+        aln.pivot_table(
+            index="sseqid",
+            columns="genome",
+            values="pident",
+            aggfunc=max
+        )
+        .fillna(0)
+        > 0
+    )
+
+    # Count up the number of genomes per gene
+    vc = wide_df.sum(axis=1)
+
+    # Count up the number of genes per genome at different thresholds
+    plot_df = pd.DataFrame([
+        (
+            dict(
+                genome=genome,
+                count=count,
+                threshold=threshold
+            )
+        )
+        for threshold in range(1, vc.max())
+        for genome, count in (
+            wide_df
+            .loc[vc >= threshold]
+            .sum()
+            .items()
+        )
+    ])
+
+    fig = px.box(
+        data_frame=plot_df,
+        x="threshold",
+        y="count",
+        points="all",
+        labels=dict(
+            threshold="Minimum Number of Genomes per Gene",
+            count="Number of Genes per Genome at Threshold"
+        ),
+        hover_data=["genome"]
+    )
+    fig.write_html("gene_frequency_genome_size.html")
+
+
+def sort(df: pd.DataFrame, method="average", metric="euclidean"):
+    return df.reindex(
+        index=df.index.values[
+            hierarchy.leaves_list(
+                hierarchy.linkage(
+                    df,
+                    method=method,
+                    metric=metric
+                )
+            )
+        ]
+    )
 
 
 if __name__ == "__main__":
