@@ -83,7 +83,7 @@ workflow align_genomes {
 
     // Select a set of marker genes from the provided alignments
     select_markers(
-        concatenate_alignments.out,
+        concatenate_alignments.out.csv,
         centroids_faa
     )
 
@@ -109,6 +109,6 @@ workflow align_genomes {
     emit:
     markers = select_markers.out
     clean_genomes = clean_genomes.out
-    concat_alignments = concatenate_alignments.out
+    concat_alignments = concatenate_alignments.out.csv
 
 }

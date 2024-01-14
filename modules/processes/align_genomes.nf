@@ -203,22 +203,11 @@ process concatenate_alignments {
     path "inputs/*.tsv.gz"
 
     output:
-    path "genomes.aln.csv.gz"
+    path "genomes.aln.csv.gz", emit: csv
+    path "*.html", emit: html
 
-"""#!/bin/bash
-
-set -euo pipefail
-
-echo "${params.aln_fmt} genome" | tr ' ' ',' > "genomes.aln.csv"
-
-gunzip -c inputs/*.tsv.gz \
-    | tr '\t' ',' \
-    >> "genomes.aln.csv"
-
-gzip "genomes.aln.csv"
-
-"""
-
+    script:
+    template "concatenate_alignments.py"
 }
 
 // Select a set of marker genes
