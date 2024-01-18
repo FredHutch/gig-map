@@ -10,6 +10,17 @@ process bin_genes {
     output:
     path "*"
 
-    script:
-    template "bin_genes.py"
+    """#!/bin/bash
+set -e
+
+bin_genes.py \
+    --genome_aln "${genome_aln}" \
+    --gene_annot "${gene_annot}" \
+    --min_coverage "${params.min_coverage}" \
+    --min_identity "${params.min_identity}" \
+    --min_genomes_per_gene "${params.min_genomes_per_gene}" \
+    --max_dist_genes "${params.max_dist_genes}" \
+    --min_bin_size "${params.min_bin_size}" \
+    --max_dist_genomes "${params.max_dist_genomes}" \
+    """
 }

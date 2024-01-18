@@ -52,6 +52,7 @@ workflow {
 
         gene_bins.csv       Table listing genes and bins (including optional gene annotations)
         genome_groups.csv   Table listing the genome groups based on gene bin content
+        bin_genes.log       Logfile reporting processing metrics
         *.html              Various summary figures
         """,
         params.help

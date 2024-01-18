@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import anndata as ad
+import click
 import logging
 from typing import Dict, List, Union
 import pandas as pd
@@ -662,21 +663,39 @@ def sort_index(df: pd.DataFrame, method="average", metric="euclidean"):
     ]
 
 
-def main():
+@click.command
+@click.option('--genome_aln', type=str)
+@click.option('--gene_annot', type=str)
+@click.option('--min_coverage', type=float)
+@click.option('--min_identity', type=float)
+@click.option('--min_genomes_per_gene', type=int)
+@click.option('--max_dist_genes', type=float)
+@click.option('--min_bin_size', type=int)
+@click.option('--max_dist_genomes', type=float)
+def main(
+    genome_aln,
+    gene_annot,
+    min_coverage,
+    min_identity,
+    min_genomes_per_gene,
+    max_dist_genes,
+    min_bin_size,
+    max_dist_genomes
+):
 
     # Read in the genome alignment data and set up an object
     gene_data = GeneData.from_alignment_csv(
-        "${genome_aln}",
-        "${gene_annot}",
-        min_coverage=float("${params.min_coverage}"),
-        min_identity=float("${params.min_identity}"),
-        min_genomes_per_gene=int("${params.min_genomes_per_gene}")
+        genome_aln,
+        gene_annot,
+        min_coverage=min_coverage,
+        min_identity=min_identity,
+        min_genomes_per_gene=min_genomes_per_gene
     )
 
     # bin the genes
     gene_data.bin_genes(
-        max_dist_genes=float("${params.max_dist_genes}"),
-        min_bin_size=int("${params.min_bin_size}")
+        max_dist_genes=max_dist_genes,
+        min_bin_size=min_bin_size
     )
 
     # Summarize the bins
@@ -687,7 +706,7 @@ def main():
 
     # Group the genomes
     gene_data.group_genomes(
-        max_dist_genomes=float("${params.max_dist_genomes}")
+        max_dist_genomes=max_dist_genomes
     )
 
     # Make heatmaps
