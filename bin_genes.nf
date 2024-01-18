@@ -43,14 +43,16 @@ workflow {
 
         --max_dist_genes    Maximum Jaccard distance threshold used to group genes into bins
 
-        --min_bin_size  Minimum number of genes needed to retain a bin
+        --min_bin_size      Minimum number of genes needed to retain a bin
 
         --max_dist_genomes  Maximum Euclidean distance threshold used to group genomes based on gene bin content
 
 
         Outputs:
 
-        bins.csv.gz     Table listing genes and bins (including optional gene annotations)
+        gene_bins.csv       Table listing genes and bins (including optional gene annotations)
+        genome_groups.csv   Table listing the genome groups based on gene bin content
+        *.html              Various summary figures
         """,
         params.help
     )
