@@ -396,6 +396,15 @@ class GeneData(ad.AnnData):
         )
         self.obs.to_csv("genome_groups.csv")
 
+        # Calculate the mean detection rate for each bin
+        # across each of the genome groups
+        self.uns["group_profile"] = (
+            self.obsm["prop_genes_detected"]
+            .groupby(self.obs["group"])
+            .mean()
+        )
+        self.uns["group_profile"].to_csv("group_profile.csv")
+
     def make_heatmaps(self):
 
         # All genes, all genomes
@@ -428,17 +437,12 @@ class GeneData(ad.AnnData):
 
         # Binned genes, binned genomes
         heatmap(
-            (
-                self.obsm["prop_genes_detected"]
-                .groupby(self.obs["group"])
-                .mean()
-            ),
+            self.uns["group_profile"],
             index_bars=self.obs["group"].value_counts(),
             columns_bars=self.var["bin"].value_counts(),
             filename="heatmap.binned_genes_grouped_genomes.html",
             metric="braycurtis"
         )
-
 
 
 class FigureBuilder:
@@ -664,8 +668,8 @@ def sort_index(df: pd.DataFrame, method="average", metric="euclidean"):
 
 
 @click.command
-@click.option('--genome_aln', type=str)
-@click.option('--gene_annot', type=str)
+@click.option('--genome_aln', type=click.Path(exists=True))
+@click.option('--gene_annot', type=click.Path(exists=True))
 @click.option('--min_coverage', type=float)
 @click.option('--min_identity', type=float)
 @click.option('--min_genomes_per_gene', type=int)
