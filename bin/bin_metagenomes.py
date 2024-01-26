@@ -404,22 +404,34 @@ class Metagenome:
             pd.Series(self.data.uns["bin_size"])
         ).T
 
-        for sample, bin_abund in (
-            self
-            .data
+        # Translate the scaled gene abundance into a proportion, so
+        # that the fitted data will ideally have the same sum as
+        # the number of reads sequenced for that sample
+        group_profile = group_profile / group_profile.sum()
+
+        # Make a table with the number of reads per bin
+        reads_per_bin = (
+            self.data
             .mod["bins"]
             .to_df()
             .reindex(
                 columns=group_profile.index.values
             )
             .fillna(0)
-            .iterrows()
-        ):
+        )
+
+        for sample, bin_abund in reads_per_bin.iterrows():
+            # Run NNLS
             x, rnorm = nnls(
                 group_profile,
                 bin_abund
             )
-            nnls_residual[sample] = rnorm
+
+            # Scale the 2-norm of the residual by the total
+            # number of reads in the right-hand side vector
+            nnls_residual[sample] = rnorm / bin_abund.sum()
+
+            # Add a vector with the fitted genome abundances
             genome_abund[sample] = (
                 pd.Series(
                     x,
@@ -427,9 +439,12 @@ class Metagenome:
                 )
             )
 
+        # Make a DataFrame with the fitted read numbers per genome
+        genome_abund = pd.DataFrame(genome_abund)
+
         self.data.mod["genomes"] = ad.AnnData(
             X=(
-                pd.DataFrame(genome_abund)
+                genome_abund
                 .T
                 .reindex(
                     index=self.data.obs_names,
