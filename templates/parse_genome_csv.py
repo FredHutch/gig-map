@@ -7,6 +7,7 @@ df = pd.read_csv("input.csv")
 # Make a list of URLs to download
 url_list = []
 
+
 # Function to format the path to the genome FASTA
 def format_ftp(ftp_prefix):
 
@@ -21,16 +22,18 @@ def format_ftp(ftp_prefix):
     # Return the path to the genome FASTA
     return f"{ftp_prefix}/{id_str}${params.parse_genome_csv_suffix}"
 
+
 # Populate a list with formatted annotations for each file
 # which will be downloaded from NCBI
 annotation_list = []
 
+
 # Function to format the annotation for each row
-def format_annotation(r):
+def format_annotation(r, cname):
 
     # Get the name of the file which will be downloaded
     annots = dict(
-        genome_id=r["GenBank FTP"].rsplit("/", 1)[-1] + "${params.parse_genome_csv_suffix}"
+        genome_id=r[cname].rsplit("/", 1)[-1] + "${params.parse_genome_csv_suffix}"
     )
 
     # Rename fields
@@ -54,32 +57,40 @@ def format_annotation(r):
 
     return annots
 
+
+def get_ftp_cname(r):
+    """Return 'GenBank FTP' or 'RefSeq FTP' if either is present."""
+
+    # Try GenBank first, and then fall back to RefSeq
+    for cname in ['GenBank FTP', 'RefSeq FTP']:
+
+        # If a value is provided, use it
+        if (
+            not pd.isnull(r[cname]) and 
+            isinstance(r[cname], str) and 
+            r[cname].startswith('ftp://')
+        ):
+            return cname
+
+
 # Iterate over each row in the table
 for _, r in df.iterrows():
-    
-    # If there is no value in the 'GenBank FTP' column
-    if pd.isnull(r['GenBank FTP']):
-    
-        # Skip it
-        continue
-    
-    # If the 'GenBank FTP' column doesn't start with 'ftp://'
-    elif not r['GenBank FTP'].startswith('ftp://'):
-    
-        # Skip it
-        continue
 
-    # Otherwise
+    cname = get_ftp_cname(r)
+
+    if cname is None:
+        print("No download URL provided for record:")
+        print(r.to_json())
+
     else:
-
         # Format the path to the genome in that folder
         url_list.append(
-            format_ftp(r['GenBank FTP'])
+            format_ftp(r[cname])
         )
 
         # Format the annotations
         annotation_list.append(
-            format_annotation(r)
+            format_annotation(r, cname)
         )
 
 # Write the list to a file
