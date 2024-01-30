@@ -360,6 +360,7 @@ class GeneData(ad.AnnData):
                     x=prop_in_bin.index.values,
                     y=prop_in_bin[kw].values,
                     hovertext=prop_in_bin[kw].values,
+                    showlegend=False
                 ),
                 row=ix+1,
                 col=1
