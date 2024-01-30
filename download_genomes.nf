@@ -16,15 +16,24 @@ workflow {
     helpers.help_message(
         """
         Download genomes from a collection of genomes in the NCBI Genome database
+
+        Downloads the genome sequences in nucleotide FASTA format from a collection
+        of genomes in the NCBI Genome database.
         
-        Downloads the gene sequences in amino acid FASTA format from a collection
-        of genomes in the NCBI Genome database. A table of genomes to be downloaded
-        can be accessed from the website:
+        The legacy format for a table of genomes to be downloaded from NCBI
+        can be accessed in CSV format from this website:
         https://www.ncbi.nlm.nih.gov/genome/browse#!/prokaryotes/
+        Specify inputs from this website as --genome_csv
+
+        Alternatively, the updated format for NCBI genomes using the Datasets
+        API can be accessed in TSV format from this website:
+        https://www.ncbi.nlm.nih.gov/datasets/genome/
+        Specify inputs from this website as --genome_tsv
 
         Parameters:
 
         --genome_csv           Table of genomes to be downloaded (CSV)
+        --genome_tsv           Table of genomes to be downloaded (TSV)
         --output               Folder where output files will be written
 
         """,
@@ -33,17 +42,21 @@ workflow {
 
     // Make sure that the required parameters were provided
     helpers.require_param(params.output, "output")
-    helpers.require_param(params.genome_csv, "genome_csv")
 
-    // Parse the CSV and raise an error if the path is not valid
+    // Parse the CSV path(s), if provided
     Channel
         .fromPath( params.genome_csv.split(',').toList() )
-        .ifEmpty { error "Cannot find any file(s) at '${params.genome_csv}'" }
-        .set { genome_manifest }
+        .set { genome_manifest_csv }
+
+    // Parse the TSV path(s), if provided
+    Channel
+        .fromPath( params.genome_tsv.split(',').toList() )
+        .set { genome_manifest_tsv }
 
     // Download the genomes for each genome
     download_genomes(
-        genome_manifest
+        genome_manifest_csv,
+        genome_manifest_tsv
     )
 
 }

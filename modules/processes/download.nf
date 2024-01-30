@@ -35,6 +35,64 @@ process parse_genome_csv {
 
 }
 
+// Parse the NCBI Genome Browser TSV 
+process parse_genome_tsv {
+    container "${params.container__pandas}"
+    label "io_limited"
+
+    input:
+        path "input.tsv"
+    
+    output:
+        path "acc_list.txt"
+
+    script:
+    template "parse_genome_tsv.py"
+
+}
+
+process getDatasets {
+    container "${params.container__datasets}"
+    label "io_limited"
+
+    maxForks params.ftp_threads
+
+    input:
+        val dataset_acc
+
+    output:
+        tuple val(dataset_acc), path("ncbi_dataset.zip")
+
+    script:
+    template "getDatasets.sh"
+
+}
+
+process unpackDatasets {
+    container "${params.container__famli}"
+    label "io_limited"
+    publishDir "${params.ftp_output_folder}", mode: 'copy', overwrite: true, enabled: "${params.publishFTP}" == "true", pattern: "*.f*"
+
+    maxForks params.ftp_threads
+
+    input:
+        tuple val(dataset_acc), path("ncbi_dataset.zip")
+
+    output:
+        path "*.f*", emit: fasta
+        path "assembly_data_report.jsonl", emit: annot
+
+    """#!/bin/bash
+set -e
+unzip ncbi_dataset.zip
+mv ncbi_dataset/data/assembly_data_report.jsonl ./
+mv ncbi_dataset/data/*/* ./
+[ -s protein.faa ] && mv protein.faa ${dataset_acc}_protein.faa
+gzip *.f*
+    """
+
+}
+
 
 // Combine all of the genome annotations into a single file
 process concatenate_annotations {
@@ -44,42 +102,12 @@ process concatenate_annotations {
    
     input:
     path "annotations/*.csv.gz"
+    path "annotations/*.jsonl"
     val output_prefix
 
     output:
     path "${output_prefix}.annot.csv.gz"
 
-"""#!/usr/bin/env python3
-import pandas as pd
-import os
-
-# Set the name of the output file based on the output_prefix value (genes/genomes)
-output_fp = "${output_prefix}.annot.csv.gz"
-
-# If there are any annotations available
-if os.path.exists('annotations'):
-
-    # Read in all of the inputs
-    df = pd.concat([
-        pd.read_csv(
-            os.path.join('annotations', fp)
-        )
-        for fp in os.listdir('annotations')
-        if fp.endswith('.csv.gz')
-    ])
-
-    # Write out the table
-    df.to_csv(
-        output_fp,
-        index=None
-    )
-
-# If there are no annotations available
-else:
-
-    # Write out an empty file
-    with open(output_fp, 'wt') as handle:
-        handle.write("${output_prefix}_id\\n")
-
-"""
+    script:
+    template "concatenate_annotations.py"
 }
