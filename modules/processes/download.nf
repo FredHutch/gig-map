@@ -61,7 +61,7 @@ process getDatasets {
         val dataset_acc
 
     output:
-        tuple val(dataset_acc), path("ncbi_dataset.zip")
+        tuple val(dataset_acc), path("ncbi_dataset.zip"), optional: true
 
     script:
     template "getDatasets.sh"
