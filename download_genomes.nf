@@ -46,11 +46,13 @@ workflow {
     // Parse the CSV path(s), if provided
     Channel
         .fromPath( params.genome_csv.split(',').toList() )
+        .filter { it.exists() }
         .set { genome_manifest_csv }
 
     // Parse the TSV path(s), if provided
     Channel
         .fromPath( params.genome_tsv.split(',').toList() )
+        .filter { it.exists() }
         .set { genome_manifest_tsv }
 
     // Download the genomes for each genome
