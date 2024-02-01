@@ -68,13 +68,13 @@ workflow {
 
     // Get all of the genomes
     Channel
-        .fromPath("${params.genomes}/**")
+        .fromPath("${params.genomes}/**.f*")
         .filter { it.exists() }
         .set { genomes_ch }
 
     // Get all of the genes
     Channel
-        .fromPath("${params.genes}/**")
+        .fromPath("${params.genes}/**.f*")
         .filter { it.exists() }
         .set { genes_ch }
 
