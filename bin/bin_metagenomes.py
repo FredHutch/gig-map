@@ -1219,10 +1219,9 @@ def main(
         min_n_genes
     )
 
-    # FIXME
-    # mdata.to_csv(output_folder)
-    # mdata.to_h5ad(output_folder)
-    # mdata.data.write_h5mu(f"{output_folder}/metagenome.h5mu")
+    mdata.to_csv(output_folder)
+    mdata.to_h5ad(output_folder)
+    mdata.data.write_h5mu(f"{output_folder}/metagenome.h5mu")
     mdata.plot(output_folder)
 
 
