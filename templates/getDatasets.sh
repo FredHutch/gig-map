@@ -12,7 +12,12 @@ hasData(){
         \$1 \
         --no-progressbar \
         --include ${params.ncbi_datasets_type} \
-        --preview > preview.json
+        --preview > preview.json 2> error.txt
+
+    # If there was a download error, return False
+    if grep -q "Download error" error.txt; then
+        return 1
+    fi
 
     # Parse the number of records
     parse_preview_json.py
