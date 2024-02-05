@@ -1007,7 +1007,7 @@ class Metagenome:
                 for i in [1, 2, 4, 5, 6]
             }
         )
-        fig.write_html(f"{output_fp}.html")
+        fig.write_html(f"{output_fp}.html", include_plotlyjs="cdn")
         for ext in ['png', 'pdf']:
             fig.write_image(
                 f"{output_fp}.{ext}",

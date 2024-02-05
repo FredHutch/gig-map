@@ -90,7 +90,7 @@ def gene_frequency_bars(aln: pd.DataFrame):
         labels=dict(sseqid="Number of Genomes", index="Gene"),
         title="Gene Detection Frequency"
     )
-    fig.write_html("gene_frequency_bars.html")
+    fig.write_html("gene_frequency_bars.html", include_plotlyjs="cdn")
 
 
 def genome_frequency_bars(aln: pd.DataFrame):
@@ -113,7 +113,7 @@ def genome_frequency_bars(aln: pd.DataFrame):
         labels=dict(genome="Number of Genes", index="Genome"),
         title="Genome Size Distribution"
     )
-    fig.write_html("genome_frequency_bars.html")
+    fig.write_html("genome_frequency_bars.html", include_plotlyjs="cdn")
 
 
 def alignment_qc_metrics(aln: pd.DataFrame):
@@ -141,7 +141,7 @@ def alignment_qc_metrics(aln: pd.DataFrame):
         title="Gene Detection QC Metrics",
         color_continuous_scale=colorscale
     )
-    fig.write_html("alignment_qc_metrics.html")
+    fig.write_html("alignment_qc_metrics.html", include_plotlyjs="cdn")
     
 
 def alignment_heatmap(aln: pd.DataFrame):
@@ -164,7 +164,7 @@ def alignment_heatmap(aln: pd.DataFrame):
         color_continuous_scale="Blues",
         labels=dict(sseqid="Gene", genome="Genome")
     )
-    fig.write_html("alignment_heatmap.html")
+    fig.write_html("alignment_heatmap.html", include_plotlyjs="cdn")
 
 
 def gene_frequency_genome_size(aln: pd.DataFrame):
@@ -213,7 +213,7 @@ def gene_frequency_genome_size(aln: pd.DataFrame):
         ),
         hover_data=["genome"]
     )
-    fig.write_html("gene_frequency_genome_size.html")
+    fig.write_html("gene_frequency_genome_size.html", include_plotlyjs="cdn")
 
 
 def sort(df: pd.DataFrame, method="average", metric="euclidean"):
