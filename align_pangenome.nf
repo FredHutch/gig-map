@@ -73,7 +73,7 @@ workflow {
     helpers.require_param(params.output, "output")
 
     // If there is no samplesheet
-    if ( "${params.samplesheet}" != "false" ){
+    if ( "${params.samplesheet}" == "false" ){
         // Requre the reads parameter
         helpers.require_param(params.reads, "reads")
     }

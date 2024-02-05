@@ -10,7 +10,6 @@ def helpers = shell.parse(new File("${workflow.projectDir}/helpers.gvy"))
 // Import sub-workflows
 include { align_reads } from './modules/align_reads'
 include { find_reads } from './modules/find_reads'
-include { join_read_pairs } from './modules/processes/align_reads'
 
 // Standalone entrypoint
 workflow {
@@ -53,7 +52,7 @@ workflow {
     helpers.require_param(params.genes, "genes")
 
     // If there is no samplesheet
-    if ( "${params.samplesheet}" != "false" ){
+    if ( "${params.samplesheet}" == "false" ){
         // Requre the reads parameter
         helpers.require_param(params.reads, "reads")
     }
