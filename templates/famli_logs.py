@@ -11,6 +11,8 @@ for fp in os.listdir("."):
         sample = fp[:-len(".log")]
         with open(fp) as handle:
             for line in handle:
+                if "[FAMLI parse] " not in line:
+                    continue
                 line = line.rstrip("\\n").split("[FAMLI parse] ", 1)[1]
                 if line.startswith("Time elapsed: "):
                     dat[sample]["seconds"] = float(line[len("Time elapsed: "):].replace(",", ""))
