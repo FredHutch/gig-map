@@ -386,8 +386,11 @@ class GeneData(ad.AnnData):
         logger.info(f"Maximum {method} distance: {max_dist_genomes}")
 
         # Assign genomes into groups
+        # (drop any genomes which don't have gene content in bins)
         self.obs["group"] = self.linkage_cluster(
-            self.obsm["n_genes_detected"],
+            self.obsm["n_genes_detected"].loc[
+                self.obsm["n_genes_detected"].sum(axis=1) > 0
+            ],
             method=method,
             metric=metric,
             max_dist=max_dist_genomes,
