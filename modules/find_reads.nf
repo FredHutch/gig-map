@@ -17,10 +17,10 @@ workflow find_reads {
             )
             .map {
                 it -> [
-                    it['sample'],
+                    it.get('sample', it['"sample"']),
                     [
-                        file(it.get('R1', it['fastq_1']), checkIfExists: true),
-                        file(it.get('R2', it['fastq_2']), checkIfExists: true)
+                        file(it.get('R1', it.get('fastq_1', it['"fastq_1"'])), checkIfExists: true),
+                        file(it.get('R2', it.get('fastq_2', it['"fastq_2"'])), checkIfExists: true)
                     ]
                 ]
             }
