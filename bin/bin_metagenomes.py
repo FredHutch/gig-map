@@ -309,11 +309,27 @@ class Metagenome:
 
         filt_n = filtered_obs.sum()
         tot_n = filtered_obs.shape[0]
-        logger.info(f"{filt_n:,} / {tot_n:,} samples have {query}")
+        logger.info(f"{filt_n:,} / {tot_n:,} samples filtered out: {query}")
 
-        if filtered_obs.any():
-            self.data = self.data[~filtered_obs]
-        self.log_content()
+        if "filtered_out" not in self.data.uns:
+            self.data.uns["filtered_out"] = pd.Series(
+                False,
+                index=self.data.obs_names
+            )
+
+        self.data.uns["filtered_out"] = (
+            self.data.uns["filtered_out"] |
+            filtered_obs
+        )
+        filt_n = self.data.uns["filtered_out"].sum()
+        logger.info(f"Total samples filtered out: {filt_n:,} / {tot_n:,}")
+
+    @property
+    def filtered_samples(self):
+        """List of samples which pass the filters."""
+        return self.data.uns["filtered_out"].index.values[
+            ~self.data.uns["filtered_out"]
+        ]
 
     def log_content(self):
         for line in str(self.data).split("\n"):
@@ -341,6 +357,7 @@ class Metagenome:
                 )
                 .sum()
                 .T
+                .reindex(index=self.filtered_samples)
             )
         )
         self.data.mod["bins"].var["n_genes"] = pd.Series(self.data.uns["bin_size"])
