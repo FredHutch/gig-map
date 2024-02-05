@@ -2,6 +2,7 @@
 process join_read_pairs {
     container "${params.container__gigmap}"
     label 'io_limited'
+    tag "${sample_name}"
     
     input:
     tuple val(sample_name), path("inputs/")
@@ -19,6 +20,7 @@ cat inputs/* > "${sample_name}.${params.reads_suffix}"
 process count_reads {
     container "${params.container__pandas}"
     label 'io_limited'
+    tag "${sample_name}"
     
     input:
     // Place all input files in an input/ folder, naming with a simple numeric index
@@ -40,6 +42,7 @@ gunzip -c input/input*.fastq.gz | awk 'NR % 4 == 1' | wc -l > ${sample_name}.num
 process diamond {
     container "${params.container__diamond}"
     label 'mem_medium'
+    tag "${sample_name}"
     
     input:
     // Place all input files in an input/ folder, naming with a simple numeric index
@@ -76,6 +79,7 @@ process diamond_logs {
 process filter_aln {
     container "${params.container__pandas}"
     label 'io_limited'
+    tag "${sample_name}"
     
     input:
     tuple val(sample_name), path(aln)
@@ -93,6 +97,7 @@ process famli {
     container "${params.container__famli}"
     label 'mem_medium'
     publishDir "${params.output}/alignments/", mode: "copy", overwrite: true
+    tag "${sample_name}"
     
     input:
     tuple val(sample_name), file(input_aln)
