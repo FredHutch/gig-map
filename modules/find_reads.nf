@@ -19,8 +19,8 @@ workflow find_reads {
                 it -> [
                     it['sample'],
                     [
-                        file(it['R1'], checkIfExists: true),
-                        file(it['R2'], checkIfExists: true)
+                        file(it.get('R1', it['fastq_1']), checkIfExists: true),
+                        file(it.get('R2', it['fastq_2']), checkIfExists: true)
                     ]
                 ]
             }
