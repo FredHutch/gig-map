@@ -17,7 +17,7 @@ workflow find_reads {
             )
             .map {
                 it -> [
-                    it.get('sample', it['"sample"']),
+                    it.get('sample', it['"sample"']).replaceAll(/^\"|\"$/, ""),
                     [
                         file(it.get('R1', it.get('fastq_1', it['"fastq_1"']).replaceAll(/^\"|\"$/, "")), checkIfExists: true),
                         file(it.get('R2', it.get('fastq_2', it['"fastq_2"']).replaceAll(/^\"|\"$/, "")), checkIfExists: true)
