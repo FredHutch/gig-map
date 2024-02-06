@@ -170,7 +170,6 @@ class Metagenome:
         self.calc_bin_silhouette_score()
         self.est_genome_abund()
         self.calc_rel_abund()
-        del self.data.uns["filtered_out"]
 
         return self
 
@@ -493,14 +492,11 @@ class Metagenome:
         self.data.update()
         self.log_content()
 
-    def calc_rel_abund(self, mods=None, prefix="Relative to "):
+    def calc_rel_abund(self, mods=None):
         """
-        Compute the relative abundance in different ways.
-        1. Relative to any feature which is ubiquitously present
-        2. Relative to the total number of reads sequenced
-        3. Relative to the number of reads aligned
+        Normalize the abundance to the number of reads aligned
 
-        For each modality, a layer will be created with the given prefix
+        For each modality, a 'prop' layer will be created
         """
         if mods is None:
             mods = ["bins", "genomes"]
@@ -509,38 +505,26 @@ class Metagenome:
             # Get the values for this modality
             abund: pd.DataFrame = self.data.mod[mod].to_df()
 
-            # Identify any variables which are found in all samples
-            comp_vars = [var for var, vals in abund.items() if (vals > 0).all()]
-            logger.info(f"There are {len(comp_vars):,} variables {mod} present in all samples")
-            for var in comp_vars:
-                kw = f"{prefix}{var}"
-                logger.info(f"Computing {mod} {kw}")
-                # Calculate the ratio to the comparison variable
-                ratios = (abund.T / abund[var]).T
-                # Save the table
-                self.data.mod[mod].layers[kw] = ratios
-
-            # Run the analysis in comparison to the number of aligned reads
-            for kw, label in [
-                ("tot_reads", "Total Reads"),
-                ("aligned_reads", "Aligned Reads")
-            ]:
-                assert kw in self.data.mod["genes"].obs
-                new_kw = f"{prefix}{label}"
-                logger.info(f"Computing {mod} {new_kw}")
-                rel_abund = (
-                    abund.T /
-                    self.data.mod["genes"].obs[kw].reindex(
-                        index=abund.index.values
-                    )
-                ).T
-                self.data.mod[mod].layers[new_kw] = rel_abund
+            assert "aligned_reads" in self.data.mod["genes"].obs
+            logger.info(f"Normalizing {mod} to sequencing depth")
+            rel_abund = (
+                abund.T /
+                self.data.mod["genes"].obs["aligned_reads"].reindex(
+                    index=abund.index.values
+                )
+            ).T
+            self.data.mod[mod].layers["prop"] = rel_abund
 
     def compare_groups(self, category, mods=None):
         assert category in self.data.obs.columns.values
 
         # Get the metadata values
-        meta: pd.Series = self.data.obs[category].dropna()
+        meta: pd.Series = (
+            self.data
+            .obs[category]
+            .reindex(index=self.filtered_samples)
+            .dropna()
+        )
         logger.info(f"Samples with {category} defined: {meta.shape[0]:,}")
 
         # We can only support the comparison of two groups (at this point)
@@ -557,30 +541,16 @@ class Metagenome:
             self.compare_groups_mod(meta, mod)
             self.log_content()
 
-    @staticmethod
-    def pack_meta_layer(meta_name, layer):
-        return f"~ {meta_name} - {layer}"
-
-    @staticmethod
-    def unpack_meta_layer(varm):
-        if varm.startswith("~ "):
-            return varm[2:].split(" - ", 1)
-        else:
-            return None, None
-
     def compare_groups_mod(self, meta: pd.Series, mod: str):
         logger.info(f"Comparing samples on the basis of {mod}")
 
-        # Use each of the different relative abundance tables
-        # which have been computed for this modality
-        for layer in self.data.mod[mod].layers:
-            label = self.pack_meta_layer(meta.name, layer)
-            logger.info(f"Comparing samples {label}")
-            abund: pd.DataFrame = self.data.mod[mod].to_df(layer)
+        # Use the relative abundance table computed for this modality
+        logger.info(f"Comparing samples using {mod} content")
+        abund: pd.DataFrame = self.data.mod[mod].to_df("prop")
 
-            self.data.mod[mod].varm[label] = (
-                self.compare_groups_single(meta, abund)
-            )
+        self.data.mod[mod].varm[f"~{meta.name}"] = (
+            self.compare_groups_single(meta, abund)
+        )
 
     def compare_groups_single(
         self,
@@ -622,11 +592,15 @@ class Metagenome:
 
     def to_h5ad(self, output_folder):
 
+        if "filtered_out" in self.data.uns:
+            del self.data.uns["filtered_out"]
         for mod in self.data.mod:
             self.data.mod[mod].write_h5ad(f"{output_folder}/metagenome.{mod}.h5ad")
 
     def to_csv(self, output_folder):
 
+        if "filtered_out" in self.data.uns:
+            del self.data.uns["filtered_out"]
         self.to_csv_obj(self.data, f"{output_folder}/metagenome")
 
     def to_csv_obj(self, obj, path):
@@ -681,23 +655,29 @@ class Metagenome:
         # and genomes extend horizontally.
 
         for bins_varm in self.data.mod["bins"].varm:
-            bins_meta, bins_layer = self.unpack_meta_layer(bins_varm)
+            assert bins_varm.startswith("~"), f"Expected ~meta, not {bins_varm}"
+            bins_meta = bins_varm[1:]
 
             for genomes_varm in self.data.mod["genomes"].varm:
-                genomes_meta, genome_layer = self.unpack_meta_layer(genomes_varm)
+                assert genomes_varm.startswith("~"), f"Expected ~meta, not {genomes_varm}"
+                genomes_meta = genomes_varm[1:]
 
                 if bins_meta == genomes_meta:
-                    output_fn = ' - '.join([bins_meta, "bins", bins_layer, "genomes", genome_layer])
+                    output_fn = genomes_meta
                     output_fp = f"{output_folder}/{output_fn}"
                     self.write_image(
                         bins_meta,
-                        bins_layer,
-                        genome_layer,
                         output_fp,
                     )
 
     @staticmethod
-    def sort_index(df):
+    def log_scale(df: pd.DataFrame):
+
+        lowest = df.apply(lambda c: c[c > 0].min()).min()
+        return df.clip(lower=lowest).apply(np.log10)
+
+    @staticmethod
+    def sort_index(df: pd.DataFrame):
         return df.index.values[
             hierarchy.leaves_list(
                 hierarchy.linkage(
@@ -711,8 +691,6 @@ class Metagenome:
     def write_image(
         self,
         meta_cname,
-        bins_layer,
-        genome_layer,
         output_fp
     ):
         """"
@@ -796,7 +774,7 @@ class Metagenome:
         genomes_df: pd.DataFrame = (
             self.data
             .mod["genomes"]
-            .to_df(genome_layer)
+            .to_df("prop")
         )
         sample_order = self.sort_index(genomes_df)
         genomes_df = genomes_df.reindex(
@@ -804,19 +782,10 @@ class Metagenome:
             index=sample_order
         ).fillna(0)
 
-        if genome_layer.startswith("Relative to "):
-            comparitor = genome_layer[len("Relative to "):]
-            if comparitor in genomes_df.columns.values:
-                genomes_df = (
-                    genomes_df
-                    .drop(columns=[comparitor])
-                    .reindex(columns=genome_order)
-                )
-
         self.heatmap(
-            genomes_df.T,
+            self.log_scale(genomes_df.T),
             fig,
-            value_label=genome_layer,
+            value_label="Proportion of Aligned Reads (log10)",
             row=2,
             col=4,
             showscale=True,
@@ -826,7 +795,7 @@ class Metagenome:
             colorbar_xpad=0,
             colorbar_orientation="h",
             colorbar_title_side="top",
-            colorbar_title_text=f"Genome Group Abundance<br>{genome_layer}",
+            colorbar_title_text="Genome Group Abundance<br>Proportion of Aligned Reads (log10)",
             colorbar_y=0.45,
             colorbar_len=0.25
         )
@@ -875,7 +844,7 @@ class Metagenome:
             (
                 self.data
                 .mod["genomes"]
-                .varm[f"~ {meta_cname} - {genome_layer}"]
+                .varm[f"~{meta_cname}"]
                 ["neg_log10_qvalue"]
             ),
             "FDR-adjusted p-value (-log10)",
@@ -895,7 +864,8 @@ class Metagenome:
             row=2,
             col=6,
             orient="h",
-            showlegend=False
+            showlegend=False,
+            log=True
         )
 
         # Bins Information (extending vertically from the central heatmap)
@@ -917,26 +887,18 @@ class Metagenome:
         bins_df: pd.DataFrame = (
             self.data
             .mod["bins"]
-            .to_df(bins_layer)
+            .to_df("prop")
         )
         sample_order = self.sort_index(bins_df)
         bins_df = bins_df.reindex(
             columns=bin_order,
             index=sample_order
         ).fillna(0)
-        if bins_layer.startswith("Relative to "):
-            comparitor = bins_layer[len("Relative to "):]
-            if comparitor in bins_df.columns.values:
-                bins_df = (
-                    bins_df
-                    .drop(columns=[comparitor])
-                    .reindex(columns=bin_order)
-                )
 
         self.heatmap(
-            bins_df,
+            self.log_scale(bins_df),
             fig,
-            value_label=bins_layer,
+            value_label="Proportion of Aligned Reads (log10)",
             row=4,
             col=2,
             coloraxis="coloraxis4",
@@ -946,7 +908,7 @@ class Metagenome:
             colorbar_y=0.55,
             colorbar_len=0.25,
             colorbar_title_side="right",
-            colorbar_title_text=f"Gene Bin Abundance<br>{bins_layer}",
+            colorbar_title_text="Gene Bin Abundance<br>Proportion of Aligned Reads (log10)",
             colorbar_xpad=0
         )
 
@@ -981,7 +943,7 @@ class Metagenome:
             (
                 self.data
                 .mod["bins"]
-                .varm[f"~ {meta_cname} - {bins_layer}"]
+                .varm[f"~{meta_cname}"]
                 ["neg_log10_qvalue"]
             ),
             "FDR-adjusted p-value (-log10)",
@@ -990,7 +952,7 @@ class Metagenome:
             col=2
         )
 
-        # Boxplot comparing genome abundances by sample group
+        # Boxplot comparing gene bin abundances by sample group
         self.box(
             bins_df,
             self.data.obs[meta_cname].reindex(index=sample_order),
@@ -998,17 +960,12 @@ class Metagenome:
             "Gene Bin Abundance",
             fig,
             row=7,
-            col=2
+            col=2,
+            log=True
         )
 
         logger.info(fig.layout)
-        title_text = " - ".join(
-            [
-                f"Association with {meta_cname}",
-                f"Gene Bins: {bins_layer}",
-                f"Genome Groups: {genome_layer}"
-            ]
-        )
+        title_text = f"Association with {meta_cname}"
         fig.update_layout(
             title_text=title_text,
             title_xanchor="center",
@@ -1081,7 +1038,7 @@ class Metagenome:
             col=col
         )
 
-    def bar(self, vals: pd.Series, label: str, fig, row, col, orient="v"):
+    def bar(self, vals: pd.Series, label: str, fig, row, col, orient="v", log=False):
         assert orient in ["v", "h"]
         kwargs = (
             dict(
@@ -1109,18 +1066,30 @@ class Metagenome:
         )
         label = label.replace(" ", "<br>")
         self.label_axis(fig, row, col, orient, label)
+        if log:
+            self.logscale_axis(fig, row, col, orient)
+
+    def label_axis(self, fig, row, col, orient, title):
+        self.update_axis(
+            fig, row, col, orient, title=title
+        )
+
+    def logscale_axis(self, fig, row, col, orient):
+        self.update_axis(
+            fig, row, col, orient, type="log"
+        )
 
     @staticmethod
-    def label_axis(fig, row, col, orient, label):
+    def update_axis(fig, row, col, orient, **kwargs):
         if orient == "v":
             fig.for_each_yaxis(
-                lambda axis: axis.update(title=label),
+                lambda axis: axis.update(**kwargs),
                 row=row,
                 col=col
             )
         else:
             fig.for_each_xaxis(
-                lambda axis: axis.update(title=label),
+                lambda axis: axis.update(**kwargs),
                 row=row,
                 col=col
             )
@@ -1135,6 +1104,7 @@ class Metagenome:
         row,
         col,
         orient="v",
+        log=False,
         **box_kwargs
     ):
         assert orient in ["v", "h"]
@@ -1179,6 +1149,8 @@ class Metagenome:
             )
         label = label.replace(" ", "<br>")
         self.label_axis(fig, row, col, orient, label)
+        if log:
+            self.logscale_axis(fig, row, col, orient)
 
 
 def bin_metagenomes(
