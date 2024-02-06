@@ -170,6 +170,7 @@ class Metagenome:
         self.calc_bin_silhouette_score()
         self.est_genome_abund()
         self.calc_rel_abund()
+        del self.data.uns["filtered_out"]
 
         return self
 
@@ -464,7 +465,7 @@ class Metagenome:
                 genome_abund
                 .T
                 .reindex(
-                    index=self.data.obs_names,
+                    index=self.filtered_samples,
                     columns=group_profile.columns.values
                 )
             ),
@@ -475,7 +476,7 @@ class Metagenome:
                     )
                 )
                 .reindex(
-                    index=self.data.obs_names
+                    index=self.filtered_samples
                 )
             ),
             var=(
@@ -527,7 +528,12 @@ class Metagenome:
                 assert kw in self.data.mod["genes"].obs
                 new_kw = f"{prefix}{label}"
                 logger.info(f"Computing {mod} {new_kw}")
-                rel_abund = (abund.T / self.data.mod["genes"].obs[kw]).T
+                rel_abund = (
+                    abund.T /
+                    self.data.mod["genes"].obs[kw].reindex(
+                        index=abund.index.values
+                    )
+                ).T
                 self.data.mod[mod].layers[new_kw] = rel_abund
 
     def compare_groups(self, category, mods=None):
@@ -1138,7 +1144,11 @@ class Metagenome:
                 hue_df
                 .reset_index()
                 .melt(
-                    id_vars=[hue_df.index.name],
+                    id_vars=[(
+                        "index"
+                        if hue_df.index.name is None
+                        else hue_df.index.name
+                    )],
                     var_name="variable"
                 )
             )
