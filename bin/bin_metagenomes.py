@@ -676,17 +676,21 @@ class Metagenome:
         lowest = df.apply(lambda c: c[c > 0].min()).min()
         return df.clip(lower=lowest).apply(np.log10)
 
-    @staticmethod
-    def sort_index(df: pd.DataFrame):
-        return df.index.values[
-            hierarchy.leaves_list(
-                hierarchy.linkage(
-                    df.values,
-                    metric="cosine",
-                    method="average"
+    def sort_index(self, df: pd.DataFrame, metric="cosine", method="average"):
+        try:
+            return df.index.values[
+                hierarchy.leaves_list(
+                    hierarchy.linkage(
+                        df.values,
+                        metric=metric,
+                        method=method
+                    )
                 )
-            )
-        ]
+            ]
+        except Exception as e:
+            logger.info("Error encountered while sorting table:")
+            self.log_df(df)
+            raise e
 
     def write_image(
         self,
@@ -714,9 +718,32 @@ class Metagenome:
         row_heights = np.array([0.5, heatmap_size, 1, heatmap_size, 1, 1, 1])
         row_heights = list(row_heights / row_heights.sum())
 
+        # Genomes across samples
+        genomes_df: pd.DataFrame = (
+            self.data
+            .mod["genomes"]
+            .to_df("prop")
+        )
+
+        # Bins across samples
+        bins_df: pd.DataFrame = (
+            self.data
+            .mod["bins"]
+            .to_df("prop")
+        )
+
         # Sort the bins and genomes
-        bin_order = self.sort_index(self.data.uns["group_profile"])
-        genome_order = self.sort_index(self.data.uns["group_profile"].T)
+        bin_order = self.sort_index(
+            bins_df.T,
+            metric="euclidean",
+            method="ward"
+        )
+
+        genome_order = self.sort_index(
+            genomes_df.T,
+            metric="euclidean",
+            method="ward"
+        )
 
         cols = 6
         rows = 7
@@ -771,11 +798,6 @@ class Metagenome:
         )
 
         # Genomes across samples
-        genomes_df: pd.DataFrame = (
-            self.data
-            .mod["genomes"]
-            .to_df("prop")
-        )
         sample_order = self.sort_index(genomes_df)
         genomes_df = genomes_df.reindex(
             columns=genome_order,
@@ -884,11 +906,6 @@ class Metagenome:
         )
 
         # Bins across samples
-        bins_df: pd.DataFrame = (
-            self.data
-            .mod["bins"]
-            .to_df("prop")
-        )
         sample_order = self.sort_index(bins_df)
         bins_df = bins_df.reindex(
             columns=bin_order,
