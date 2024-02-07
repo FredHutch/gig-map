@@ -424,7 +424,7 @@ class Metagenome:
         # Translate the scaled gene abundance into a proportion, so
         # that the fitted data will ideally have the same sum as
         # the number of reads sequenced for that sample
-        group_profile = group_profile / group_profile.sum()
+        group_profile = (group_profile / group_profile.sum()).fillna(0)
 
         # Make a table with the number of reads per bin
         reads_per_bin = (
@@ -439,10 +439,15 @@ class Metagenome:
 
         for sample, bin_abund in reads_per_bin.iterrows():
             # Run NNLS
-            x, rnorm = nnls(
-                group_profile,
-                bin_abund
-            )
+            try:
+                x, rnorm = nnls(
+                    group_profile,
+                    bin_abund
+                )
+            except ValueError as e:
+                logger.info(group_profile)
+                logger.info(bin_abund)
+                raise e
 
             # Scale the 2-norm of the residual by the total
             # number of reads in the right-hand side vector
