@@ -313,7 +313,7 @@ extract_genes.py \
 // Reorganize a set of FASTA sequences across files to be grouped by header
 process reorganize_fastas {
     container "${params.container__pandas}"
-    label "io_limited"
+    label "mem_medium"
     publishDir "${params.output}/${subfolder}", mode: 'copy', overwrite: true
 
     input:
