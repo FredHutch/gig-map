@@ -181,7 +181,8 @@ class Metagenome:
             fig,
             row=2,
             col=2,
-            orient="h"
+            orient="h",
+            log=True
         )
 
         # Bins across samples
