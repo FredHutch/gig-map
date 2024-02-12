@@ -8,7 +8,7 @@ GroovyShell shell = new GroovyShell()
 def helpers = shell.parse(new File("${workflow.projectDir}/helpers.gvy"))
 
 // Import sub-workflows
-include { bin_metagenomes } from './modules/processes/bin_metagenomes'
+include { bin_metagenomes } from './modules/bin_metagenomes'
 include { align_reads } from './modules/align_reads'
 include { find_reads } from './modules/find_reads'
 

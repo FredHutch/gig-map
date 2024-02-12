@@ -62,7 +62,7 @@ process diamond {
 process diamond_logs {
     container "${params.container__pandas}"
     label 'io_limited'
-    publishDir "${params.output}", mode: 'copy', overwrite: true
+    publishDir "${params.output}/logs/", mode: 'copy', overwrite: true
    
     input:
     path "*"
@@ -114,7 +114,7 @@ process famli {
 process famli_logs {
     container "${params.container__pandas}"
     label 'io_limited'
-    publishDir "${params.output}", mode: "copy", overwrite: true
+    publishDir "${params.output}/logs/", mode: "copy", overwrite: true
     
     input:
     path "*"

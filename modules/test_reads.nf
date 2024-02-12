@@ -41,7 +41,7 @@ process shard_genes {
 // Test for differences between samples
 process corncob {
     container "${params.container__corncob}"
-    label "mem_medium"
+    label "io_limited"
     
     input:
     file metadata_csv
