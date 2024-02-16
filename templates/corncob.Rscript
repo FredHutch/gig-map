@@ -23,12 +23,18 @@ numCores = ${task.cpus}
 print("Reading in ${metadata_csv}")
 metadata <- read.csv("${metadata_csv}", sep=",")
 metadata <- tibble::column_to_rownames(metadata, names(metadata)[1])
-print(metadata)
+print(head(metadata))
+print(dim(metadata))
 
 print("Reading in ${readcounts_csv_gz}")
 counts <- read.csv("${readcounts_csv_gz}", sep=",")
 counts <- tibble::column_to_rownames(counts, "specimen")
-print(counts)
+print(head(counts))
+print(dim(counts))
+
+# Subset the metadata to have the same rows and order as counts
+print("Aligning sample order between metadata and counts")
+metadata <- metadata[rownames(counts),]
 
 #### Run the differentialAbundance analysis
 da <- differentialTest(
