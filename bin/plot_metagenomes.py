@@ -59,9 +59,15 @@ class Metagenome:
         self.adata.var = self.adata.var.merge(
             stats,
             left_index=True,
-            right_index=True
+            right_index=True,
+            how="outer"
         )
-        self.adata.var["qvalue"] = multipletests(self.adata.var["p_value"], 0.1, "fdr_bh")[1]
+        self.adata.var = self.adata.var.assign(**{
+            kw: self.adata.var[kw].fillna(val)
+            for kw, val in [("estimate", 0), ("std_error", 0), ("p_value", 1)]
+        })
+        self.adata.var["qvalue"] = multipletests(self.adata.var["p_value"].fillna(0), 0.1, "fdr_bh")[1]
+        self.adata.var["neg_log10_pvalue"] = -np.log10(self.adata.var["p_value"])
         self.adata.var["neg_log10_qvalue"] = -np.log10(self.adata.var["qvalue"])
         for line in str(self.adata).split("\n"):
             logger.info(line)
@@ -237,14 +243,21 @@ class Metagenome:
         )
 
         # Bars showing the -log10(qvalue) for each gene bin
+        # (unless there are no useful q-values, in which case fall back to p-values)
+        if self.adata.var["neg_log10_qvalue"].max() == 0:
+            kw = "neg_log10_pvalue"
+            label = "p-value (-log10)"
+        else:
+            kw = "neg_log10_qvalue"
+            label = "FDR-adjusted<br>p-value (-log10)"
         self.bar(
             (
                 self
                 .adata
                 .var
-                ["neg_log10_qvalue"]
+                [kw]
             ),
-            "FDR-adjusted<br>p-value (-log10)",
+            label,
             fig,
             orient="h",
             col=4,
