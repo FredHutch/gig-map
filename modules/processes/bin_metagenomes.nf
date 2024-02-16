@@ -73,6 +73,7 @@ process plot {
 
     output:
     path "*"
+    path "${stats}"
 
     """#!/bin/bash
 set -e
