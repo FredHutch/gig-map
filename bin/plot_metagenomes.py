@@ -244,7 +244,7 @@ class Metagenome:
 
         # Bars showing the -log10(qvalue) for each gene bin
         # (unless there are no useful q-values, in which case fall back to p-values)
-        if self.adata.var["neg_log10_qvalue"].max() < 0.0001:
+        if self.adata.var["neg_log10_qvalue"].max() < 0.1:
             kw = "neg_log10_pvalue"
             label = "p-value (-log10)"
         else:
