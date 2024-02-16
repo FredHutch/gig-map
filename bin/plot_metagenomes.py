@@ -253,7 +253,7 @@ class Metagenome:
 
         # Boxplot comparing gene bin abundances by sample group
         self.box(
-            self.adata.to_df().reindex(index=sample_order),
+            self.adata.to_df("prop").reindex(index=sample_order),
             self.adata.obs[meta_cname].reindex(index=sample_order),
             meta_cname,
             "Gene Bin Abundance",
