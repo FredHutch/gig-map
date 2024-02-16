@@ -528,7 +528,7 @@ class Metagenome:
             del self.data.uns["filtered_out"]
         for mod in self.data.mod:
             adata: ad.AnnData = self.data.mod[mod]
-            adata.obs = self.data.obs
+            adata.obs = self.data.obs.reindex(index=adata.obs.index)
             for kw, val in self.data.uns.items():
                 adata.uns[kw] = val
             adata.write_h5ad(f"{output_folder}/metagenome.{mod}.h5ad")
