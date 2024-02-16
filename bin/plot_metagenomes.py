@@ -95,6 +95,14 @@ class Metagenome:
                     )
                 )
             ]
+        except ValueError as e:
+            if metric != "euclidean":
+                logger.info("Falling back to euclidean distance")
+                return self.sort_index(df, metric="euclidean", method=method)
+            else:
+                logger.info("Error encountered while sorting table:")
+                self.log_df(df)
+                raise e
         except Exception as e:
             logger.info("Error encountered while sorting table:")
             self.log_df(df)
