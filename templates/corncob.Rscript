@@ -55,21 +55,25 @@ output <- do.call(
     lapply(
         seq_along(da\$all_models),
         function(i){
-            coef <- da\$all_models[[i]]\$coef
-            return(
-                coef
-                    %>% as_tibble
-                    %>% mutate(
-                        "parameter" = coef %>% row.names,
-                        "feature" = colnames(counts)[i]
+            if("coefficients" %in% names(da\$all_models[[i]])){
+                coef <- da\$all_models[[i]]\$coefficients
+                return(
+                    coef
+                        %>% as_tibble
+                        %>% mutate(
+                            "parameter" = coef %>% row.names,
+                            "feature" = colnames(counts)[i]
+                        )
+                        %>% rename(
+                            "estimate" = Estimate,
+                            "std_error" = `Std. Error`,
+                            "p_value" = `Pr(>|t|)`
+                        )
+                        %>% select(-`t value`)
                     )
-                    %>% rename(
-                        "estimate" = Estimate,
-                        "std_error" = `Std. Error`,
-                        "p_value" = `Pr(>|t|)`
-                    )
-                    %>% select(-`t value`)
-                )
+            } else {
+                return(data.frame())
+            }
             }
         )
     )
