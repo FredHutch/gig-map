@@ -48,7 +48,7 @@ process corncob {
     file readcounts_csv_gz
 
     output:
-    file "corncob.results.csv", optional: true
+    path "corncob.results.csv", optional: true
 
     script:
     template "corncob.Rscript"
