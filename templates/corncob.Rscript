@@ -6,78 +6,89 @@ library(tidyverse)
 library(corncob)
 library(parallel)
 
-## By default, use 10% of the available memory to read in data
-connectionSize = 100000 * ${task.memory.toMega()}
-print("Using VROOM_CONNECTION_SIZE =")
-print(connectionSize)
-Sys.setenv("VROOM_CONNECTION_SIZE" = format(connectionSize, scientific=F))
+main <- function(){
 
-numCores = ${task.cpus}
+    ## By default, use 10% of the available memory to read in data
+    connectionSize = 100000 * ${task.memory.toMega()}
+    print("Using VROOM_CONNECTION_SIZE =")
+    print(connectionSize)
+    Sys.setenv("VROOM_CONNECTION_SIZE" = format(connectionSize, scientific=F))
 
-##  READCOUNTS CSV should have sample IDs in the first col
-##  METADATA CSV should have a column `specimen` (which matches up with the first column from
-##         the recounts file), and additional columns with covariates matching `formula`
+    numCores = ${task.cpus}
 
-##  corncob analysis (coefficients and p-values) are written to OUTPUT CSV on completion
+    ##  READCOUNTS CSV should have sample IDs in the first col
+    ##  METADATA CSV should have a column `specimen` (which matches up with the first column from
+    ##         the recounts file), and additional columns with covariates matching `formula`
 
-print("Reading in ${metadata_csv}")
-metadata <- read.csv("${metadata_csv}", sep=",")
-metadata <- tibble::column_to_rownames(metadata, names(metadata)[1])
-print(head(metadata))
-print(dim(metadata))
+    ##  corncob analysis (coefficients and p-values) are written to OUTPUT CSV on completion
 
-print("Reading in ${readcounts_csv_gz}")
-counts <- read.csv("${readcounts_csv_gz}", sep=",")
-counts <- tibble::column_to_rownames(counts, "specimen")
-print(head(counts))
-print(dim(counts))
+    print("Reading in ${metadata_csv}")
+    metadata <- read.csv("${metadata_csv}", sep=",")
+    metadata <- tibble::column_to_rownames(metadata, names(metadata)[1])
+    print(head(metadata))
+    print(dim(metadata))
 
-# Subset the metadata to have the same rows and order as counts
-print("Aligning sample order between metadata and counts")
-metadata <- metadata[rownames(counts),]
+    print("Reading in ${readcounts_csv_gz}")
+    counts <- read.csv("${readcounts_csv_gz}", sep=",")
+    counts <- tibble::column_to_rownames(counts, "specimen")
+    print(head(counts))
+    print(dim(counts))
 
-#### Run the differentialAbundance analysis
-da <- differentialTest(
-    data = counts,
-    formula = ~ ${params.formula},
-    phi.formula = ~ 1,
-    formula_null = ~ 1,
-    phi.formula_null = ~ 1,
-    sample_data = metadata,
-    taxa_are_rows = FALSE,
-    test = "Wald",
-    full_output = TRUE
-)
+    # If there aren't enough samples passing the threshold, stop gracefully
+    if(dim(counts)[1] <= 2){
+        print("Not enough samples to run corncob -- stopping")
+        return()
+    }
 
-# Rename the outputs as a table
-output <- do.call(
-    rbind,
-    lapply(
-        seq_along(da\$all_models),
-        function(i){
-            if("coefficients" %in% names(da\$all_models[[i]])){
-                coef <- da\$all_models[[i]]\$coefficients
-                return(
-                    coef
-                        %>% as_tibble
-                        %>% mutate(
-                            "parameter" = coef %>% row.names,
-                            "feature" = colnames(counts)[i]
-                        )
-                        %>% rename(
-                            "estimate" = Estimate,
-                            "std_error" = `Std. Error`,
-                            "p_value" = `Pr(>|t|)`
-                        )
-                        %>% select(-`t value`)
-                    )
-            } else {
-                return(data.frame())
-            }
-            }
-        )
+    # Subset the metadata to have the same rows and order as counts
+    print("Aligning sample order between metadata and counts")
+    metadata <- metadata[rownames(counts),]
+
+    #### Run the differentialAbundance analysis
+    da <- differentialTest(
+        data = counts,
+        formula = ~ ${params.formula},
+        phi.formula = ~ 1,
+        formula_null = ~ 1,
+        phi.formula_null = ~ 1,
+        sample_data = metadata,
+        taxa_are_rows = FALSE,
+        test = "Wald",
+        full_output = TRUE
     )
 
-print(sprintf("Writing out %s rows to corncob.results.csv", nrow(output)))
-write_csv(output, "corncob.results.csv")
-print("Done")
+    # Rename the outputs as a table
+    output <- do.call(
+        rbind,
+        lapply(
+            seq_along(da\$all_models),
+            function(i){
+                if("coefficients" %in% names(da\$all_models[[i]])){
+                    coef <- da\$all_models[[i]]\$coefficients
+                    return(
+                        coef
+                            %>% as_tibble
+                            %>% mutate(
+                                "parameter" = coef %>% row.names,
+                                "feature" = colnames(counts)[i]
+                            )
+                            %>% rename(
+                                "estimate" = Estimate,
+                                "std_error" = `Std. Error`,
+                                "p_value" = `Pr(>|t|)`
+                            )
+                            %>% select(-`t value`)
+                        )
+                } else {
+                    return(data.frame())
+                }
+                }
+            )
+        )
+
+    print(sprintf("Writing out %s rows to corncob.results.csv", nrow(output)))
+    write_csv(output, "corncob.results.csv")
+    print("Done")
+}
+
+main()
