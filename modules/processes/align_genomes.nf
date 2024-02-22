@@ -196,7 +196,7 @@ gunzip -c "${alignments_gz}" \
 // Combine all of the outputs into a single file
 process concatenate_alignments {
     container "${params.container__pandas}"
-    label 'io_limited'
+    label 'mem_medium'
     publishDir "${params.output}", mode: 'copy', overwrite: true
 
     input:
