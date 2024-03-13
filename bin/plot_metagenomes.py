@@ -66,7 +66,7 @@ class Metagenome:
             kw: self.adata.var[kw].fillna(val)
             for kw, val in [("estimate", 0), ("std_error", 0), ("p_value", 0.99)]
         })
-        self.adata.var["qvalue"] = multipletests(self.adata.var["p_value"].fillna(0), 0.1, "fdr_bh")[1]
+        self.adata.var["qvalue"] = multipletests(self.adata.var["p_value"].fillna(1), 0.1, "fdr_bh")[1]
         self.adata.var["neg_log10_pvalue"] = -np.log10(self.adata.var["p_value"])
         self.adata.var["neg_log10_qvalue"] = -np.log10(self.adata.var["qvalue"])
         for line in str(self.adata).split("\n"):
