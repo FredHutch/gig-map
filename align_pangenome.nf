@@ -54,6 +54,7 @@ workflow {
 
         --gene_bins         Grouping of genes into bins (e.g. gene_bins.csv)
         --group_profile     Gene content of genome groups (e.g. group_profile.csv)
+        --genome_groups     Grouping of genomes by gene content (e.g. genome_groups.csv)
         --output            Folder where output files will be written
 
         --metadata          Optional: Metadata table used to compare samples (CSV)
