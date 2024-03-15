@@ -28,6 +28,7 @@ collect_metagenomes.py \
     --genome_groups "${genome_groups}" \
     --group_profile "${group_profile}" \
     --metadata "${metadata}" \
+    --incl_unaligned ${params.incl_unaligned} \
     --min_n_reads ${params.min_n_reads} \
     --min_n_genes ${params.min_n_genes} \
     --output_folder ./
@@ -48,6 +49,9 @@ process split {
     """#!/usr/bin/env python3
 import pandas as pd
 df = pd.read_csv("corncob.results.csv")
+
+if "${params.incl_unaligned}" != "false":
+    df = df.query("feature != 'unaligned_reads'")
 
 for param, param_df in df.groupby("parameter"):
     if not param.startswith("mu.") or param.endswith("(Intercept)"):

@@ -28,14 +28,14 @@ for parameter, df in long_df.groupby("parameter"):
         continue
 
     fdr_bh = pd.Series(
-        multipletests(df["p_value"].values, 0.1, method="fdr_bh")[1],
+        multipletests(df["p_value"].fillna(1).values, 0.1, method="fdr_bh")[1],
         index=df.index
     )
-    
+
     df = df.assign(
         fdr_bh=fdr_bh
     )
-    
+
     df.to_csv(
         f"{parameter.replace('(', '').replace(')', '')}.results.csv.gz"
     )

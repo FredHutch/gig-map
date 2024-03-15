@@ -44,6 +44,14 @@ main <- function(){
     print("Aligning sample order between metadata and counts")
     metadata <- metadata[rownames(counts),]
 
+    # If the user added the --incl_unaligned flag, include the unaligned reads
+    if("${params.incl_unaligned}" != "false"){
+        print("Including unaligned reads in the analysis")
+        # Add the 'unaligned_reads' column from metadata to the counts table
+        counts\$unaligned_reads <- metadata\$genes.unaligned_reads
+        print(head(counts))
+    }
+
     #### Run the differentialAbundance analysis
     da <- differentialTest(
         data = counts,

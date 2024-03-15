@@ -123,6 +123,7 @@ class Metagenome:
             )
             .assign(
                 aligned_reads=X.sum(axis=1),
+                unaligned_reads=lambda d: d['tot_reads'] - d['aligned_reads'],
                 detected_genes=(X > 0).sum(axis=1)
             )
         )
@@ -158,7 +159,8 @@ class Metagenome:
         genome_groups,
         group_profile,
         min_n_reads,
-        min_n_genes
+        min_n_genes,
+        incl_unaligned
     ):
         self = cls.parse_read_alignments(read_alignments_fp)
         self.log_content()
@@ -170,7 +172,7 @@ class Metagenome:
         self.calc_bin_abund()
         self.calc_bin_silhouette_score()
         self.est_genome_abund()
-        self.calc_rel_abund()
+        self.calc_rel_abund(incl_unaligned != "false")
 
         return self
 
@@ -498,7 +500,7 @@ class Metagenome:
         self.data.update()
         self.log_content()
 
-    def calc_rel_abund(self, mods=None):
+    def calc_rel_abund(self, incl_unaligned: bool, mods=None):
         """
         Normalize the abundance to the number of reads aligned
 
@@ -515,7 +517,9 @@ class Metagenome:
             logger.info(f"Normalizing {mod} to sequencing depth")
             rel_abund = (
                 abund.T /
-                self.data.mod["genes"].obs["aligned_reads"].reindex(
+                self.data.mod["genes"].obs[
+                    "tot_reads" if incl_unaligned else "aligned_reads"
+                ].reindex(
                     index=abund.index.values
                 )
             ).T
@@ -614,6 +618,7 @@ def bin_metagenomes(
     genome_groups,
     group_profile,
     metadata,
+    incl_unaligned,
     min_n_reads,
     min_n_genes
 ):
@@ -623,7 +628,8 @@ def bin_metagenomes(
         genome_groups,
         group_profile,
         min_n_reads,
-        min_n_genes
+        min_n_genes,
+        incl_unaligned
     )
     mdata.add_metadata(metadata)
     return mdata
@@ -635,6 +641,7 @@ def bin_metagenomes(
 @click.option('--genome_groups', type=click.Path(exists=True))
 @click.option('--group_profile', type=click.Path(exists=True))
 @click.option('--metadata', type=click.Path(exists=True))
+@click.option('--incl_unaligned', type=str)
 @click.option('--min_n_reads', type=int)
 @click.option('--min_n_genes', type=int)
 @click.option('--output_folder', type=click.Path())
@@ -644,6 +651,7 @@ def main(
     genome_groups,
     group_profile,
     metadata,
+    incl_unaligned,
     min_n_reads,
     min_n_genes,
     output_folder
@@ -654,6 +662,7 @@ def main(
     logger.info(f"genome_groups: {genome_groups}")
     logger.info(f"group_profile: {group_profile}")
     logger.info(f"metadata: {metadata}")
+    logger.info(f"incl_unaligned: {incl_unaligned}")
     logger.info(f"min_n_reads: {min_n_reads}")
     logger.info(f"min_n_genes: {min_n_genes}")
 
@@ -663,6 +672,7 @@ def main(
         genome_groups,
         group_profile,
         metadata,
+        incl_unaligned,
         min_n_reads,
         min_n_genes
     )

@@ -58,7 +58,7 @@ workflow {
         --output            Folder where output files will be written
 
         --metadata          Optional: Metadata table used to compare samples (CSV)
-        --category          Optional: Column from metadata table used for comparison
+        --formula           Optional: Column(s) from metadata table used for comparison
 
         --min_n_reads       Exclude any samples with fewer than this number of reads aligned (default: 0)
         --min_n_genes       Exclude any samples with fewer than this number of genes detected (default: 0)

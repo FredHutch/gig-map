@@ -186,8 +186,10 @@ class Metagenome:
 
         # Number of genes per bin
         self.bar(
-            pd.Series(
-                self.adata.uns["bin_size"]
+            pd.DataFrame(
+                {
+                    "Genes per Bin (#)": self.adata.uns["bin_size"]
+                }
             ).reindex(
                 index=bin_order
             ),
@@ -212,7 +214,7 @@ class Metagenome:
                 .T
             )),
             fig,
-            value_label="Proportion of Aligned Reads (log10)",
+            value_label="Proportion of Reads (log10)",
             row=2,
             col=3,
             coloraxis="coloraxis3",
@@ -223,7 +225,7 @@ class Metagenome:
             colorbar_y=0.85,
             colorbar_len=column_widths[2] - (horizontal_spacing * 1.5),
             colorbar_title_side="top",
-            colorbar_title_text="Gene Bin Abundance<br>Proportion of Aligned Reads (log10)",
+            colorbar_title_text="Gene Bin Abundance<br>Proportion of Reads (log10)",
             colorbar_xpad=0,
         )
 
@@ -255,7 +257,12 @@ class Metagenome:
                 self
                 .adata
                 .var
-                [kw]
+                .reindex(
+                    columns=[kw, "p_value", "estimate"]
+                )
+                .rename(
+                    columns={kw: label}
+                )
             ),
             label,
             fig,
@@ -353,25 +360,38 @@ class Metagenome:
             col=col
         )
 
-    def bar(self, vals: pd.Series, label: str, fig, row, col, orient="v", log=False):
+    def bar(
+        self,
+        data: pd.DataFrame,
+        cname: str,
+        fig,
+        row,
+        col,
+        orient="v",
+        log=False
+    ):
         assert orient in ["v", "h"]
         kwargs = (
             dict(
-                y=vals.values,
-                x=vals.index.values
+                y=data[cname].values,
+                x=data[cname].index.values
             )
             if orient == "v" else
             dict(
-                x=vals.values,
-                y=vals.index.values,
+                x=data[cname].values,
+                y=data[cname].index.values,
                 orientation='h'
             )
         )
         fig.add_trace(
             go.Bar(
                 showlegend=False,
-                hovertext=vals.apply(
-                    lambda v: f"{label}: {v}"
+                hovertext=data.apply(
+                    lambda r: "<br>".join([
+                        f"{kw}: {val}"
+                        for kw, val in r.items()
+                    ]),
+                    axis=1
                 ),
                 marker=dict(color="blue"),
                 **kwargs
@@ -379,7 +399,7 @@ class Metagenome:
             row=row,
             col=col
         )
-        self.label_axis(fig, row, col, orient, label)
+        self.label_axis(fig, row, col, orient, cname)
         if log:
             self.logscale_axis(fig, row, col, orient)
 

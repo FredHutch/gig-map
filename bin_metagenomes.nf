@@ -30,10 +30,12 @@ workflow {
         --read_alignments   Alignments from align_reads.nf (e.g. read_alignments.csv.gz)
         --gene_bins         Grouping of genes into bins from bin_genes.nf (e.g. gene_bins.csv)
         --group_profile     Gene content of genome groups from bin_genes.nf (e.g. group_profile.csv)
+        --genome_groups     Grouping of genomes into groups (e.g. genome_groups.csv)
         --output            Folder where output files will be written
 
         --metadata          Optional: Metadata table used to compare samples (CSV)
-        --category          Optional: Column from metadata table used for comparison
+        --formula           Optional: Column(s) from metadata table used for comparison
+        --incl_unaligned    Include unaligned reads in the comparison (default: false)
 
         --min_n_reads       Exclude any samples with fewer than this number of reads aligned (default: 0)
         --min_n_genes       Exclude any samples with fewer than this number of genes detected (default: 0)
