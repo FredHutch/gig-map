@@ -7,15 +7,10 @@ import click
 import logging
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
-from scipy import stats
 from scipy.optimize import nnls
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
 from sklearn.metrics import silhouette_score
-from statsmodels.stats.multitest import multipletests
 from muon import MuData
 
 # Set the level of the logger to INFO
@@ -369,6 +364,12 @@ class Metagenome:
 
     def calc_bin_silhouette_score(self, metric="euclidean"):
         """Calculate the silhouette score for each bin."""
+
+        # If there are more than 10,000 genes, don't calculate
+        if self.data.mod["genes"].to_df().shape[1] > 10000:
+            logger.info("Too many genes to calculate silhouette score")
+            return
+
         logger.info("Calculating silhouette score for bins")
 
         # Calculate pairwise distances
