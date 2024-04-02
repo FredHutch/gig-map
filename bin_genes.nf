@@ -68,10 +68,14 @@ workflow {
     // Get the gene annotations
     gene_annot = file(params.gene_annot, checkIfExists: true)
 
+    // Get the genome annotations
+    genome_annot = file(params.genome_annot, checkIfExists: true)
+
     // Bin the genes
     bin_genes(
         genome_aln,
-        gene_annot
+        gene_annot,
+        genome_annot
     )
 
 }

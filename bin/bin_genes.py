@@ -287,6 +287,12 @@ class GeneData(ad.AnnData):
             .to_csv("gene_bins.csv")
         )
 
+    def add_genome_annotations(self, genome_annot):
+        """Add the genome annotations"""
+        self.genome_annot = pd.read_csv(genome_annot)
+        msg = "Missing genome_id column in genome annotations"
+        assert "genome_id" in self.genome_annot.columns.values, msg
+
     def summarize_genomes(self):
 
         # Total number of genes in each bin
@@ -318,7 +324,15 @@ class GeneData(ad.AnnData):
                 )
             )
         )
-        genome_content.to_csv("genome_content.long.csv", index=None)
+        (
+            genome_content
+            .merge(
+                self.genome_annot,
+                left_on="genome",
+                right_on="genome_id"
+            )
+            .to_csv("genome_content.long.csv", index=None)
+        )
 
         for kw in ["n_genes_detected", "prop_genes_detected"]:
             self.obsm[kw] = (
@@ -398,7 +412,15 @@ class GeneData(ad.AnnData):
             prefix="Group ",
             name="Genome Group"
         )
-        self.obs.to_csv("genome_groups.csv")
+        (
+            self.obs
+            .merge(
+                self.genome_annot,
+                left_on="genome",
+                right_on="genome_id"
+            )
+            .to_csv("genome_groups.csv", index=None)
+        )
 
         # Calculate the mean detection rate for each bin
         # across each of the genome groups
@@ -674,6 +696,7 @@ def sort_index(df: pd.DataFrame, method="average", metric="euclidean"):
 @click.command
 @click.option('--genome_aln', type=click.Path(exists=True))
 @click.option('--gene_annot', type=click.Path(exists=True))
+@click.option('--genome_annot', type=click.Path(exists=True))
 @click.option('--min_coverage', type=float)
 @click.option('--min_identity', type=float)
 @click.option('--min_genomes_per_gene', type=int)
@@ -683,6 +706,7 @@ def sort_index(df: pd.DataFrame, method="average", metric="euclidean"):
 def main(
     genome_aln,
     gene_annot,
+    genome_annot,
     min_coverage,
     min_identity,
     min_genomes_per_gene,
@@ -708,6 +732,9 @@ def main(
 
     # Summarize the bins
     gene_data.summarize_bins()
+
+    # Add the genome annotations
+    gene_data.add_genome_annotations(genome_annot)
 
     # Summarize the genomes
     gene_data.summarize_genomes()

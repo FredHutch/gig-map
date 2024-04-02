@@ -6,6 +6,7 @@ process bin_genes {
     input:
     path genome_aln
     path gene_annot
+    path genome_annot
 
     output:
     path "*"
@@ -16,6 +17,7 @@ set -e
 bin_genes.py \
     --genome_aln "${genome_aln}" \
     --gene_annot "${gene_annot}" \
+    --genome_annot "${genome_annot}" \
     --min_coverage "${params.min_coverage}" \
     --min_identity "${params.min_identity}" \
     --min_genomes_per_gene "${params.min_genomes_per_gene}" \

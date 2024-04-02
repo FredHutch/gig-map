@@ -142,7 +142,8 @@ workflow {
     // Bin the genes
     bin_genes(
         align_genomes.out.concat_alignments,
-        deduplicate.out.annot
+        deduplicate.out.annot,
+        download_genomes.out.annot
     )
 
 }
