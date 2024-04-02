@@ -243,12 +243,15 @@ class Metagenome:
     def add_genome_groups(self, genome_groups):
         logger.info("Adding genome groups")
 
+        # Read in the table of genome groups
+        genome_groups = self._read_csv(genome_groups, "genome")
+
+        # Save the list of which genomes belong to each group
+        self.data.uns["genome_groups"] = genome_groups
+
         # Save the total number of genomes in each group
         self.data.uns["genome_group_size"] = (
-            self._read_csv(
-                genome_groups,
-                "genome"
-            )
+            genome_groups
             ["group"]
             .value_counts()
             .to_dict()
