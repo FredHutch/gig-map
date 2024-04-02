@@ -13,7 +13,6 @@ def parse_jsonl(fp):
     with open(fp) as handle:
         dat = json.load(handle)
     # The data returned is in a nested dict that we want to turn into a wide DataFrame
-        
     output = {}
 
     # flatten_dict will take:
@@ -34,6 +33,14 @@ def parse_jsonl(fp):
         if isinstance(val, str) and "\\n" in val:
             continue
         output[kw] = val
+
+    # Optionally merge the accession and assemblyName fields
+    if "accession" in output and "assemblyName" in output:
+        output["genome_id"] = "_".join([
+            output["accession"],
+            output["assemblyName"],
+            "genomic.fna.gz"
+        ])
 
     return output
 
