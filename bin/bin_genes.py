@@ -425,6 +425,7 @@ class GeneData(ad.AnnData):
                 left_on="genome",
                 right_on="genome_id"
             )
+            .applymap(lambda s: s.replace("\n", " ") if isinstance(s, str) else s)
             .to_csv("genome_groups.csv", index=None)
         )
 
