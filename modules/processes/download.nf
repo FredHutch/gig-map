@@ -99,7 +99,7 @@ process concatenate_annotations {
     container "${params.container__pandas}"
     label 'io_limited'
     publishDir "${params.output}", mode: 'copy', overwrite: true
-   
+
     input:
     path "annotations/*.csv.gz"
     path "annotations/*.jsonl"

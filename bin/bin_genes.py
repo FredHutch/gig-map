@@ -412,8 +412,14 @@ class GeneData(ad.AnnData):
             prefix="Group ",
             name="Genome Group"
         )
+        msg = "Missing genome column in observations"
+        assert "genome" in self.obs.reset_index().columns.values, msg
+        msg = "Missing genome_id column in genome annotations"
+        assert "genome_id" in self.genome_annot.columns.values, msg
+
         (
             self.obs
+            .reset_index()
             .merge(
                 self.genome_annot,
                 left_on="genome",

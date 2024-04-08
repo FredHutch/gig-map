@@ -17,30 +17,20 @@ def parse_jsonl(fp):
 
     # flatten_dict will take:
     # {'key1': {'key2': 1}}
-    # and yield a series of:
+    # and return an iterator of (e.g.):
     # ['key1', 'key2'], 1
     for path, val in flatten_dict(dat):
-        # First see if ['key2'] can be used for ['key1', 'key2']
-        # If not, keep expanding until we get a match
-        kw = None
-        for i in range(1, len(path)):
-            kw = "_".join(path[-i:])
-            if key_map.get(kw) == path:
-                break
-            elif kw not in key_map:
-                key_map[kw] = path
-                break
-        if isinstance(val, str) and "\\n" in val:
-            continue
-        output[kw] = val
+        # Add the value to the output
+        output["_".join(path)] = val
 
     # Optionally merge the accession and assemblyName fields
-    if "accession" in output and "assemblyName" in output:
-        output["genome_id"] = "_".join([
-            output["accession"],
-            output["assemblyName"],
-            "genomic.fna.gz"
-        ])
+    assert "accession" in output, list(output.keys())
+    assert "assemblyInfo_assemblyName" in output, list(output.keys())
+    output["genome_id"] = "_".join([
+        output["accession"],
+        output["assemblyInfo_assemblyName"],
+        "genomic.fna.gz"
+    ])
 
     return output
 
@@ -55,8 +45,10 @@ def flatten_dict(dat: dict, path=None):
         elif isinstance(val, list):
             for i, v in enumerate(val):
                 if isinstance(v, dict):
-                    for x, y in flatten_dict(v, path=path + [str(i), kw]):
+                    for x, y in flatten_dict(v, path=path + [kw, str(i)]):
                         yield x, y
+                else:
+                    yield path + [str(i)], v
         else:
             yield path + [kw], val
 
