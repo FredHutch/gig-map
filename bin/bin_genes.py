@@ -289,7 +289,12 @@ class GeneData(ad.AnnData):
 
     def add_genome_annotations(self, genome_annot):
         """Add the genome annotations"""
-        self.genome_annot = pd.read_csv(genome_annot)
+        self.genome_annot = (
+            pd.read_csv(genome_annot)
+            .rename(
+                columns=dict(genomes_id="genome_id")
+            )
+        )
         msg = "Missing genome_id column in genome annotations"
         assert "genome_id" in self.genome_annot.columns.values, msg
 

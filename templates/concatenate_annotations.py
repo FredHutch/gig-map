@@ -2,6 +2,7 @@
 import pandas as pd
 import json
 import os
+import gzip
 
 # Set the name of the output file based on the output_prefix value (genes/genomes)
 output_fp = "${output_prefix}.annot.csv.gz"
@@ -84,5 +85,5 @@ if os.path.exists('annotations'):
 else:
 
     # Write out an empty file
-    with open(output_fp, 'wt') as handle:
+    with gzip.open(output_fp, 'wt') as handle:
         handle.write("${output_prefix}_id\\n")
