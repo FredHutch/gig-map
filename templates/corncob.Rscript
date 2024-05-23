@@ -44,6 +44,18 @@ main <- function(){
     print("Aligning sample order between metadata and counts")
     metadata <- metadata[rownames(counts),]
 
+    # Drop any rows from the metadata which lack a value in the formula string
+    print(sprintf("Dropping rows from metadata which lack a value in the formula string: %s", formula))
+    for(cname in strsplit("${params.formula}", "\\+ ")[[1]]){
+        if(cname %in% colnames(metadata)){
+            metadata <- metadata[!is.na(metadata[[cname]]),]
+        }
+    }
+
+    # Subset the counts to only have the rows which were retained in the metadata
+    print("Aligning sample order between metadata and counts")
+    counts <- counts[rownames(metadata),]
+
     # If the user added the --incl_unaligned flag, include the unaligned reads
     if("${params.incl_unaligned}" != "false"){
         print("Including unaligned reads in the analysis")
@@ -56,9 +68,9 @@ main <- function(){
     da <- differentialTest(
         data = counts,
         formula = ~ ${params.formula},
-        phi.formula = ~ 1,
+        phi.formula = ~ ${params.formula},
         formula_null = ~ 1,
-        phi.formula_null = ~ 1,
+        phi.formula_null = ~ ${params.formula},
         sample_data = metadata,
         taxa_are_rows = FALSE,
         test = "Wald",
