@@ -46,7 +46,7 @@ main <- function(){
 
     # Drop any rows from the metadata which lack a value in the formula string
     print("Dropping rows from metadata which lack a value in the formula string: ${params.formula}")
-    for(cname in strsplit("${params.formula}", "\\+ ")[[1]]){
+    for(cname in strsplit("${params.formula}", " ")[[1]]){
         if(cname %in% colnames(metadata)){
             metadata <- metadata[!is.na(metadata[[cname]]),]
         }
