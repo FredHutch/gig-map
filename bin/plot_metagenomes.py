@@ -329,6 +329,7 @@ class Metagenome:
         **kwargs
     ):
 
+        df = df.dropna(axis=1, how="all")
         assert df.dropna().shape[0] == df.shape[0], df
 
         if "colorbar_title_text" not in kwargs:
