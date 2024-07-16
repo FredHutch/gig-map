@@ -85,7 +85,7 @@ def gene_frequency_bars(aln: pd.DataFrame):
     # Make a bargraph
     fig = px.bar(
         data_frame=vc,
-        x="index",
+        x="count",
         y="sseqid",
         labels=dict(sseqid="Number of Genomes", index="Gene"),
         title="Gene Detection Frequency"
@@ -108,7 +108,7 @@ def genome_frequency_bars(aln: pd.DataFrame):
     # Make a bargraph
     fig = px.bar(
         data_frame=vc,
-        x="index",
+        x="count",
         y="genome",
         labels=dict(genome="Number of Genes", index="Genome"),
         title="Genome Size Distribution"
