@@ -254,7 +254,7 @@ class GeneData(ad.AnnData):
         # Make a bargraph
         fig = px.bar(
             data_frame=bin_counts.reset_index(),
-            x="index",
+            x="count",
             y="bin",
             labels=dict(bin="Number of Genes", index="Bin"),
             title="Gene Bin Size Distribution",
