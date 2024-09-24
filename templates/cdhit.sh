@@ -27,6 +27,8 @@ for f in input.genes.*.fasta.gz; do
 
 # Write the stream to a file
 done \
+    | tr '|' '_' \
+    | deduplicate_gene_names.sh \
     > input.genes.fasta
 
 

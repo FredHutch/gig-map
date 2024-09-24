@@ -82,6 +82,7 @@ class GeneData(ad.AnnData):
         logger.info(f"Reading in {gene_annot_fp}")
         gene_annot = pd.read_csv(gene_annot_fp)
         cls.validate_cnames(gene_annot, ["gene_id", "combined_name"], gene_annot_fp)
+        assert gene_annot["gene_id"].duplicated().sum() == 0, "Duplicate gene IDs"
         gene_annot.set_index("gene_id", inplace=True)
 
         ngenomes = aln["genome"].unique().shape[0]
