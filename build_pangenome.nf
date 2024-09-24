@@ -9,6 +9,7 @@ def helpers = shell.parse(new File("${workflow.projectDir}/helpers.gvy"))
 
 // Import sub-workflows
 include { align_genomes } from './modules/align_genomes' addParams(output: "${params.output}/align")
+include { ani } from './modules/ani'
 include { download_genes } from './modules/download_genes'
 include { download_genomes } from './modules/download_genomes'
 include { deduplicate } from './modules/deduplicate' addParams(output: "${params.output}/gene_catalog")
@@ -133,6 +134,11 @@ workflow {
     align_genomes(
         genomes_ch.mix(download_genomes.out.genomes),
         deduplicate.out.fasta
+    )
+
+    // Calculate the ANI for all of those genomes
+    ani(
+        genomes_ch.mix(download_genomes.out.genomes)
     )
 
     ///////////////////////////
