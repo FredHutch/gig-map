@@ -186,6 +186,8 @@ class Metagenome:
             msg = f"Expected to find {kw} in {fp}"
             assert kw in df.columns.values, msg
 
+        # The index must be a string
+        df = df.assign(**{index_col: df[index_col].astype(str)})
         return df.set_index(index_col)
 
     def _read_csv_columns(
@@ -205,7 +207,10 @@ class Metagenome:
             cnames,
             **kwargs
         ).items():
-            logger.info(f"Adding {cname} to {attr}")
+            if cvals.dtype == "object":
+                logger.info(f"Converting {cname} to a string")
+                cvals = cvals.astype(str)
+            logger.info(f"Adding {cname} to {attr} (type: {cvals.dtype})")
             getattr(
                 (
                     self.data
