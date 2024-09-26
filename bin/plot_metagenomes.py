@@ -49,8 +49,11 @@ class Metagenome:
         h5ad
     ):
 
-        stats = self._read_csv(stats).set_index("feature")
+        stats = self._read_csv(stats).dropna().set_index("feature")
         self.adata = ad.read_h5ad(h5ad)
+        # Drop any variable names that are 'nan'
+        if 'nan' in self.adata.var_names:
+            self.adata = self.adata[:, [n for n in self.adata.var_names if n != 'nan']]
 
         # Restore the variable names that may have been mangled by R
         stats = stats.rename(
@@ -60,7 +63,7 @@ class Metagenome:
             stats,
             left_index=True,
             right_index=True,
-            how="outer"
+            how="left"
         )
         self.adata.var = self.adata.var.assign(**{
             kw: self.adata.var[kw].fillna(val)
