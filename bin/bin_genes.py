@@ -8,6 +8,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from scipy.cluster import hierarchy
+from scipy.spatial import distance
 
 # Set the level of the logger to INFO
 logFormatter = logging.Formatter(
@@ -152,8 +153,8 @@ class GeneData(ad.AnnData):
         tot = vc.shape[0]
         tot_counts = vc.sum()
         vc = vc.loc[(vc >= min_genomes_per_gene)]
-        logger.info(f"{vc.shape[0]:,} / {tot:,}% genes meeting threshold")
-        logger.info(f"{round(100 * vc.sum() / tot_counts, 1)} total gene content meeting threshold")
+        logger.info(f"{vc.shape[0]:,} / {tot:,} genes meeting threshold")
+        logger.info(f"{round(100 * vc.sum() / tot_counts, 1)}% total gene content meeting threshold")
         return aln.loc[aln['sseqid'].isin(vc.index.values)]
 
     def bin_genes(
@@ -582,6 +583,11 @@ def heatmap(
     metric="euclidean",
     colorscale="Blues"
 ):
+    # Omit any rows or columns which are all zeros
+    X = X.loc[
+        X.sum(axis=1) > 0,
+        X.sum(axis=0) > 0
+    ]
 
     # Set up a FigureBuilder
     fb = FigureBuilder()
@@ -695,15 +701,41 @@ def sort_index(df: pd.DataFrame, method="average", metric="euclidean"):
     ])
     logger.info(f"{intro}{df.shape[0]:,} items ({kwarg_str})")
 
-    return df.index.values[
-        hierarchy.leaves_list(
-            hierarchy.linkage(
-                df,
-                method=method,
-                metric=metric
+    # Calculate the pairwise distances
+    dist = distance.pdist(df, metric=metric)
+
+    try:
+        return df.index.values[
+            hierarchy.leaves_list(
+                hierarchy.linkage(
+                    dist,
+                    method=method
+                )
             )
+        ]
+    except ValueError as e:
+        # To help diagnose the error, make the distance matrix
+        dm = pd.DataFrame(
+            distance.squareform(dist),
+            index=df.index.values,
+            columns=df.index.values
         )
-    ]
+
+        # Report the number of cells (distances) which are NaN
+        n_nan = dm.isnull().sum().sum()
+        logger.info(f"Number of NaN distances: {n_nan}")
+
+        # If it's less than 10% of the total, report the individual cells
+        if n_nan < 0.1 * dm.size:
+            logger.info("NaN distances:")
+            for s1 in dm.index.values:
+                for s2 in dm.columns.values:
+                    if pd.isnull(dm.loc[s1, s2]):
+                        logger.info(f"{s1} - {s2}")
+                        logger.info(df.loc[s1])
+                        logger.info(df.loc[s2])
+
+        raise e
 
 
 @click.command
