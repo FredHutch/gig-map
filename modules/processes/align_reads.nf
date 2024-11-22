@@ -27,7 +27,7 @@ process count_reads {
     tuple val(sample_name), path("input/input*.fastq.gz")
     
     output:
-    path "${sample_name}.num_reads.txt"
+    tuple val(sample_name), path("${sample_name}.num_reads.txt")
 
     """#!/bin/bash
 
@@ -36,6 +36,22 @@ process count_reads {
 # Count the number of lines, divided by 4
 gunzip -c input/input*.fastq.gz | awk 'NR % 4 == 1' | wc -l > ${sample_name}.num_reads.txt
     """
+}
+
+// Concatenate the read counts from multiple lanes
+process concat_readcounts {
+    container "${params.container__pandas}"
+    label 'io_limited'
+
+    input:
+    tuple val(sample_name), path("inputs/*.num_reads.txt")
+
+    output:
+    path "${sample_name}.num_reads.txt"
+
+    script:
+    template "concat_readcounts.py"
+    
 }
 
 // Align short reads against a gene catalog in amino acid space
@@ -58,11 +74,23 @@ process diamond {
 
 }
 
+process concat_aln {
+    container "${params.container__pandas}"
+
+    input:
+    tuple val(sample_name), path("inputs/*.aln.gz")
+
+    output:
+    tuple val(sample_name), path("${sample_name}.aln.gz")
+
+    script:
+    """cat inputs/* > ${sample_name}.aln.gz"""
+}
+
 // Group together a collection of DIAMOND logs
 process diamond_logs {
     container "${params.container__pandas}"
     label 'io_limited'
-    publishDir "${params.output}/logs/", mode: 'copy', overwrite: true
    
     input:
     path "*"

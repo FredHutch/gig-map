@@ -3,12 +3,16 @@
 include {
     count_reads;
     diamond;
+    concat_aln;
+    concat_readcounts;
     diamond_logs;
     filter_aln;
     famli;
     famli_logs;
     gather
 } from './processes/align_reads'
+
+include { concat_csv as concat_diamond_logs } from './processes/general' addParams(output_csv: "diamond_logs.csv", output_subfolder: "logs", publish: true)
 
 // Reuse the DIAMOND index creation process
 include { makedb_diamond } from './processes/align_genomes'
@@ -30,6 +34,20 @@ workflow align_reads {
         fastq_ch
     )
 
+    // Join the read counts from each sample which are split across lanes
+    count_reads.out
+        .groupTuple()
+        .branch {
+            i -> 
+            multiple: i[1].size() > 1
+            single: true
+        }
+        .set { count_reads_grouped }
+
+    concat_readcounts(
+        count_reads_grouped.multiple
+    )
+
     // Align those reads with DIAMOND against the centroids
     diamond(
         makedb_diamond.out,
@@ -38,12 +56,39 @@ workflow align_reads {
 
     // Summarize the time of execution for each alignment
     diamond_logs(
-        diamond.out.log.toSortedList()
+        diamond.out.log
+    )
+
+    // Join the stats across all files
+    concat_diamond_logs(
+        diamond_logs.out.toSortedList()
+    )
+
+    // Join the alignments from each sample which are split across lanes
+    // The items which are grouped together are the ones which have the same sample name
+    // If there is a sample with just one lane, it will be left alone
+    diamond.out
+        .aln
+        .groupTuple()
+        .branch {
+            i -> 
+            multiple: i[1].size() > 1
+            single: true
+        }
+        .set { aln_grouped }
+
+    concat_aln(
+        aln_grouped.multiple
     )
 
     // Filter out any samples which have an insufficient number of alignments
     filter_aln(
-        diamond.out.aln
+        aln_grouped
+            .single
+            .map {
+                it -> [it[0], it[1][0]]
+            }
+            .mix(concat_aln.out)
     )
 
     // Filter the alignments and resolve multi-mapping reads with FAMLI
@@ -57,7 +102,13 @@ workflow align_reads {
     // Gather all of the alignment information into a single CSV
     gather(
         famli.out.json.toSortedList(),
-        count_reads.out.toSortedList()
+        count_reads_grouped
+            .single
+            .map {
+                it -> it[1][0]
+            }
+            .mix(concat_readcounts.out)
+            .toSortedList()
     )
 
     emit:
