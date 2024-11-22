@@ -690,6 +690,8 @@ def alternate_colors(vals: pd.Series, n=2) -> pd.Series:
 
 
 def sort_index(df: pd.DataFrame, method="average", metric="euclidean"):
+    if df.shape[0] < 2:
+        return df.index.values
 
     intro = "Sorting index: "
     kwarg_str = ", ".join([
