@@ -22,6 +22,7 @@ process collect {
     """#!/bin/bash
 set -e
 
+MPLCONFIGDIR=\${TMPDIR:-/tmp/.config/matplotlib} \
 collect_metagenomes.py \
     --read_alignments "${read_alignments}" \
     --gene_bins "${gene_bins}" \
