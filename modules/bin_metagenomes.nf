@@ -24,23 +24,27 @@ workflow bin_metagenomes {
             metadata
         )
 
-        corncob(
-            collect.out.metadata,
-            collect.out.bin_counts
-        )
+        if ("${params.formula}" != "false"){
 
-        split(
-            corncob.out
-        )
+            corncob(
+                collect.out.metadata,
+                collect.out.bin_counts
+            )
 
-        plot(
-            split
-                .out
-                .flatten()
-                .map {
-                    it -> [it.name.replaceAll(".results.csv", ""), it]
-                }
-                .combine(collect.out.bins_h5ad)
-        )
+            split(
+                corncob.out
+            )
+
+            plot(
+                split
+                    .out
+                    .flatten()
+                    .map {
+                        it -> [it.name.replaceAll(".results.csv", ""), it]
+                    }
+                    .combine(collect.out.bins_h5ad)
+            )
+
+        }
 
 }
