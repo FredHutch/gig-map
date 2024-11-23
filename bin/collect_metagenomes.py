@@ -135,6 +135,9 @@ class Metagenome:
             )
         )
 
+        # Remove any columns from obs which are all NaN
+        obs = obs.loc[:, obs.notna().any()]
+
         self = cls(
             genes=ad.AnnData(
                 X=X,
@@ -250,6 +253,18 @@ class Metagenome:
 
         # Read in the table of genome groups
         genome_groups = self._read_csv(genome_groups, "genome")
+
+        # Drop any columns which are entirely NaN
+        genome_groups = genome_groups.loc[:, genome_groups.notna().any()]
+
+        # Fill any remaining NaNs with ""
+        genome_groups = genome_groups.fillna("")
+
+        # For each column, if any item in the column is a string, convert
+        # the column to a string
+        for col in genome_groups.columns:
+            if genome_groups[col].dtype == "object":
+                genome_groups[col] = genome_groups[col].astype(str)
 
         # Save the list of which genomes belong to each group
         self.data.uns["genome_groups"] = genome_groups
