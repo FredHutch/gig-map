@@ -11,7 +11,7 @@ from scipy.optimize import nnls
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
 from sklearn.metrics import silhouette_score
-from muon import MuData
+from mudata import MuData
 
 # Set the level of the logger to INFO
 logFormatter = logging.Formatter(
