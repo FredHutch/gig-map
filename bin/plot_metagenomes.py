@@ -119,7 +119,21 @@ class Metagenome:
 
     def plot(self, meta_cname, output_folder):
 
-        output_fp = f"{output_folder}/{meta_cname}"
+        # Note that in the case of a categorical comparison, the `meta_cname`
+        # will be the name of the column, concatenated with the value which
+        # is being compared against.
+        # For this reason, we will differentiate the meta_cname from the meta_label
+        meta_label = str(meta_cname)
+        if meta_cname not in self.adata.obs.columns:
+            meta_cname = None
+            for _cname in self.adata.obs.columns:
+                if meta_label.startswith(_cname):
+                    meta_cname = _cname
+                    break
+            if meta_cname is None:
+                raise ValueError(f"Could not find column matching {meta_label}")
+
+        output_fp = f"{output_folder}/{meta_label}"
 
         # Sort the bins and samples
         bin_order = self.sort_index(
@@ -288,7 +302,7 @@ class Metagenome:
         )
 
         logger.info(fig.layout)
-        title_text = f"Association with {meta_cname}"
+        title_text = f"Association with {meta_label}"
         fig.update_layout(
             title_text=title_text,
             title_xanchor="center",
