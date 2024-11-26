@@ -94,6 +94,11 @@ class Metagenome:
         return df.clip(lower=lowest).apply(np.log10)
 
     def sort_index(self, df: pd.DataFrame, metric="cosine", method="average"):
+
+        # No need to sort if there is only one row
+        if df.shape[0] == 1:
+            return df.index.values
+
         try:
             return df.index.values[
                 hierarchy.leaves_list(
