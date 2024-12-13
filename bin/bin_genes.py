@@ -424,17 +424,19 @@ class GeneData(ad.AnnData):
         msg = "Missing genome_id column in genome annotations"
         assert "genome_id" in self.genome_annot.columns.values, msg
 
-        (
+        genome_groups: pd.DataFrame = (
             self.obs
             .reset_index()
             .merge(
                 self.genome_annot,
                 left_on="genome",
-                right_on="genome_id"
+                right_on="genome_id",
+                how="outer"
             )
             .applymap(lambda s: s.replace("\n", " ") if isinstance(s, str) else s)
-            .to_csv("genome_groups.csv", index=None)
         )
+        assert genome_groups.shape[0] > 0
+        genome_groups.to_csv("genome_groups.csv", index=None)
 
         # Calculate the mean detection rate for each bin
         # across each of the genome groups
