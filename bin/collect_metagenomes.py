@@ -465,16 +465,15 @@ class Metagenome:
         )
 
         for sample, bin_abund in reads_per_bin.iterrows():
-            # Run NNLS
+            # Run NNLS, skipping if there are any errors
             try:
                 x, rnorm = nnls(
                     group_profile,
                     bin_abund
                 )
-            except ValueError as e:
-                logger.info(group_profile)
-                logger.info(bin_abund)
-                raise e
+            except (ValueError, RuntimeError):
+                logger.info(f"Sample failed to run through NNLS - skipping ({sample})")
+                continue
 
             # Scale the 2-norm of the residual by the total
             # number of reads in the right-hand side vector
