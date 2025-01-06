@@ -466,6 +466,7 @@ class Metagenome:
 
         for sample, bin_abund in reads_per_bin.iterrows():
             # Run NNLS, skipping if there are any errors
+            logger.info(f"Attempting NNLS on sample {sample}")
             try:
                 x, rnorm = nnls(
                     group_profile,
