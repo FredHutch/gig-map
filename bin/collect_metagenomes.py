@@ -472,7 +472,7 @@ class Metagenome:
                     group_profile,
                     bin_abund
                 )
-            except (ValueError, RuntimeError):
+            except (ValueError, RuntimeError, np.linalg.LinAlgError):
                 logger.info(f"Sample failed to run through NNLS - skipping ({sample})")
                 continue
 
