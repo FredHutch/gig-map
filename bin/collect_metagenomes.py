@@ -189,6 +189,9 @@ class Metagenome:
             msg = f"Expected to find {kw} in {fp}"
             assert kw in df.columns.values, msg
 
+        # Drop any rows where the index_column is null
+        df = df.dropna(subset=[index_col])
+
         # The index must be a string
         df = df.assign(**{index_col: df[index_col].astype(str)})
         return df.set_index(index_col)
@@ -559,6 +562,9 @@ class Metagenome:
             adata.obs = self.data.obs.reindex(index=adata.obs.index)
             for kw, val in self.data.uns.items():
                 adata.uns[kw] = val
+            for line in str(adata).split("\n"):
+                logger.info(line)
+            logger.info(f"Writing to: {output_folder}/metagenome.{mod}.h5ad")
             adata.write_h5ad(f"{output_folder}/metagenome.{mod}.h5ad")
 
     def to_csv(self, output_folder):
