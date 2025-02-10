@@ -9,8 +9,8 @@ process combine_markers {
         path unaligned_fasta
 
     output:
-        path "*.distmat", emit: distmat
-        path "*.msa.gz", emit: msa
+        path "*.distmat", emit: distmat, optional: true
+        path "*.msa.gz", emit: msa, optional: true
 
 """#!/bin/bash
 
@@ -18,6 +18,12 @@ set -e
 
 # Make a local copy of the decompressed FASTA
 gunzip -c ${unaligned_fasta} > input.fasta
+
+# If there are fewer than 4 sequences, skip the alignment
+if [ \$(grep -c ">" input.fasta) -lt 4 ]; then
+    echo "Fewer than 4 sequences in the input, skipping alignment"
+    exit 0
+fi
 
 # Run Clustal-Omega
 clustalo \
