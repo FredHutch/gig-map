@@ -1,3 +1,20 @@
+// Deduplicate the names before running CDHIT
+process deduplicate_fasta_names {
+    container "${params.container__pandas}"
+    label 'io_limited'
+   
+    input:
+    path "input.genes.*.fasta.gz"
+    
+    output:
+    path "deduplicated.genes.fasta.gz"
+    
+    script:
+    """#!/bin/bash
+deduplicate_fasta_names.py 'input.genes.*.fasta.gz' deduplicated.genes.fasta.gz
+
+    """
+}
 // Cluster genes by amino acid similarity
 process cdhit {
     container "${params.container__cdhit}"
@@ -5,7 +22,7 @@ process cdhit {
     publishDir "${params.output}", mode: 'copy', overwrite: true
    
     input:
-    path "input.genes.*.fasta.gz"
+    path "deduplicated.genes.fasta.gz"
     
     output:
     path "centroids.faa.gz", emit: fasta
@@ -57,7 +74,7 @@ process filter_genes {
         path input_fasta
     
     output:
-        path "${input_fasta.name}.filtered.fasta"
+        path "${input_fasta.name}.filtered.fasta.gz"
     
     script:
     template "filter_genes.py"

@@ -5,7 +5,7 @@ import os
 
 input_fp = "${input_fasta}"
 assert os.path.exists(input_fp)
-output_fp = "${input_fasta.name}.filtered.fasta"
+output_fp = "${input_fasta.name}.filtered.fasta.gz"
 print(f"Reading in {input_fp}, writing to {output_fp}")
 
 min_gene_len = ${params.min_gene_length}
@@ -51,7 +51,7 @@ else:
     input_handle = open(input_fp, "r")
 
 counter = 0
-with open(output_fp, 'w') as output_handle:
+with gzip.open(output_fp, 'wt') as output_handle:
 
     for header, seq in parse_fasta(input_handle):
 

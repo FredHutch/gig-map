@@ -6,6 +6,7 @@ nextflow.enable.dsl=2
 // Import processes
 include {
     cdhit;
+    deduplicate_fasta_names;
     annotate_centroids;
     filter_genes;
     get_gene_annot;
@@ -28,12 +29,16 @@ workflow deduplicate {
         genes_ch
     )
 
-
-    // Run CD-HIT on all of the gene sequences
-    cdhit(
+    // Deduplicate the gene sequences
+    deduplicate_fasta_names(
         filter_genes
             .out
             .toSortedList()
+    )
+
+    // Run CD-HIT on all of the gene sequences
+    cdhit(
+        deduplicate_fasta_names.out
     )
 
     // Generate a simple annotation file for each centroid
