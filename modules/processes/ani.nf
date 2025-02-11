@@ -82,34 +82,10 @@ process aggregate_distances {
         path "inputs/*"
     
     output:
-        path "distances.csv.gz"
+        path "distances.csv.gz", emit: distances
+        path "ani_dendrogram.*", emit: dendrogram
+
+    script:
+    template "aggregate_distances.py"
     
-"""
-#!/usr/bin/env python3
-
-import pandas as pd
-import os
-
-# Read in all of the distances
-df = pd.concat(
-    [
-        pd.read_csv(
-            os.path.join('inputs', fp),
-            sep="\\t",
-            header=None,
-            names=['query', 'ref', 'dist', 'n', 'ratio']
-        ).reindex(
-            columns=['query', 'ref', 'dist']
-        )
-        for fp in os.listdir('inputs')
-    ]
-).pivot_table(
-    index='query',
-    columns='ref',
-    values='dist'
-).to_csv(
-    "distances.csv.gz"
-)
-
-"""
 }

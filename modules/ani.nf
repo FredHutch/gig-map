@@ -33,7 +33,7 @@ workflow ani {
         )
 
     emit:
-    distances = aggregate_distances.out
+    distances = aggregate_distances.out.distances
 }
 
 workflow {

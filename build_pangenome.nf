@@ -10,6 +10,7 @@ def helpers = shell.parse(new File("${workflow.projectDir}/helpers.gvy"))
 // Import sub-workflows
 include { align_genomes } from './modules/align_genomes' addParams(output: "${params.output}/align")
 include { ani } from './modules/ani'
+include { filter_genomes } from './modules/filter_genomes'
 include { download_genes } from './modules/download_genes'
 include { download_genomes } from './modules/download_genomes'
 include { deduplicate } from './modules/deduplicate' addParams(output: "${params.output}/gene_catalog")
@@ -109,6 +110,12 @@ workflow {
         genome_manifest_tsv
     )
 
+    // Make a channel with both the downloaded genomes
+    // and the genomes from the folder input
+    genomes_ch
+        .mix(download_genomes.out.genomes)
+        .set { combined_genomes_ch }
+
     //////////////////////////////
     // DOWNLOAD GENES FROM NCBI //
     //////////////////////////////
@@ -126,19 +133,38 @@ workflow {
     // Combine genes from NCBI and from the folder input
     deduplicate(genes_ch.mix(download_genes.out.genes))
 
+    /////////////////////
+    // COMPARE GENOMES //
+    /////////////////////
+
+    // Calculate the ANI for all of those genomes
+    ani(combined_genomes_ch)
+
+    ////////////////////
+    // FILTER GENOMES //
+    ////////////////////
+    if ("${params.filter_ani_enabled}" != "false") {
+        // Filter genomes based on ANI
+        filter_genomes(
+            ani.out.distances,
+            combined_genomes_ch
+        )
+
+        // Make a new channel with the filtered genomes
+        filtered_genomes_ch = filter_genomes.out.filtered_genomes
+    } else {
+        // If filtering is disabled
+        filtered_genomes_ch = combined_genomes_ch
+    }
+
     //////////////////////
     // ALIGN TO GENOMES //
     //////////////////////
 
     // Run the genome alignment sub-workflow
     align_genomes(
-        genomes_ch.mix(download_genomes.out.genomes),
+        filtered_genomes_ch,
         deduplicate.out.fasta
-    )
-
-    // Calculate the ANI for all of those genomes
-    ani(
-        genomes_ch.mix(download_genomes.out.genomes)
     )
 
     ///////////////////////////

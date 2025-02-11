@@ -6,8 +6,10 @@ from pathlib import Path
 import plotly.express as px
 from scipy.cluster import hierarchy
 import logging
+import sys
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 
 def read_file(fp: Path, header: List[str]):
