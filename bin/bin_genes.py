@@ -4,7 +4,6 @@ import anndata as ad
 import click
 import logging
 from typing import Dict, List, Union
-import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -29,6 +28,30 @@ fileHandler = logging.FileHandler("bin_genes.log")
 fileHandler.setFormatter(logFormatter)
 fileHandler.setLevel(logging.INFO)
 logger.addHandler(fileHandler)
+
+
+def filter_sort_name_bins(
+    bins: pd.Series,
+    min_size=1,
+    prefix="Bin ",
+    name="bin"
+) -> pd.Series:
+
+    # Count the number of genes in each bin
+    vc = bins.value_counts().sort_values(ascending=False)
+    logger.info(f"Formed {vc.shape[0]:,} bins in total (before filtering)")
+
+    # Rename the bins, and mask anything below the threshold
+    bin_map = {
+        old_ix: f"{prefix}{new_ix + 1}"
+        for new_ix, (old_ix, count) in enumerate(vc.items())
+        if count >= min_size
+    }
+
+    # Map each gene name to the bin assignment
+    bins = bins.apply(bin_map.get)
+
+    return bins
 
 
 class GeneData(ad.AnnData):
@@ -184,21 +207,24 @@ class GeneData(ad.AnnData):
             for j in range(i + 1, coords.shape[0])
         ]).reindex(columns=['gene1', 'gene2', 'dist'])
 
-    def proximity_matrix(self, threshold=10000):
+    def calc_gene_proximity(
+        self,
+        threshold: int
+    ):
         """
-        Compute a distance matrix for every pair of genes using the jaccard
+        Compute a distance score for every pair of genes using the jaccard
         distance. This distance is defined as the number of genes that are
-        shared between two genomes at a distance no greater than the threshold,
-        divided by the number of genomes that either gene is present in.
+        shared between two genomes at a distance no greater than the
+        proximity threshold, divided by the number of genomes that either
+        gene is present in.
         """
-        logger.info(f"Calculating proximity matrix with threshold: {threshold}")
+        logger.info(f"Calculating proximity for genes <= {threshold:,}bp apart")
 
         # Get the pairwise distances and then filter them
         dists_df = (
             pd.concat([
                 (
                     self.calc_dists_contig(contig_df).assign(genome=genome)
-                    .query("dist > 0")
                     .query(f"dist <= {threshold}")
                 )
                 for (genome, _), contig_df in self.uns["aln"].groupby(["genome", "qseqid"])
@@ -220,31 +246,24 @@ class GeneData(ad.AnnData):
         }
         logger.info(f"Calculated genome presence for {len(genomes_per_gene):,} genes")
 
-        # Generate the distance metric for each pair of genes
+        # Return a long DataFrame with the 'dist' column for each pair of genes
         # n_union = len(gene1genomes | gene2genomes)
         # Adjacency distance = 1 - (n_in_proximity / n_union)
-        adj = (
-            pd.DataFrame({
-                gene1: {
-                    gene2: (
-                        0
-                        if gene1 == gene2
-                        else
-                        1 - (len(genomes_in_proximity[gene1][gene2]) / len(gene1genomes | gene2genomes))
-                    )
-                    for gene2, gene2genomes in genomes_per_gene.items()
-                    if len(gene1genomes & gene2genomes) > 0
-                }
-                for gene1, gene1genomes in genomes_per_gene.items()
-            })
-            .fillna(1)
-            .sort_index(axis=0)
-            .sort_index(axis=1)
-        )
+        df = pd.DataFrame([
+            dict(
+                gene1=gene1,
+                gene2=gene2,
+                dist=(
+                    1 - (len(genomes_in_proximity[gene1][gene2]) / len(gene1genomes | gene2genomes))
+                )
+            )
+            for gene1, gene1genomes in genomes_per_gene.items()
+            for gene2, gene2genomes in genomes_per_gene.items()
+            if gene1 > gene2 and len(gene1genomes & gene2genomes) > 0
+        ])
 
-        logger.info("Calculated proximity distance metric")
-
-        return adj
+        logger.info(f"Calculated {df.shape[0]:,} gene linkages by proximity")
+        return df
 
     def bin_genes(
         self,
@@ -265,11 +284,11 @@ class GeneData(ad.AnnData):
             logger.info("Binning on gene proximity")
             logger.info(f"Proximity threshold: {gene_proximity_threshold}")
             logger.info("Jaccard distance, single linkage clustering")
-            bins = self.linkage_cluster(
-                self.proximity_matrix(gene_proximity_threshold),
-                method="single",
-                metric="precomputed",
-                max_dist=max_dist_genes,
+            bins = self.single_linkage_cluster(
+                (
+                    self.calc_gene_proximity(gene_proximity_threshold)
+                    .query(f"dist <= {max_dist_genes}")
+                ),
                 min_size=min_bin_size,
                 name="Gene Bin"
             )
@@ -293,6 +312,53 @@ class GeneData(ad.AnnData):
 
         # Assign to the var/bin slot
         self.var["bin"] = bins
+
+    @staticmethod
+    def single_linkage_cluster(
+        long_df: pd.DataFrame,
+        min_size=1,
+        prefix="Bin ",
+        name="bin"
+    ) -> pd.Series:
+
+        # Make a vector with the bin ID for each gene
+        bins = pd.Series([])
+
+        # Keep a pointer to the largest bin ID
+        largest_bin = 0
+
+        # For each pair of genes that are linked
+        for r in long_df.itertuples():
+
+            # Get the bin for each gene
+            bin1 = bins.get(r.gene1)
+            bin2 = bins.get(r.gene2)
+
+            # If neither gene is in a bin, make a new bin
+            if bin1 is None and bin2 is None:
+                largest_bin += 1
+                bins[r.gene1] = largest_bin
+                bins[r.gene2] = largest_bin
+
+            # If one gene is in a bin, add the other gene to that bin
+            elif bin1 is None:
+                bins[r.gene1] = bin2
+            elif bin2 is None:
+                bins[r.gene2] = bin1
+
+            # If both genes are in different bins, merge the bins
+            elif bin1 != bin2:
+                bins = bins.map(lambda s: bin2 if s == bin1 else s)
+
+        # Filter by size, sort by size, and rename the bins with a prefix
+        bins = filter_sort_name_bins(
+            bins,
+            min_size=min_size,
+            prefix=prefix,
+            name=name
+        )
+
+        return bins
 
     @staticmethod
     def linkage_cluster(
@@ -322,38 +388,21 @@ class GeneData(ad.AnnData):
             method=method,
             metric=None if metric == "precomputed" else metric
         )
-        bins = hierarchy.fcluster(
-            L,
-            max_dist,
-            criterion="distance"
+        bins = pd.Series(
+            hierarchy.fcluster(
+                L,
+                max_dist,
+                criterion="distance"
+            ),
+            index=wide_df.index
         )
 
-        # Count the number of genes in each bin
-        vc = pd.Series(bins).value_counts().sort_values(ascending=False)
-        logger.info(f"Formed {vc.shape[0]:,} bins in total (before filtering)")
-
-        # Rename the bins, and mask anything below the threshold
-        bin_map = {
-            old_ix: f"{prefix}{new_ix + 1}"
-            for new_ix, (old_ix, count) in enumerate(vc.items())
-            if count >= min_size
-        }
-
-        # Map each gene name to the bin assignment
-        bins = (
-            pd.DataFrame([
-                {
-                    "index": index,
-                    name: bin_map.get(bin_ix)
-                }
-                for index, bin_ix in zip(
-                    wide_df.index.values,
-                    bins
-                )
-            ])
-            .dropna()
-            .set_index("index")
-            [name]
+        # Filter by size, sort by size, and rename the bins with a prefix
+        bins = filter_sort_name_bins(
+            bins,
+            min_size=min_size,
+            prefix=prefix,
+            name=name
         )
 
         return bins
@@ -814,7 +863,7 @@ def alternate_colors(vals: pd.Series, n=2) -> pd.Series:
 
 def sort_index_nested(
     df: pd.DataFrame,
-    groups: Union[pd.Series, None]=None,
+    groups: Union[pd.Series, None] = None,
     method="average",
     metric="euclidean"
 ):
