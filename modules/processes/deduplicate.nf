@@ -7,29 +7,65 @@ process deduplicate_fasta_names {
     path "input.genes.*.fasta.gz"
     
     output:
-    path "deduplicated.genes.fasta.gz"
+    path "deduplicated.genes.*.fasta.gz"
     
     script:
     """#!/bin/bash
-deduplicate_fasta_names.py 'input.genes.*.fasta.gz' deduplicated.genes.fasta.gz
+deduplicate_fasta_names.py 'input.genes.*.fasta.gz' deduplicated.genes '${params.cluster_shard_size}'
 
     """
 }
-// Cluster genes by amino acid similarity
-process cdhit {
+
+// Cluster genes by amino acid similarity, once per shard
+process cdhit_scatter {
     container "${params.container__cdhit}"
     label 'mem_medium'
-    publishDir "${params.output}", mode: 'copy', overwrite: true
    
     input:
-    path "deduplicated.genes.fasta.gz"
+    path "deduplicated.genes.0.fasta.gz"
     
     output:
     path "centroids.faa.gz", emit: fasta
-    path "centroids.membership.csv.gz"
+    path "centroids.membership.csv.gz", emit: membership
     
     script:
     template "cdhit.sh"
+}
+
+// Cluster genes by amino acid similarity
+process cdhit_gather {
+    container "${params.container__cdhit}"
+    label 'mem_medium'
+    publishDir "${params.output}", mode: 'copy', overwrite: true, pattern: "*.faa.gz"
+   
+    input:
+    path "deduplicated.genes.*.fasta.gz"
+    
+    output:
+    path "centroids.faa.gz", emit: fasta
+    path "centroids.membership.csv.gz", emit: membership
+    
+    script:
+    template "cdhit.sh"
+}
+
+// Merge the membership information from all of the shards
+process merge_cluster_membership {
+    container "${params.container__pandas}"
+    label 'io_limited'
+    publishDir "${params.output}", mode: 'copy', overwrite: true
+
+    input:
+    path "scatter.membership.*.tsv.gz"
+    path "gather.membership.tsv.gz"
+
+    output:
+    path "centroids.membership.csv.gz"
+
+    script:
+    """#!/bin/bash
+merge_cluster_membership.py
+    """
 }
 
 

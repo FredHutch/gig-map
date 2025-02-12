@@ -5,7 +5,9 @@ nextflow.enable.dsl=2
 
 // Import processes
 include {
-    cdhit;
+    cdhit_scatter;
+    cdhit_gather;
+    merge_cluster_membership;
     deduplicate_fasta_names;
     annotate_centroids;
     filter_genes;
@@ -36,14 +38,25 @@ workflow deduplicate {
             .toSortedList()
     )
 
-    // Run CD-HIT on all of the gene sequences
-    cdhit(
-        deduplicate_fasta_names.out
+    // Run CD-HIT on all of the shards
+    cdhit_scatter(
+        deduplicate_fasta_names.out.flatten()
+    )
+
+    // Gather the CD-HIT results
+    cdhit_gather(
+        cdhit_scatter.out.fasta.toSortedList()
+    )
+
+    // Merge the cluster membership labels
+    merge_cluster_membership(
+        cdhit_scatter.out.membership.toSortedList(),
+        cdhit_gather.out.membership
     )
 
     // Generate a simple annotation file for each centroid
     annotate_centroids(
-        cdhit.out.fasta,
+        cdhit_gather.out.fasta,
         get_gene_annot
             .out
             .annot
@@ -51,7 +64,7 @@ workflow deduplicate {
     )
 
     emit:
-    fasta = cdhit.out.fasta
+    fasta = cdhit_gather.out.fasta
     annot = annotate_centroids.out.annot
 
 }

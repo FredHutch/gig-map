@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # Decompress the input
-gunzip -c deduplicated.genes.fasta.gz > input.genes.fasta
+gunzip -c deduplicated.genes.*.fasta.gz > input.genes.fasta
 
 # Cluster the inputs
 cd-hit \
