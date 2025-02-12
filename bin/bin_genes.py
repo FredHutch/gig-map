@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
+from collections import defaultdict
 import anndata as ad
 import click
 import logging
 from typing import Dict, List, Union
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -45,6 +47,11 @@ class GeneData(ad.AnnData):
         # Read in the table
         logger.info(f"Reading in {aln_fp}")
         aln = pd.read_csv(aln_fp)
+
+        # Calculate the middle of each gene
+        aln = aln.assign(
+            gene_middle=aln[["qstart", "qend"]].mean(axis=1)
+        )
 
         # Make sure that we have the expected columns
         cls.validate_cnames(
@@ -104,7 +111,8 @@ class GeneData(ad.AnnData):
                 )
                 for kw in ["coverage", "pident"]
             },
-            var=gene_annot.reindex(index=var_ix)
+            var=gene_annot.reindex(index=var_ix),
+            uns=dict(aln=aln)
         )
 
     @staticmethod
@@ -157,26 +165,127 @@ class GeneData(ad.AnnData):
         logger.info(f"{round(100 * vc.sum() / tot_counts, 1)}% total gene content meeting threshold")
         return aln.loc[aln['sseqid'].isin(vc.index.values)]
 
+    @staticmethod
+    def calc_dists_contig(contig_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Using the coordinates for all genes in a particular contig,
+        return the list of all pairwise distances which are under the threshold.
+        """
+        # Get the coordinates of each gene as the middle of the gene
+        coords = contig_df.set_index("sseqid")["gene_middle"]
+
+        return pd.DataFrame([
+            dict(
+                gene1=coords.index.values[i],
+                gene2=coords.index.values[j],
+                dist=abs(coords.values[i] - coords.values[j])
+            )
+            for i in range(coords.shape[0])
+            for j in range(i + 1, coords.shape[0])
+        ]).reindex(columns=['gene1', 'gene2', 'dist'])
+
+    def proximity_matrix(self, threshold=10000):
+        """
+        Compute a distance matrix for every pair of genes using the jaccard
+        distance. This distance is defined as the number of genes that are
+        shared between two genomes at a distance no greater than the threshold,
+        divided by the number of genomes that either gene is present in.
+        """
+        logger.info(f"Calculating proximity matrix with threshold: {threshold}")
+
+        # Get the pairwise distances and then filter them
+        dists_df = (
+            pd.concat([
+                (
+                    self.calc_dists_contig(contig_df).assign(genome=genome)
+                    .query("dist > 0")
+                    .query(f"dist <= {threshold}")
+                )
+                for (genome, _), contig_df in self.uns["aln"].groupby(["genome", "qseqid"])
+            ])
+        )
+        logger.info(f"Calculated {dists_df.shape[0]:,} proximity pairs")
+
+        # Find the genomes where each pair of genes is found
+        # in proximity on the same contig no more distant than the threshold
+        genomes_in_proximity = defaultdict(lambda: defaultdict(set))
+        for _, r in dists_df.iterrows():
+            genomes_in_proximity[r["gene1"]][r["gene2"]].add(r["genome"])
+            genomes_in_proximity[r["gene2"]][r["gene1"]].add(r["genome"])
+
+        # Get the set of genomes that each gene is found within
+        genomes_per_gene = {
+            gene: set(gene_df["genome"].tolist())
+            for gene, gene_df in self.uns["aln"].groupby("sseqid")
+        }
+        logger.info(f"Calculated genome presence for {len(genomes_per_gene):,} genes")
+
+        # Generate the distance metric for each pair of genes
+        # n_union = len(gene1genomes | gene2genomes)
+        # Adjacency distance = 1 - (n_in_proximity / n_union)
+        adj = (
+            pd.DataFrame({
+                gene1: {
+                    gene2: (
+                        0
+                        if gene1 == gene2
+                        else
+                        1 - (len(genomes_in_proximity[gene1][gene2]) / len(gene1genomes | gene2genomes))
+                    )
+                    for gene2, gene2genomes in genomes_per_gene.items()
+                    if len(gene1genomes & gene2genomes) > 0
+                }
+                for gene1, gene1genomes in genomes_per_gene.items()
+            })
+            .fillna(1)
+            .sort_index(axis=0)
+            .sort_index(axis=1)
+        )
+
+        logger.info("Calculated proximity distance metric")
+
+        return adj
+
     def bin_genes(
         self,
-        method="average",
-        metric="jaccard",
         max_dist_genes=0.05,
-        min_bin_size=1
+        min_bin_size=1,
+        gene_proximity_enabled="false",
+        gene_proximity_threshold=10000,
     ):
         """Combine genes into bins."""
 
-        logger.info(f"Maximum {metric} distance for binning genes: {max_dist_genes}")
         logger.info(f"Minimum bin size: {min_bin_size:,}")
 
-        bins = self.linkage_cluster(
-            self.to_df().T,
-            method=method,
-            metric=metric,
-            max_dist=max_dist_genes,
-            min_size=min_bin_size,
-            name="Gene Bin"
-        )
+        # gene_proximity_enabled should either be 'true' or 'false'
+        assert gene_proximity_enabled in ['true', 'false'], \
+            f"gene_proximity_enabled should either be 'true' or 'false', not {gene_proximity_enabled}"
+
+        if gene_proximity_enabled == 'true':
+            logger.info("Binning on gene proximity")
+            logger.info(f"Proximity threshold: {gene_proximity_threshold}")
+            logger.info("Jaccard distance, single linkage clustering")
+            bins = self.linkage_cluster(
+                self.proximity_matrix(gene_proximity_threshold),
+                method="single",
+                metric="precomputed",
+                max_dist=max_dist_genes,
+                min_size=min_bin_size,
+                name="Gene Bin"
+            )
+
+        else:
+
+            logger.info("Binning on gene presence/absence")
+            logger.info("Jaccard distance, average linkage clustering")
+            bins = self.linkage_cluster(
+                self.to_df().T,
+                method="average",
+                metric="jaccard",
+                max_dist=max_dist_genes,
+                min_size=min_bin_size,
+                name="Gene Bin"
+            )
 
         n_clust = bins.unique().shape[0]
         n_genes = bins.shape[0]
@@ -196,7 +305,9 @@ class GeneData(ad.AnnData):
         name="bin"
     ) -> pd.Series:
 
-        intro = "Performing linkage cluster analysis: "
+        logger.info(f"Maximum {metric} distance for binning genes: {max_dist}")
+
+        intro = f"Performing {method} linkage cluster analysis: "
         kwarg_str = ", ".join([
             f"{kw}={val}"
             for kw, val in dict(
@@ -207,9 +318,9 @@ class GeneData(ad.AnnData):
         ])
         logger.info(f"{intro}{wide_df.shape[0]:,} items ({kwarg_str})")
         L = hierarchy.linkage(
-            wide_df,
+            distance.squareform(wide_df.values) if metric == "precomputed" else wide_df,
             method=method,
-            metric=metric
+            metric=None if metric == "precomputed" else metric
         )
         bins = hierarchy.fcluster(
             L,
@@ -433,7 +544,7 @@ class GeneData(ad.AnnData):
                 right_on="genome_id",
                 how="outer"
             )
-            .applymap(lambda s: s.replace("\n", " ") if isinstance(s, str) else s)
+            .map(lambda s: s.replace("\n", " ") if isinstance(s, str) else s)
         )
         assert genome_groups.shape[0] > 0
         genome_groups.to_csv("genome_groups.csv", index=None)
@@ -457,7 +568,7 @@ class GeneData(ad.AnnData):
                 .reindex(
                     columns=self.var["bin"].dropna().index
                 )
-                .applymap(int)
+                .map(int)
             ),
             index_colors=self.obs["group"],
             index_colors_title="Genome Group",
@@ -595,8 +706,18 @@ def heatmap(
     fb = FigureBuilder()
 
     # Get the sorted axes
-    obs_ix = sort_index(X, method=method, metric=metric)
-    var_ix = sort_index(X.T, method=method, metric=metric)
+    obs_ix = sort_index_nested(
+        X,
+        groups=index_colors,
+        method=method,
+        metric=metric
+    )
+    var_ix = sort_index_nested(
+        X.T,
+        groups=columns_colors,
+        method=method,
+        metric=metric
+    )
 
     # Set up the central heatmap
     fb.add_col(
@@ -691,6 +812,33 @@ def alternate_colors(vals: pd.Series, n=2) -> pd.Series:
     return pd.Series(output, index=vals.index.values)
 
 
+def sort_index_nested(
+    df: pd.DataFrame,
+    groups: Union[pd.Series, None]=None,
+    method="average",
+    metric="euclidean"
+):
+    """If a grouping vector is provided, perform a nested sort."""
+    if groups is None:
+        return sort_index(df, method=method, metric=metric)
+
+    # Get the sorted order of the groups
+    group_order = sort_index(df.groupby(groups).mean(), method=method, metric="euclidean")
+
+    # Get the sorted order of the items within each group
+    ix = []
+    for group in group_order:
+        ix.extend(
+            sort_index(
+                df.loc[groups == group],
+                method=method,
+                metric=metric
+            )
+        )
+
+    return ix
+
+
 def sort_index(df: pd.DataFrame, method="average", metric="euclidean"):
     if df.shape[0] < 2:
         return df.index.values
@@ -752,6 +900,8 @@ def sort_index(df: pd.DataFrame, method="average", metric="euclidean"):
 @click.option('--max_dist_genes', type=float)
 @click.option('--min_bin_size', type=int)
 @click.option('--max_dist_genomes', type=float)
+@click.option('--gene_proximity_enabled', type=str)
+@click.option('--gene_proximity_threshold', type=int)
 def main(
     genome_aln,
     gene_annot,
@@ -761,7 +911,9 @@ def main(
     min_genomes_per_gene,
     max_dist_genes,
     min_bin_size,
-    max_dist_genomes
+    max_dist_genomes,
+    gene_proximity_enabled,
+    gene_proximity_threshold
 ):
 
     # Read in the genome alignment data and set up an object
@@ -776,7 +928,9 @@ def main(
     # bin the genes
     gene_data.bin_genes(
         max_dist_genes=max_dist_genes,
-        min_bin_size=min_bin_size
+        min_bin_size=min_bin_size,
+        gene_proximity_enabled=gene_proximity_enabled,
+        gene_proximity_threshold=gene_proximity_threshold
     )
 
     # Summarize the bins

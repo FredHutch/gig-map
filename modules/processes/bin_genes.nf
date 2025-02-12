@@ -24,5 +24,7 @@ bin_genes.py \
     --max_dist_genes "${params.max_dist_genes}" \
     --min_bin_size "${params.min_bin_size}" \
     --max_dist_genomes "${params.max_dist_genomes}" \
+    --gene_proximity_enabled "${params.gene_proximity_enabled}" \
+    --gene_proximity_threshold "${params.gene_proximity_threshold}" \
     """
 }
