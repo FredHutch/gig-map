@@ -8,7 +8,7 @@ GroovyShell shell = new GroovyShell()
 def helpers = shell.parse(new File("${workflow.projectDir}/helpers.gvy"))
 
 // Import sub-workflows
-include { bin_genes } from './modules/processes/bin_genes'
+include { bin_genes_wf } from './modules/bin_genes'
 
 // Standalone entrypoint
 workflow {
@@ -72,7 +72,7 @@ workflow {
     genome_annot = file(params.genome_annot, checkIfExists: true)
 
     // Bin the genes
-    bin_genes(
+    bin_genes_wf(
         genome_aln,
         gene_annot,
         genome_annot

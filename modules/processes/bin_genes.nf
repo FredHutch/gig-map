@@ -28,3 +28,27 @@ bin_genes.py \
     --gene_proximity_threshold "${params.gene_proximity_threshold}" \
     """
 }
+
+process plot_bins {
+    container "${params.container__pandas}"
+    label 'io_limited'
+    publishDir "${params.output}", mode: 'copy', overwrite: true
+
+    input:
+    path genome_aln
+    path "*"
+
+    output:
+    path "layout/*"
+
+    """#!/bin/bash
+set -e
+
+plot_bins.py \
+    --gene_bins gene_bins.csv \
+    --genome_aln "${genome_aln}" \
+    --min_coverage "${params.min_coverage}" \
+    --min_identity "${params.min_identity}" \
+
+"""
+}

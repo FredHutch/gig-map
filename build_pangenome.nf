@@ -14,7 +14,7 @@ include { filter_genomes } from './modules/filter_genomes'
 include { download_genes } from './modules/download_genes'
 include { download_genomes } from './modules/download_genomes'
 include { deduplicate } from './modules/deduplicate' addParams(output: "${params.output}/gene_catalog")
-include { bin_genes } from './modules/processes/bin_genes' addParams(output: "${params.output}/bin_pangenome")
+include { bin_genes_wf } from './modules/bin_genes' addParams(output: "${params.output}/bin_pangenome")
 
 // Standalone entrypoint
 workflow {
@@ -172,7 +172,7 @@ workflow {
     ///////////////////////////
 
     // Bin the genes
-    bin_genes(
+    bin_genes_wf(
         align_genomes.out.concat_alignments,
         deduplicate.out.annot,
         download_genomes.out.annot
