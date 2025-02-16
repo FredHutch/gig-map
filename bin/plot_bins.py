@@ -2,6 +2,7 @@
 import gzip
 import json
 from pathlib import Path
+from typing import Tuple
 import click
 import numpy as np
 import pandas as pd
@@ -24,8 +25,9 @@ logging.basicConfig(
 @click.option('--min_identity', type=float)
 def main(genome_aln, gene_bins, min_coverage, min_identity):
     # Read in the table of alignments
+    logger.info("Reading in the alignments table: %s", genome_aln)
     aln = pd.read_csv(genome_aln, index_col=0)
-    logger.info("Read in the alignments table: %s", aln.shape)
+    logger.info("Done reading in the alignments table: %s", aln.shape)
 
     # Filter on minimum coverage and identity
     logger.info(f"Filtering on minimum coverage: {min_coverage}")
@@ -89,49 +91,65 @@ class Layout:
     # in the layout
     coords: pd.DataFrame
 
-    def __init__(self):
+    # Working copy of the alignments that need to be added
+    aln_df: pd.DataFrame
+
+    def __init__(self, aln_df: pd.DataFrame):
         self.added_genes = set()
         self.coords = pd.DataFrame()
+        self.aln_df = aln_df
 
-    def recursive_add_contig(self, aln_df: pd.DataFrame):
+    def get_next_contig_to_add(self) -> Tuple[str, str]:
+        """Return the next genome/contig to add to the layout."""
+
+        # Compute the number of genes that have not been added
+        # which are in each contig
+        contig_priority = self.find_contig_priority()
+
+        # If there are no genes that have not been added
+        # then we are done
+        if (
+            contig_priority is None or
+            contig_priority.shape[0] == 0 or
+            contig_priority["n_pending"].max() == 0
+        ):
+            return (None, None)
+
+        top_genome = contig_priority.iloc[0]['genome']
+        top_contig = contig_priority.iloc[0]['contig']
+
+        return (top_genome, top_contig)
+
+    def add_all_contigs(self):
         """
         If there is a contig in the alignments which has
         genes that have not yet been added, find the contig
         which has the most genes that have not been added
         and add that to the global layout.
         """
+        top_genome, top_contig = self.get_next_contig_to_add()
 
-        # Compute the number of genes that have not been added
-        # which are in each contig
-        contig_priority = self.find_contig_priority(aln_df)
+        while top_genome is not None:
+            # Add the top contig to the layout
+            self.add_contig(top_genome, top_contig)
 
-        # If there are no genes that have not been added
-        # then we are done
-        if contig_priority is None or contig_priority["n_pending"].max() == 0:
-            return
+            # Drop that contig from the running alignments
+            self.aln_df = (
+                self.aln_df
+                .query(f"genome != '{top_genome}' or contig != '{top_contig}'")
+            )
+            # Get the next set
+            top_genome, top_contig = self.get_next_contig_to_add()
 
-        top_genome = contig_priority.iloc[0]['genome']
-        top_contig = contig_priority.iloc[0]['contig']
+    def add_contig(self, top_genome: str, top_contig: str):
+        """Add a single contig to the layout."""
 
-        # Add the top contig to the layout
-        self.add_contig(
-            aln_df
+        contig_df = (
+            self.aln_df
             .query(f"genome == '{top_genome}'")
             .query(f"contig == '{top_contig}'")
         )
-
-        # Drop that contig from the running alignments
-        aln_df = (
-            aln_df
-            .query(f"genome != '{top_genome}'")
-            .query(f"contig != '{top_contig}'")
-        )
-
-        # Add the best one
-        return self.recursive_add_contig(aln_df)
-
-    def add_contig(self, contig_df: pd.DataFrame):
-        """Add a single contig to the layout."""
+        logger.info(f"Adding contig '{top_contig}' from genome '{top_genome}'")
 
         # Generate the potential coordinates for each gene
         # in the contig using the forward and reverse strand,
@@ -144,6 +162,9 @@ class Layout:
             self.coords = pd.concat([self.coords, fwd_coords])
         else:
             self.coords = pd.concat([self.coords, rev_coords])
+
+        # Record which genes have been added
+        self.added_genes.update(set(zip(contig_df["genome"], contig_df["gene_id"])))
 
     def generate_coords(self, contig_df: pd.DataFrame, orientation: str):
         """
@@ -277,12 +298,12 @@ class Layout:
             self.coords["global_end"].max(),
         )
 
-    def find_contig_priority(self, aln_df: pd.DataFrame) -> pd.DataFrame:
+    def find_contig_priority(self) -> pd.DataFrame:
         """
         Compute the number of genes that have not been added
         which are in each contig
         """
-        if aln_df.shape[0] == 0:
+        if self.aln_df.shape[0] == 0:
             return
 
         return pd.DataFrame([
@@ -292,7 +313,7 @@ class Layout:
                 n_pending=len(set([(genome, gene) for gene in df["gene_id"]]) - self.added_genes),
                 n_total=df["gene_id"].nunique()
             )
-            for (genome, contig), df in aln_df.groupby(["genome", "contig"])
+            for (genome, contig), df in self.aln_df.groupby(["genome", "contig"])
         ]).sort_values(
             by=["n_pending", "n_total"],
             ascending=False
@@ -463,17 +484,20 @@ class Layout:
 def layout_bin(bin: str, aln_df: pd.DataFrame):
     """Generate the layout for a bin across every genome that it is found in"""
 
-    # If there is only one gene, skip it
-    if aln_df["gene_id"].nunique() == 1:
+    # If there is only one gene or more than 500, skip it
+    if (
+        aln_df["gene_id"].nunique() == 1 or
+        aln_df["gene_id"].nunique() > 500
+    ):
         return
 
     logger.info(f"Computing layout for {bin}")
 
     # Make the layout object
-    layout = Layout()
+    layout = Layout(aln_df)
 
     # Add the alignment information
-    layout.recursive_add_contig(aln_df)
+    layout.add_all_contigs()
     logger.info(''.join([
         f"Found positions for {aln_df['genome'].nunique():,} genomes, "
         f"{aln_df['contig'].nunique():,} contigs, and "
