@@ -6,7 +6,11 @@ from scipy.spatial.distance import squareform
 import logging
 import sys
 logger = logging.getLogger(__name__)
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logging.basicConfig(
+    stream=sys.stdout,
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 # Get the threshold used for filtering
 logger.info("Filtering ANI values below (filter_ani_threshold): ${params.filter_ani_threshold}")

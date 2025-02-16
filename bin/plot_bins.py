@@ -10,7 +10,11 @@ import logging
 from scipy.cluster import hierarchy
 from plotly import graph_objects as go
 logger = logging.getLogger("plot_bins.py")
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logging.basicConfig(
+    stream=sys.stdout,
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 
 @click.command

@@ -6,7 +6,11 @@ import sys
 from pathlib import Path
 import logging
 logger = logging.getLogger(__name__)
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logging.basicConfig(
+    stream=sys.stdout,
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 # Read in all FASTA files with the glob provided by sys.argv[0]
 # Write out deduplicated names to a file with the prefix given by sys.argv[1]
