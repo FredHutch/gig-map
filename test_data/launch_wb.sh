@@ -4,7 +4,7 @@ set -euo pipefail
 
 export WB_BASE=$PWD/._workbench
 export NXF_ANSI_LOG=0
-export NXF_VER="21.10.6"
+export NXF_VER="24.10.4"
 
 # Set up a virtual environment
 if [ ! -d venv ]; then python3 -m venv venv; fi

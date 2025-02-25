@@ -7,7 +7,7 @@
             "help": "Nextflow Version",
             "wb_env": "NXF_VER",
             "wb_type": "string",
-            "default": "21.10.6"
+            "default": "24.10.4"
         }
     }
 }
