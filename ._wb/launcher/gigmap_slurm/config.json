@@ -1,7 +1,7 @@
 {
     "$schema": "https://raw.githubusercontent.com/FredHutch/bash-workbench/main/docs/schema.json",
-    "name": "Run gig-map locally (requires Docker)",
-    "description": "Configure Nextflow to run with Docker enabled",
+    "name": "Run gig-map on SLURM",
+    "description": "Configure Nextflow to run with Apptainer enabled",
     "args": {
         "nxf_ver": {
             "help": "Nextflow Version",
