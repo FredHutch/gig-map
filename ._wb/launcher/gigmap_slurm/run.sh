@@ -11,7 +11,7 @@ report.enabled = true
 trace.enabled = true
 
 process {
-    executor = "slurm"
+    executor = 'slurm'
 }
 """ > nextflow.config
 
