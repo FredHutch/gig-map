@@ -1,0 +1,43 @@
+{
+    "$schema": "https://raw.githubusercontent.com/FredHutch/bash-workbench/main/docs/schema.json",
+    "name": "Build Pangenome (gig-map)",
+    "description": "Build a pangenome dataset from a collection of genes and genomes.",
+    "args": {
+        "genome_tsv": {
+            "help": "A table of genomes to be downloaded can be accessed from the website: https://www.ncbi.nlm.nih.gov/datasets/genome/",
+            "wb_env": "GENOME_TSV",
+            "wb_type": "file",
+            "required": true
+        },
+        "min_coverage": {
+            "help": "Minimum proportion of a gene which must align in order to retain the alignment",
+            "wb_type": "integer",
+            "required": true,
+            "default": 90
+        },
+        "min_identity": {
+            "help": "Minimum percent identity of the amino acid alignment required to retain the alignment",
+            "wb_type": "integer",
+            "required": true,
+            "default": 90
+        },
+        "min_genomes_per_gene": {
+            "help": "Minimum number of genomes for a gene to be found in to be included",
+            "wb_type": "integer",
+            "required": true,
+            "default": 1
+        },
+        "min_bin_size": {
+            "help": "Minimum number of genes needed to retain a bin",
+            "wb_type": "integer",
+            "required": true,
+            "default": 1
+        },
+        "max_dist_genes": {
+            "help": "Maximum Jaccard distance threshold used to group genes into bins",
+            "wb_type": "float",
+            "required": true,
+            "default": 0.05
+        }
+    }
+}
