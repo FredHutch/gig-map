@@ -10,6 +10,7 @@ import sys
 import logging
 from scipy.cluster import hierarchy
 from plotly import graph_objects as go
+from multiprocessing import Pool
 logger = logging.getLogger("plot_bins.py")
 logging.basicConfig(
     stream=sys.stdout,
@@ -23,7 +24,8 @@ logging.basicConfig(
 @click.option('--gene_bins', type=click.Path(exists=True))
 @click.option('--min_coverage', type=float)
 @click.option('--min_identity', type=float)
-def main(genome_aln, gene_bins, min_coverage, min_identity):
+@click.option('--threads', type=int, default=1)
+def main(genome_aln, gene_bins, min_coverage, min_identity, threads):
     # Read in the table of alignments
     logger.info("Reading in the alignments table: %s", genome_aln)
     aln = pd.read_csv(genome_aln, index_col=0)
@@ -76,9 +78,17 @@ def main(genome_aln, gene_bins, min_coverage, min_identity):
         "gene_name"
     ])
 
+    # Set up a multiprocessing pool
+    pool = Pool(threads)
+
     # For each bin, make a display
-    for bin, aln_df in merged.groupby("bin"):
-        layout_bin(bin, aln_df)
+    pool.map(
+        layout_bin,
+        [
+            (bin, aln_df)
+            for bin, aln_df in merged.groupby("bin")
+        ]
+    )
 
 
 class Layout:
@@ -481,8 +491,11 @@ class Layout:
         ]
 
 
-def layout_bin(bin: str, aln_df: pd.DataFrame):
+def layout_bin(inputs: Tuple[str, pd.DataFrame]):
     """Generate the layout for a bin across every genome that it is found in"""
+
+    # Split up the inputs
+    bin, aln_df = inputs
 
     # If there is only one gene or more than 500, skip it
     if (
@@ -509,6 +522,7 @@ def layout_bin(bin: str, aln_df: pd.DataFrame):
 
     # Plot the coordinates
     layout.plot(bin)
+
 
 if __name__ == "__main__":
     main()

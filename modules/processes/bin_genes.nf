@@ -31,7 +31,7 @@ bin_genes.py \
 
 process plot_bins {
     container "${params.container__pandas}"
-    label 'io_limited'
+    label 'cpu_high'
     publishDir "${params.output}", mode: 'copy', overwrite: true
 
     input:
@@ -49,6 +49,7 @@ plot_bins.py \
     --genome_aln "${genome_aln}" \
     --min_coverage "${params.min_coverage}" \
     --min_identity "${params.min_identity}" \
+    --threads ${task.cpus}
 
 """
 }
