@@ -223,6 +223,8 @@ def gene_frequency_genome_size(aln: pd.DataFrame):
 
 
 def sort(df: pd.DataFrame, method="average", metric="euclidean"):
+    if df.shape[0] < 3:
+        return df
     return df.reindex(
         index=df.index.values[
             hierarchy.leaves_list(
