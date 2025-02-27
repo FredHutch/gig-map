@@ -39,7 +39,7 @@ process plot_bins {
     path "*"
 
     output:
-    path "layout/*"
+    path "layout/*", optional: true
 
     """#!/bin/bash
 set -e
