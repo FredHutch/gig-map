@@ -1270,11 +1270,16 @@ def get_genome_label_map(fig):
         }
 
 
-def order_by_linkage(df, method="ward", metric="euclidean", logger=None):
+def order_by_linkage(df: pd.DataFrame, method="ward", metric="euclidean", logger=None):
     """Return the order of rows based on linkage clustering"""
 
     if logger is not None:
         logger.info(f"Ordering table by {method} linkage and {metric} distances")
+
+    if df.shape[0] < 3:
+        logger.info(f"No need to sort - {df.shape[0]} rows")
+        return df.index.values
+    logger.info(f"Sorting {df.shape[0]:,} rows")
 
     # Perform linkage clustering
     L = hierarchy.linkage(

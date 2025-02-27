@@ -113,6 +113,9 @@ def write_feather(df, fp):
 
 def order_genomes(data, method="average"):
 
+    if data['distmat'].shape[0] < 3:
+        return data['distmat'].index.values
+
     return data['distmat'].index.values[
         hierarchy.leaves_list(
             hierarchy.linkage(

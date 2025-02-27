@@ -626,6 +626,12 @@ class Metagenome:
         return df.clip(lower=lowest).apply(np.log10)
 
     def sort_index(self, df: pd.DataFrame, metric="cosine", method="average"):
+
+        if df.shape[0] < 3:
+            logger.info(f"No need to sort - {df.shape[0]} rows")
+            return df.index.values
+        logger.info(f"Sorting {df.shape[0]:,} rows")
+
         try:
             return df.index.values[
                 hierarchy.leaves_list(

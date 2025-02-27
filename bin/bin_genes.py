@@ -383,19 +383,31 @@ class GeneData(ad.AnnData):
             ).items()
         ])
         logger.info(f"{intro}{wide_df.shape[0]:,} items ({kwarg_str})")
-        L = hierarchy.linkage(
-            distance.squareform(wide_df.values) if metric == "precomputed" else wide_df,
-            method=method,
-            metric=None if metric == "precomputed" else metric
-        )
-        bins = pd.Series(
-            hierarchy.fcluster(
-                L,
-                max_dist,
-                criterion="distance"
-            ),
-            index=wide_df.index
-        )
+
+        if wide_df.shape[0] < 3:
+            logger.info(f"No need to sort - {wide_df.shape[0]} rows")
+            bins = pd.Series({
+                ix: 0
+                for ix in wide_df.index
+            })
+
+        else:
+
+            logger.info(f"Sorting {wide_df.shape[0]:,} rows")
+
+            L = hierarchy.linkage(
+                distance.squareform(wide_df.values) if metric == "precomputed" else wide_df,
+                method=method,
+                metric=None if metric == "precomputed" else metric
+            )
+            bins = pd.Series(
+                hierarchy.fcluster(
+                    L,
+                    max_dist,
+                    criterion="distance"
+                ),
+                index=wide_df.index
+            )
 
         # Filter by size, sort by size, and rename the bins with a prefix
         bins = filter_sort_name_bins(

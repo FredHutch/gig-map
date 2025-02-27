@@ -95,8 +95,8 @@ class Metagenome:
 
     def sort_index(self, df: pd.DataFrame, metric="cosine", method="average"):
 
-        # No need to sort if there is only one row
-        if df.shape[0] == 1:
+        # No need to sort if there are fewer than 3 rows
+        if df.shape[0] < 3:
             return df.index.values
 
         try:
