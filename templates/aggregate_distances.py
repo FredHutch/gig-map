@@ -32,7 +32,7 @@ df.to_csv("distances.csv.gz")
 # Check to see if the filter_ani_threshold parameter is set
 try:
     filter_ani_threshold = float("${params.filter_ani_threshold}")
-except:
+except: # noqa
     filter_ani_threshold = None
 
 # Build a linkage matrix using this distance matrix
@@ -48,6 +48,9 @@ dendrogram(
 # Adjust the height of the plot to fit the labels
 plt.gcf().set_size_inches(8, 0.15 * len(df.index))
 plt.xlabel("ANI Distance")
-plt.tight_layout()
+try:
+    plt.tight_layout()
+except ValueError:
+    pass
 plt.savefig('ani_dendrogram.png')
 plt.savefig('ani_dendrogram.pdf')
