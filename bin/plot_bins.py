@@ -362,6 +362,8 @@ class Layout:
         # add a second set of labels across the top with the gene names
         gene_labels = (
             self.coords
+            .dropna(subset=["global_start", "global_end"])
+            .fillna("")
             .groupby(["gene_id", "gene_name"])
             .apply(lambda d: np.mean([d["global_start"].mean(), d["global_end"].mean()]), include_groups=False)
             .reset_index()
