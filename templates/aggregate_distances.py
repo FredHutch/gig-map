@@ -50,7 +50,10 @@ plt.gcf().set_size_inches(8, 0.15 * len(df.index))
 plt.xlabel("ANI Distance")
 try:
     plt.tight_layout()
-except ValueError:
+except:
     pass
-plt.savefig('ani_dendrogram.png')
-plt.savefig('ani_dendrogram.pdf')
+try:
+    plt.savefig('ani_dendrogram.png')
+    plt.savefig('ani_dendrogram.pdf')
+except:
+    pass

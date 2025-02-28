@@ -83,7 +83,7 @@ process aggregate_distances {
     
     output:
         path "distances.csv.gz", emit: distances
-        path "ani_dendrogram.*", emit: dendrogram
+        path "ani_dendrogram.*", emit: dendrogram, optional: true
 
     script:
     template "aggregate_distances.py"
