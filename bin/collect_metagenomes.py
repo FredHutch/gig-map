@@ -224,7 +224,11 @@ class Metagenome:
                     self.data[modality]
                 ),
                 attr
-            )[cname] = cvals
+            )[(
+                "_specimen"
+                if cname == "specimen" and attr == "obs"
+                else cname
+            )] = cvals
 
         self.log_content()
 
