@@ -13,7 +13,16 @@ trace.enabled = true
 process {
     executor = 'slurm'
 }
+env {
 """ > nextflow.config
+
+echo $ENV | tr ';' '\n' | while read field; do 
+    if [[ $(echo $field | grep -c '=') == 1 ]]; then
+        echo "    ${field#*=} = '${field%=*}'"
+    fi
+done >> nextflow.config
+
+echo "}" >> nextflow.config
 
 cat nextflow.config
 echo

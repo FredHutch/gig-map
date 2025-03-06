@@ -3,6 +3,13 @@
     "name": "Run gig-map on SLURM",
     "description": "Configure Nextflow to run with Apptainer enabled",
     "args": {
+        "env": {
+            "help": "Optional Environment Variables: kwA=valA;kwB=valB",
+            "wb_type": "string",
+            "wb_env": "ENV",
+            "default": "",
+            "required": true
+        },
         "nxf_ver": {
             "help": "Nextflow Version",
             "wb_env": "NXF_VER",
