@@ -18,7 +18,7 @@ env {
 
 echo $ENV | tr ';' '\n' | while read field; do 
     if [[ $(echo $field | grep -c '=') == 1 ]]; then
-        echo "    ${field#*=} = '${field%=*}'"
+        echo "    ${field%=*} = '${field#*=}'"
     fi
 done >> nextflow.config
 
