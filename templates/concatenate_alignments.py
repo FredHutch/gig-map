@@ -199,7 +199,7 @@ def gene_frequency_genome_size(aln: pd.DataFrame):
                 threshold=threshold
             )
         )
-        for threshold in range(1, vc.max())
+        for threshold in range(1, vc.max() + 1)
         for genome, count in (
             wide_df
             .loc[vc >= threshold]
