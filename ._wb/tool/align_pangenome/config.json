@@ -1,0 +1,52 @@
+{
+    "$schema": "https://raw.githubusercontent.com/FredHutch/bash-workbench/main/docs/schema.json",
+    "name": "Align Pangenome (gig-map)",
+    "description": "Align a set of metagenomic sequencing data to a pangenome.",
+    "args": {
+        "pangenome": {
+            "help": "Pangenome folder (created with build_pangenome.nf)",
+            "wb_type": "folder",
+            "wb_env": "PANGENOME",
+            "required": true
+        },
+        "reads": {
+            "help": "Folder containing the set of FASTQ files to align against those genes",
+            "wb_type": "folder",
+            "required": true
+        },
+        "reads_suffix": {
+            "help": "File ending for all reads",
+            "wb_type": "string",
+            "default": "fastq.gz"
+        },
+        "read_pairing_pattern": {
+            "help": "Pattern to match read pairs",
+            "wb_type": "string",
+            "default": "_R{1,2}"
+        },
+        "paired": {
+            "help": "Are the reads paired-end?",
+            "wb_type": "bool",
+            "default": true
+        },
+        "aligner": {
+            "help": "Algorithm used for alignment (default: diamond, options: diamond, blast)",
+            "wb_env": "ALIGNER",
+            "wb_type": "select",
+            "wb_choices": ["diamond", "blast"],
+            "default": "diamond"
+        },
+        "max_overlap": {
+            "help": "Any alignment which overlaps a higher-scoring alignment by more than this will be filtered out",
+            "wb_env": "MAX_OVERLAP",
+            "wb_type": "integer",
+            "default": 50
+        },
+        "query_gencode": {
+            "help": "Genetic code used for conceptual translation of gnvenome sequences",
+            "wb_env": "QUERY_GENCODE",
+            "wb_type": "integer",
+            "default": 11
+        }
+    }
+}
