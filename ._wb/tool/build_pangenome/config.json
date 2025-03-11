@@ -7,7 +7,17 @@
             "help": "A table of genomes to be downloaded can be accessed from the website: https://www.ncbi.nlm.nih.gov/datasets/genome/",
             "wb_env": "GENOME_TSV",
             "wb_type": "file",
-            "required": true
+            "required": false
+        },
+        "genomes": {
+            "help": "A folder of genome sequences in nucleotide FASTA format",
+            "wb_type": "folder",
+            "required": false
+        },
+        "genes": {
+            "help": "A folder of gene sequences in protein FASTA format",
+            "wb_type": "folder",
+            "required": false
         },
         "min_coverage": {
             "help": "Minimum proportion of a gene which must align in order to retain the alignment",
