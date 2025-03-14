@@ -37,8 +37,7 @@ nextflow \
     --group_groups "${GROUP_GROUPS}" \
     --output "${PWD}" \
     -params-file ._wb/tool/params.json \
-    -resume \
-    -profile "${PROFILE}"
+    -resume
 
 # If temporary files were not placed in a separate location
 if [ -d work ]; then
