@@ -30,7 +30,7 @@ done
 echo Starting workflow
 nextflow \
     run \
-    "${TOOL_REPO}/build_pangenome.nf" \
+    "${TOOL_REPO}/align_pangenome.nf" \
     --genes "${GENES}" \
     --gene_bins "${GENE_BINS}" \
     --group_profile "${GROUP_PROFILE}" \
