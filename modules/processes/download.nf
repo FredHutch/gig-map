@@ -54,6 +54,7 @@ process parse_genome_tsv {
 process getDatasets {
     container "${params.container__datasets}"
     label "io_limited"
+    tag "${dataset_acc}"
 
     maxForks params.ftp_threads
 

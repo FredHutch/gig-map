@@ -22,6 +22,9 @@ for _, r in df.iterrows():
         print("No valid assembly accession found for record:")
         print(r.to_json())
 
+    if acc in acc_list:
+        raise ValueError(f"Duplicate assembly accession found: {acc}")
+
     acc_list.append(acc)
 
 
