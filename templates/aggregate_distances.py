@@ -35,25 +35,28 @@ try:
 except: # noqa
     filter_ani_threshold = None
 
-# Build a linkage matrix using this distance matrix
-linkage_matrix = linkage(squareform(df), method='average')
+# Only build a tree if there are more than 2 genomes
+if df.shape[0] > 2:
 
-# Color the dendrogram based on the filter_ani_threshold
-dendrogram(
-    linkage_matrix,
-    color_threshold=filter_ani_threshold,
-    labels=df.index,
-    orientation='left'
-)
-# Adjust the height of the plot to fit the labels
-plt.gcf().set_size_inches(8, 0.15 * len(df.index))
-plt.xlabel("ANI Distance")
-try:
-    plt.tight_layout()
-except:
-    pass
-try:
-    plt.savefig('ani_dendrogram.png')
-    plt.savefig('ani_dendrogram.pdf')
-except:
-    pass
+    # Build a linkage matrix using this distance matrix
+    linkage_matrix = linkage(squareform(df), method='average')
+
+    # Color the dendrogram based on the filter_ani_threshold
+    dendrogram(
+        linkage_matrix,
+        color_threshold=filter_ani_threshold,
+        labels=df.index,
+        orientation='left'
+    )
+    # Adjust the height of the plot to fit the labels
+    plt.gcf().set_size_inches(8, 0.15 * len(df.index))
+    plt.xlabel("ANI Distance")
+    try:
+        plt.tight_layout()
+    except:
+        pass
+    try:
+        plt.savefig('ani_dendrogram.png')
+        plt.savefig('ani_dendrogram.pdf')
+    except:
+        pass
