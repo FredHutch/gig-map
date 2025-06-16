@@ -48,6 +48,12 @@
             "wb_type": "float",
             "required": true,
             "default": 0.05
+        },
+        "ftp_threads": {
+            "help": "Number of threads to use for downloading genomes from NCBI",
+            "wb_type": "integer",
+            "required": true,
+            "default": 1
         }
     }
 }
