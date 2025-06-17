@@ -264,8 +264,8 @@ class Metagenome:
         # Drop any columns which are entirely NaN
         genome_groups = genome_groups.loc[:, genome_groups.notna().any()]
 
-        # Fill any remaining NaNs with ""
-        genome_groups = genome_groups.fillna("")
+        # Fill any remaining NaNs with "None"
+        genome_groups = genome_groups.fillna("None")
 
         # For each column, if any item in the column is a string, convert
         # the column to a string
@@ -569,7 +569,7 @@ class Metagenome:
             for line in str(adata).split("\n"):
                 logger.info(line)
             logger.info(f"Writing to: {output_folder}/metagenome.{mod}.h5ad")
-            adata.write_h5ad(f"{output_folder}/metagenome.{mod}.h5ad")
+            adata.write_h5ad(f"{output_folder}/metagenome.{mod}.h5ad", compression="gzip")
 
     def to_csv(self, output_folder):
 
