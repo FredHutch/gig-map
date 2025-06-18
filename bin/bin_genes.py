@@ -508,7 +508,8 @@ class GeneData(ad.AnnData):
             .merge(
                 self.genome_annot,
                 left_on="genome",
-                right_on="genome_id"
+                right_on="genome_id",
+                how="outer"
             )
             .to_csv("genome_content.long.csv", index=None)
         )
