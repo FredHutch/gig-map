@@ -41,11 +41,18 @@ def run():
     # Plot the distribution of alignment coverage and identity metrics
     alignment_qc_metrics(aln)
 
-    # Plot a heatmap of all aligned genes
-    alignment_heatmap(aln)
+    # Skip these two plots if the table would be too large
+    plot_size = aln["genome"].nunique() * aln["sseqid"].nunique()
+    if plot_size > 1000000000:
+        logger.info(f"Genome x gene table would be too large ({plot_size:,} cells) - skipping")
 
-    # Count up the number of genes per genome, given different thresholds
-    gene_frequency_genome_size(aln)
+    else:
+
+        # Plot a heatmap of all aligned genes
+        alignment_heatmap(aln)
+
+        # Count up the number of genes per genome, given different thresholds
+        gene_frequency_genome_size(aln)
 
 
 def read_aln() -> pd.DataFrame:
@@ -148,7 +155,7 @@ def alignment_qc_metrics(aln: pd.DataFrame):
         color_continuous_scale=colorscale
     )
     fig.write_html("alignment_qc_metrics.html", include_plotlyjs="cdn")
-    
+
 
 def alignment_heatmap(aln: pd.DataFrame):
 
