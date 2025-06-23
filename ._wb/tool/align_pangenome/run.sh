@@ -17,12 +17,15 @@ echo
 GENES="${PANGENOME}/gene_catalog/centroids.faa.gz"
 GENE_BINS="${PANGENOME}/bin_pangenome/gene_bins.csv"
 GROUP_PROFILE="${PANGENOME}/bin_pangenome/group_profile.csv"
-GROUP_GROUPS="${PANGENOME}/bin_pangenome/genome_groups.csv"
+GENOME_GROUPS="${PANGENOME}/bin_pangenome/genome_groups.csv"
 
-for fp in "${GENES}" "${GENE_BINS}" "${GROUP_PROFILE}" "${GROUP_GROUPS}"; do
+echo "Pangenome Reference Files:"
+for fp in "${GENES}" "${GENE_BINS}" "${GROUP_PROFILE}" "${GENOME_GROUPS}"; do
     if [ ! -f "${fp}" ]; then
         echo "ERROR: Missing file: ${fp}"
         exit 1
+    else
+        echo "${fp}"
     fi
 done
 
@@ -34,7 +37,7 @@ nextflow \
     --genes "${GENES}" \
     --gene_bins "${GENE_BINS}" \
     --group_profile "${GROUP_PROFILE}" \
-    --group_groups "${GROUP_GROUPS}" \
+    --genome_groups "${GENOME_GROUPS}" \
     --output "${PWD}" \
     -params-file ._wb/tool/params.json \
     -resume
