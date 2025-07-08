@@ -578,7 +578,7 @@ class Metagenome:
                 if kw != "group_profile":
                     adata.uns[kw] = val
             # Make sure to omit the group profile from the uns
-            if "group_profile" in self.data.uns:
+            if "group_profile" in adata.uns:
                 del adata.uns["group_profile"]
             for line in str(adata).split("\n"):
                 logger.info(line)
