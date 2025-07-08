@@ -563,7 +563,16 @@ class Metagenome:
             del self.data.uns["filtered_out"]
         for mod in self.data.mod:
             adata: ad.AnnData = self.data.mod[mod]
-            adata.obs = self.data.obs.reindex(index=adata.obs.index)
+            adata.obs = (
+                self.data
+                .obs
+                .reindex(index=adata.obs.index)
+            )
+            # Remove any columns from obs which are all NaN
+            adata.obs = adata.obs.loc[:, adata.obs.notna().any()]
+            # Fill any missing values in obs with "None"
+            adata.obs = adata.obs.fillna("None")
+
             for kw, val in self.data.uns.items():
                 adata.uns[kw] = val
             for line in str(adata).split("\n"):
