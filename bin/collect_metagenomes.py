@@ -574,7 +574,9 @@ class Metagenome:
             adata.obs = adata.obs.fillna("None")
 
             for kw, val in self.data.uns.items():
-                adata.uns[kw] = val
+                # Omit the group profile from the uns
+                if kw != "group_profile":
+                    adata.uns[kw] = val
             for line in str(adata).split("\n"):
                 logger.info(line)
             logger.info(f"Writing to: {output_folder}/metagenome.{mod}.h5ad")
