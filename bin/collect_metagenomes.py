@@ -733,6 +733,8 @@ def main(
 
     mdata.to_csv(f"{output_folder}/csv")
     mdata.to_h5ad(f"{output_folder}/h5ad")
+    if "group_profile" in mdata.data.uns:
+        del mdata.data.uns["group_profile"]
     mdata.data.write_h5mu(f"{output_folder}/metagenome.h5mu")
 
 
