@@ -587,9 +587,6 @@ class Metagenome:
                 # Omit the group profile from the uns
                 if kw != "group_profile":
                     adata.uns[kw] = val
-            # Make sure to omit the group profile from the uns
-            if "group_profile" in adata.uns:
-                del adata.uns["group_profile"]
             for line in str(adata).split("\n"):
                 logger.info(line)
             logger.info(f"Writing to: {output_folder}/metagenome.{mod}.h5ad")
@@ -743,8 +740,6 @@ def main(
 
     mdata.to_csv(f"{output_folder}/csv")
     mdata.to_h5ad(f"{output_folder}/h5ad")
-    if "group_profile" in mdata.data.uns:
-        del mdata.data.uns["group_profile"]
     mdata.data.write_h5mu(f"{output_folder}/metagenome.h5mu")
 
 
