@@ -1,17 +1,6 @@
 #!/usr/bin/env python3
-from collections.abc import Mapping
-import json
-import os
-import anndata as ad
-import click
 import logging
-import numpy as np
 import pandas as pd
-from scipy.optimize import nnls
-from scipy.spatial import distance
-from scipy.cluster import hierarchy
-from sklearn.metrics import silhouette_score
-from mudata import MuData
 
 # Set the level of the logger to INFO
 logFormatter = logging.Formatter(
