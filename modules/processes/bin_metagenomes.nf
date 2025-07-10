@@ -1,3 +1,20 @@
+process bin_summary {
+    container "${params.container__pandas}"
+    label 'io_limited'
+    publishDir "${params.output}", mode: 'copy', overwrite: true
+
+    input:
+    path read_alignments
+    path gene_bins
+
+    output:
+    path "bin_summary.csv.gz", emit: bin_summary
+
+    script:
+    template "bin_summary.py"
+
+}
+
 process collect {
     container "${params.container__pandas}"
     label 'io_limited'

@@ -1,4 +1,5 @@
 include {
+    bin_summary;
     collect;
     split;
     plot
@@ -16,35 +17,41 @@ workflow bin_metagenomes {
 
     main:
 
-        collect(
+        bin_summary(
             read_alignments,
-            gene_bins,
-            genome_groups,
-            group_profile,
-            metadata
+            gene_bins
         )
+        if (params.wide_metagenome_output){
 
-        if ("${params.formula}" != "false"){
-
-            corncob(
-                collect.out.metadata,
-                collect.out.bin_counts
+            collect(
+                read_alignments,
+                gene_bins,
+                genome_groups,
+                group_profile,
+                metadata
             )
 
-            split(
-                corncob.out
-            )
+            if ("${params.formula}" != "false"){
 
-            plot(
-                split
-                    .out
-                    .flatten()
-                    .map {
-                        it -> [it.name.replaceAll(".results.csv", ""), it]
-                    }
-                    .combine(collect.out.bins_h5ad)
-            )
+                corncob(
+                    collect.out.metadata,
+                    collect.out.bin_counts
+                )
 
+                split(
+                    corncob.out
+                )
+
+                plot(
+                    split
+                        .out
+                        .flatten()
+                        .map {
+                            it -> [it.name.replaceAll(".results.csv", ""), it]
+                        }
+                        .combine(collect.out.bins_h5ad)
+                )
+            }
         }
 
 }

@@ -168,6 +168,7 @@ process gather {
     output:
     path "read_alignments.csv.gz"
 
+    script:
     """
     gather_alignments.py
     """   
