@@ -179,6 +179,7 @@ class Metagenome:
         fp,
         index_col,
         cnames=[],
+        fillna=False,
         **kwargs
     ) -> pd.DataFrame:
 
@@ -194,7 +195,13 @@ class Metagenome:
 
         # The index must be a string
         df = df.assign(**{index_col: df[index_col].astype(str)})
-        return df.set_index(index_col)
+        df = df.set_index(index_col)
+
+        # If fillna is True, fill NaN values with the provided value
+        if fillna:
+            df = df.fillna(fillna)
+
+        return df
 
     def _read_csv_columns(
         self,
@@ -203,6 +210,7 @@ class Metagenome:
         index_col=None,
         attr=None,
         cnames=[],
+        fillna=False,
         **kwargs
     ):
         """Add columns from CSV to <attr>"""
@@ -211,6 +219,7 @@ class Metagenome:
             fp,
             index_col,
             cnames,
+            fillna=fillna,
             **kwargs
         ).items():
             if cvals.dtype == "object":
@@ -307,7 +316,8 @@ class Metagenome:
             fp=metadata,
             index_col="sample",
             attr="obs",
-            cnames=[]
+            cnames=[],
+            fillna="None",
         )
         self.data.update()
         self.log_content()
