@@ -1,4 +1,5 @@
 include {
+    bin_summary;
     collect;
     split;
     plot
@@ -15,6 +16,11 @@ workflow bin_metagenomes {
         metadata
 
     main:
+
+        bin_summary(
+            read_alignments,
+            gene_bins
+        )
 
         collect(
             read_alignments,
