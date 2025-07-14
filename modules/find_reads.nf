@@ -55,7 +55,7 @@ workflow find_reads {
             reads_ch = Channel
                 .fromPath("${reads_folder}/**${params.reads_suffix}")
                 .map {
-                    it -> [it.name.substring(0, it.name.length() - ("${params.reads_suffix}".length() + 1)), it]
+                    it -> [it.name.substring(0, it.name.length() - "${params.reads_suffix}".length()), it]
                 }
 
         }
