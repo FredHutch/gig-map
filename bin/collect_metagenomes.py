@@ -580,8 +580,20 @@ class Metagenome:
             )
             # Remove any columns from obs which are all NaN
             adata.obs = adata.obs.loc[:, adata.obs.notna().any()]
-            # Fill any missing values in obs with "None"
-            adata.obs = adata.obs.fillna("None")
+            # Fill any missing values in obs with -1 or "None"
+            adata.obs = (
+                adata.obs
+                .fillna({
+                    cname: (
+                        -1 if val.dtype == np.int64
+                        else (
+                            -1.0 if val.dtype == np.float64
+                            else "None"
+                        )
+                    )
+                    for cname, val in adata.obs.items()
+                })
+            )
 
             for kw, val in self.data.uns.items():
                 adata.uns[kw] = val
