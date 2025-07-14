@@ -39,7 +39,7 @@ def read_inputs():
                     if name is not None and len(seq) > 0:
                         yield (name, ''.join(seq))
                     seq = []
-                    name = line[1:].split(" ")[0].rstrip("\n")
+                    name = line[1:].split(" ")[0].split("\t")[0].rstrip("\n")
                 else:
                     seq.append(line.rstrip("\n"))
             if name is not None and len(seq) > 0:
@@ -49,10 +49,9 @@ def read_inputs():
 def drop_duplicates(input_generator):
     seen = set()
     for i in input_generator:
-        if i in seen:
-            continue
+        if i not in seen:
+            yield i
         seen.add(i)
-        yield i
 
 
 all_names = defaultdict(int)
@@ -73,7 +72,12 @@ for name, seq in drop_duplicates(read_inputs()):
         logger.info(f"Writing out to {fpo}")
         ofh = gzip.open(fpo, "wt")
 
-    ofh.write(f">{name}\n{seq}\n")
+    all_names[name] += 1
+    if all_names[name] > 1:
+        # If we have seen this name before, append a number to the end of the name
+        ofh.write(f">{name}_{all_names[name]}\n{seq}\n")
+    else:
+        ofh.write(f">{name}\n{seq}\n")
 ofh.close()
 
 logger.info("Done")
