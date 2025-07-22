@@ -173,3 +173,18 @@ process gather {
     gather_alignments.py
     """   
 }
+
+process centroids_length {
+    container "${params.container__pandas}"
+    label 'io_limited'
+    publishDir "${params.output}", mode: "copy", overwrite: true
+    
+    input:
+    file centroids_faa
+    
+    output:
+    path "centroids_length.csv.gz"
+
+    script:
+    template "centroids_length.py"
+}

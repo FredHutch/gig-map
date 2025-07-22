@@ -6,6 +6,7 @@ process bin_summary {
     input:
     path read_alignments
     path gene_bins
+    path centroids_length
 
     output:
     path "bin_summary.csv.gz", emit: bin_summary

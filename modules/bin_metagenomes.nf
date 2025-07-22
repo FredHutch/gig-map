@@ -10,6 +10,7 @@ include { corncob } from "./test_reads"
 workflow bin_metagenomes {
     take:
         read_alignments
+        centroids_length
         gene_bins
         genome_groups
         group_profile
@@ -19,7 +20,8 @@ workflow bin_metagenomes {
 
         bin_summary(
             read_alignments,
-            gene_bins
+            gene_bins,
+            centroids_length
         )
         if (params.wide_metagenome_output){
 
