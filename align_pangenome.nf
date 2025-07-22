@@ -103,6 +103,7 @@ workflow {
     // Bin the metagenomes
     bin_metagenomes(
         align_reads.out.csv,
+        align_reads.out.centroids_length,
         gene_bins,
         genome_groups,
         group_profile,

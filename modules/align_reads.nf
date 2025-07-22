@@ -1,6 +1,7 @@
 // Import processes from processes/align_reads.nf
 
 include {
+    centroids_length;
     count_reads;
     diamond;
     concat_aln;
@@ -25,6 +26,12 @@ workflow align_reads {
     fastq_ch
 
     main:
+
+    // Get the length of each gene in the centroids
+    // This is used to compute the RPKM later on
+    centroids_length(
+        centroids_faa
+    )
 
     // Make a DIAMOND database for the centroids
     makedb_diamond(centroids_faa)
@@ -113,5 +120,6 @@ workflow align_reads {
 
     emit:
     csv = gather.out
+    centroids_length = centroids_length.out
 
 }
