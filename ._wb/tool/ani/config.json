@@ -9,6 +9,13 @@
             "wb_type": "folder",
             "required": true
         },
+        "sketch_size": {
+            "help": "Size of the sketch to create (number of kmers)",
+            "wb_env": "SKETCH_SIZE",
+            "wb_type": "integer",
+            "required": true,
+            "default": 1000
+        },
         "nxf_profile": {
             "help": "Profile used for resource allocation (standard or testing)",
             "wb_env": "PROFILE",
