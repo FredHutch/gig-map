@@ -10,8 +10,9 @@ include {
 
 include { 
     raxml;
-    combine_markers;
-} from './processes/align_markers'
+    gene_msa;
+    calc_distmat;
+} from './processes/align_genes'
 
 workflow align_markers {
     take:
@@ -58,16 +59,21 @@ workflow align_markers {
     )
 
     // Run the MSA
-    combine_markers(
+    gene_msa(
         reorganize_fastas.out.flatten()
+    )
+
+    // Generate the distance matrices
+    calc_distmat(
+        gene_msa.out.msa.ifEmpty { error "No MSAs were produced from the input gene FASTA files" }
     )
 
     // Generate phylogenetic trees for each marker gene
     raxml(
-        combine_markers.out.msa
+        gene_msa.out.msa.ifEmpty { error "No MSAs were produced from the input gene FASTA files" }
     )
 
     emit:
-        distmat = combine_markers.out.distmat
-        msa = combine_markers.out.msa
+        distmat = calc_distmat.out.distmat
+        msa = gene_msa.out.msa
 }

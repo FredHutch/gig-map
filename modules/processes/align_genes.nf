@@ -1,15 +1,13 @@
 // Make the multiple sequence alignment
-process combine_markers {
+process gene_msa {
     container "${params.container__clustal}"
     label "mem_medium"
     publishDir "${params.output}/msa/", mode: 'copy', overwrite: true, pattern: "*.msa.gz"
-    publishDir "${params.output}/distmat/", mode: 'copy', overwrite: true, pattern: "*.distmat"
 
     input:
         path unaligned_fasta
 
     output:
-        path "*.distmat", emit: distmat, optional: true
         path "*.msa.gz", emit: msa, optional: true
 
 """#!/bin/bash
@@ -30,7 +28,6 @@ clustalo \
     --in input.fasta \
     -t DNA \
     --full \
-    --distmat-out="${unaligned_fasta.name.replaceAll('.fasta.gz', '')}.distmat" \
     --out="${unaligned_fasta.name.replaceAll('.fasta.gz', '')}.msa" \
     --threads ${task.cpus} \
     --verbose \
@@ -40,6 +37,39 @@ gzip *msa
 
 """
 }
+
+
+process calc_distmat {
+    container "${params.container__pandas}"
+    label 'io_limited'
+    publishDir "${params.output}/distmat/", mode: 'copy', overwrite: true
+    input:
+        path msa_fasta
+    output:
+        path "${msa_fasta.name.replaceAll('.msa.gz', '')}.distmat.csv.gz", emit: distmat
+    script:
+    template 'calc_distmat.py'
+}
+
+
+process merge_bins {
+    // Combine the distance matrices for each bin
+    // into a single distance matrix per bin
+    // Also, combine the MSAs for each bin into a single MSA per bin
+    container "${params.container__pandas}"
+    label 'io_limited'
+    publishDir "${params.output}/bin_distmat/", mode: 'copy', overwrite: true, pattern: "*.distmat.csv.gz"
+    input:
+        path "msas/"
+        path "distmats/"
+        path gene_bins
+    output:
+        path "*.distmat.csv.gz", emit: distmat
+        path "*.msa.gz", emit: msa
+    script:
+    template 'merge_bins.py'
+}
+
 
 // Build an ML tree from the MSA
 process raxml {

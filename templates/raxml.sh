@@ -1,6 +1,6 @@
 #!/bin/bash
 
-gunzip -c "${aln_fasta}" > "${aln_fasta.name.replaceAll('.gz', '')}"
+gunzip -c ${aln_fasta} > "${aln_fasta.name.replaceAll('.gz', '')}"
 
 raxml-ng \
     --all \

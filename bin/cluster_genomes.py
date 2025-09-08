@@ -110,7 +110,7 @@ def read_distmat(fp):
 
             # Split up the fields of the line
             fields = line.split(" ")
-            
+
             # The index is the first position
             index.append(fields[0])
 
@@ -132,6 +132,7 @@ def read_distmat(fp):
 
 # Read in the pairwise genome distances
 logger.info(f"Reading from {args.dists}")
+
 # If the distances were output by ClustalO
 if args.dists.endswith(".distmat"):
 
@@ -145,6 +146,13 @@ if args.dists.endswith(".distmat"):
 
     # Add the marker name to the output file name
     output_fp = f"{marker_name}.{args.ani_threshold}.hdf5"
+
+# If the distances were generated in CSV format
+elif args.dists.endswith(".csv.gz"):
+    dists = pd.read_csv(args.dists, index_col=0, compression="gzip")
+
+    marker_name = args.dists.replace(".csv.gz", "")
+    output_fp = args.dists.replace(".csv.gz", f".{args.ani_threshold}.hdf5")
 
 # If the distances were output as a CSV
 else:

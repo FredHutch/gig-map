@@ -221,6 +221,19 @@ for fp in os.listdir("marker_distances"):
             os.path.join("marker_distances", fp)
         )
 
+    # If the file is a CSV
+    elif fp.endswith(".csv.gz"):
+
+        # Parse the marker name from the file name
+        marker_name = fp.replace(".csv.gz", "")
+
+        # Read in the distances
+        marker_dists[marker_name] = pd.read_csv(
+            os.path.join("marker_distances", fp),
+            index_col=0,
+            compression="gzip"
+        )
+
 ###################
 # GENOME CLUSTERS #
 ###################
