@@ -30,6 +30,9 @@ workflow build_trees {
 
         // Build ML trees from the combined MSAs
         raxml(
-            merge_bins.out.msa.ifEmpty { error "No combined MSAs were produced from the merge_bins process" }
+            merge_bins.out
+                .msa
+                .ifEmpty { error "No combined MSAs were produced from the merge_bins process" }
+                .flatten()
         )
 }

@@ -81,9 +81,7 @@ process raxml {
         path aln_fasta
     
     output:
-        path "${aln_fasta.name.replaceAll('.gz', '')}.raxml.bestTree"
-        path "${aln_fasta.name.replaceAll('.gz', '')}.raxml.bestModel"
-        path "${aln_fasta.name.replaceAll('.gz', '')}.raxml.log"
+        path "${aln_fasta.name.replaceAll('.gz', '')}.raxml.*"
     
     script:
     template 'raxml.sh'
