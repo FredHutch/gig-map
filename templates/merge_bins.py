@@ -33,11 +33,13 @@ def merge_bins():
     # and also merge the MSAs
     for bin_id, bin_df in bins.groupby('bin'):
 
-        logger.info(f"Merging data for bin {bin_id}")
+        gene_list = sorted(bin_df['gene_id'].unique())
+
+        logger.info(f"Merging data for bin {bin_id} with {len(gene_list):,} genes")
 
         # Merge the distance matrices
-        merge_dms(bin_id, bin_df['gene_id'].tolist())
-        merge_msas(bin_id, bin_df['gene_id'].tolist())
+        merge_dms(bin_id, gene_list)
+        merge_msas(bin_id, gene_list)
         logger.info(f"Finished merging data for bin {bin_id}")
 
 
@@ -63,6 +65,10 @@ def merge_dms(bin_id, gene_ids):
         for gene_id in gene_ids
         if os.path.exists(gene_distmat_fp(gene_id))
     }
+    if len(dms) == 0:
+        return
+
+    logger.info(f"Merging {len(dms):,} distance matrices for bin {bin_id}")
 
     # Flatten the long format distance matrices into a single DataFrame
     dms = pd.DataFrame({
@@ -80,6 +86,10 @@ def merge_msas(bin_id, gene_ids):
         for gene_id in gene_ids
         if os.path.exists(f"msas/{gene_id}.msa.gz")
     }
+    if len(msas) == 0:
+        return
+
+    logger.info(f"Merging {len(msas):,} MSAs for bin {bin_id}")
 
     # For each alignment, make sure that the sequences are all the same length
     # Also keep track of the length of each gene
@@ -93,6 +103,7 @@ def merge_msas(bin_id, gene_ids):
 
     # Get all of the unique genome IDs
     genomes = set([genome for gene in msas.values() for genome in gene.keys()])
+    logger.info(f"Total of {len(genomes):,} unique genomes across all genes in bin {bin_id}")
 
     # Open up the output file which will have the combined MSA
     with gzip.open(f"{bin_id}.msa.gz", 'wt') as out_handle:
