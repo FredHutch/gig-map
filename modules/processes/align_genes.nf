@@ -1,3 +1,16 @@
+// Filter the gene MSAs based on minimum thresholds for site and genome presence
+process filter_msas {
+    container "${params.container__pandas}"
+    label 'io_limited'
+
+    input:
+        path "input/"
+    output:
+        path "*.msa.gz", emit: filtered_msa, optional: true
+    script:
+        template 'filter_msas.py'
+}
+
 // Make the multiple sequence alignment
 process gene_msa {
     container "${params.container__clustal}"

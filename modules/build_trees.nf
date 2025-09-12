@@ -6,6 +6,7 @@ include {
     calc_distmat;
     merge_bins;
     raxml;
+    filter_msas;
 } from './processes/align_genes'
 
 workflow build_trees {
@@ -28,11 +29,16 @@ workflow build_trees {
             gene_bins
         )
 
-        // Build ML trees from the combined MSAs
-        raxml(
+        // Filter the MSAs based on the minimum thresholds for how much useful information is present,
+        // both on a per-site and per-genome basis
+        // This helps to avoid building trees from very sparse data
+        filter_msas(
             merge_bins.out
-                .msa
-                .ifEmpty { error "No combined MSAs were produced from the merge_bins process" }
-                .flatten()
+            .msa
+            .ifEmpty { error "No combined MSAs were produced from the merge_bins process" }
+            .flatten()
         )
+
+        // Build ML trees from the combined MSAs
+        raxml(filter_msas.out)
 }
