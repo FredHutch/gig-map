@@ -87,7 +87,7 @@ process merge_bins {
 // Build an ML tree from the MSA
 process raxml {
     container "${params.container__raxml}"
-    label 'mem_medium'
+    label 'cpu_high'
     publishDir "${params.output}/raxml/", mode: 'copy', overwrite: true
 
     input:
