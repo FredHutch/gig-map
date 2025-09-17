@@ -70,6 +70,7 @@ def main():
     # Parameters from config
     min_prop_sites = ${params.raxml_min_prop_sites}
     min_prop_genomes = ${params.raxml_min_prop_genomes}
+    min_raxml_genomes = ${params.min_raxml_genomes}
     
     # Input MSA file
     input_msa_fp = Path("input").rglob("*.msa.gz").__next__()
@@ -84,11 +85,16 @@ def main():
         logger.info("No genomes or sites remain after filtering. Exiting.")
         return
     
+    if filtered_msa.shape[0] < min_raxml_genomes:
+        logger.info(f"The number of genomes passing the filter ({filtered_msa.shape[0]}) does not meet the minimum threshold ({min_raxml_genomes})")
+        return
+    
     # Save the filtered MSA in FASTA format
     with gzip.open(output_msa_fp, 'wt') as fasta_out:
         for genome, row in filtered_msa.iterrows():
             sequence = ''.join(row.tolist())
             fasta_out.write(f'>{genome}\\n{sequence}\\n')
+
     logger.info(f"Saved filtered MSA in FASTA format to {output_msa_fp}")
 
 
