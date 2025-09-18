@@ -50,18 +50,18 @@ def filter_msa(msa_fp: Path, min_prop_sites: float, min_prop_genomes: float) -> 
     msa_filtered = msa.copy()
     while msa_filtered.shape != prev_shape:
         prev_shape = msa_filtered.shape
-        # Filter sites based on min_prop_sites
-        site_non_missing = (msa_filtered != 'N').sum(axis=0)
-        site_prop_non_missing = site_non_missing / msa_filtered.shape[0]
-        filtered_sites = site_prop_non_missing[site_prop_non_missing >= min_prop_sites].index
-        msa_filtered = msa_filtered[filtered_sites]
-        logger.info(f"Filtered MSA to {msa_filtered.shape[1]} sites after applying min_prop_sites")
         # Filter genomes based on min_prop_genomes
         genome_non_missing = (msa_filtered != 'N').sum(axis=1)
         genome_prop_non_missing = genome_non_missing / msa_filtered.shape[1]
         filtered_genomes = genome_prop_non_missing[genome_prop_non_missing >= min_prop_genomes].index
         msa_filtered = msa_filtered.loc[filtered_genomes]
         logger.info(f"Filtered MSA to {msa_filtered.shape[0]} genomes after applying min_prop_genomes")
+        # Filter sites based on min_prop_sites
+        site_non_missing = (msa_filtered != 'N').sum(axis=0)
+        site_prop_non_missing = site_non_missing / msa_filtered.shape[0]
+        filtered_sites = site_prop_non_missing[site_prop_non_missing >= min_prop_sites].index
+        msa_filtered = msa_filtered[filtered_sites]
+        logger.info(f"Filtered MSA to {msa_filtered.shape[1]} sites after applying min_prop_sites")
     return msa_filtered
 
 
