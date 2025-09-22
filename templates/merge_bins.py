@@ -49,7 +49,7 @@ def gene_distmat_fp(gene_id):
 
 
 def flatten_dm(dm: pd.DataFrame, genomes: np.ndarray):
-    valid_genomes = set(genomes)
+    valid_genomes = set(dm.index.values)
     return pd.Series(
         [
             (
