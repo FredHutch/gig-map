@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import numpy as np
 import pandas as pd
 import gzip
 import logging
@@ -47,14 +48,28 @@ def gene_distmat_fp(gene_id):
     return f"distmats/{gene_id}.distmat.csv.gz"
 
 
-def flatten_dm(dm, gene_id):
-    return (
-        dm
-        .reset_index()
-        .melt(id_vars="index", var_name='genome2', value_name=gene_id)
-        .set_index(['index', 'genome2'])
-        .rename(index=dict(index='genome1'))
-        [gene_id]
+def flatten_dm(dm: pd.DataFrame, genomes: np.ndarray):
+    valid_genomes = set(genomes)
+    return pd.Series(
+        [
+            (
+                dm.loc[g1, g2]
+                if (
+                    g1 in valid_genomes
+                    and g2 in valid_genomes
+                )
+                else None
+            )
+            for g1 in genomes
+            for g2 in genomes
+            if g1 < g2
+        ],
+        index=[
+            (g1, g2)
+            for g1 in genomes
+            for g2 in genomes
+            if g1 < g2
+        ]
     )
 
 
@@ -68,11 +83,20 @@ def merge_dms(bin_id, gene_ids):
     if len(dms) == 0:
         return
 
-    logger.info(f"Merging {len(dms):,} distance matrices for bin {bin_id}")
+    # Count up how many times we see each genome
+    genome_vc = pd.Series([g for dm in dms.values() for g in dm.index.values]).value_counts()
+
+    # Get those genomes which are found in at least half of the genes
+    genomes = genome_vc.index.values[genome_vc >= (genome_vc.max() / 2)]
+
+    if len(genomes) < 2:
+        return
+
+    logger.info(f"Merging {len(dms):,} distance matrices for bin {bin_id} - {len(genomes):,} genomes")
 
     # Flatten the long format distance matrices into a single DataFrame
     dms = pd.DataFrame({
-        gene_id: flatten_dm(gene_df, gene_id)
+        gene_id: flatten_dm(gene_df, genomes)
         for gene_id, gene_df in dms.items()
     })
 
