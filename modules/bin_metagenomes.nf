@@ -5,7 +5,7 @@ include {
     plot
 } from "./processes/bin_metagenomes"
 
-include { corncob } from "./test_reads"
+include { regress } from "./test_reads"
 
 workflow bin_metagenomes {
     take:
@@ -35,13 +35,13 @@ workflow bin_metagenomes {
 
             if ("${params.formula}" != "false"){
 
-                corncob(
+                regress(
                     collect.out.metadata,
                     collect.out.bin_counts
                 )
 
                 split(
-                    corncob.out
+                    regress.out
                 )
 
                 plot(

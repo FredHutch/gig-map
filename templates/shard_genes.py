@@ -40,20 +40,21 @@ specimen_totals = read_alignments.groupby("specimen")["nreads"].sum()
 # Write out each shard
 for i, shard in enumerate(gene_shards):
 
-    read_alignments.loc[
-        read_alignments["id"].isin(set(shard))
-    ].pivot_table(
-        index="specimen",
-        columns="id",
-        values="nreads"
-    ).reindex(
-        index=manifest.index.values
-    ).fillna(
-        0
-    ).assign(
-        total=specimen_totals
-    ).applymap(
-        int
-    ).to_csv(
-        f"readcounts.{i}.csv.gz"
+    (
+        read_alignments
+        .loc[read_alignments["id"].isin(set(shard))]
+        .assign(
+            proportion=lambda d: d.apply(
+                lambda r: r["nreads"] / specimen_totals[r['specimen']],
+                axis=1
+            )
+        )
+        .pivot_table(
+            index="specimen",
+            columns="id",
+            values="proportion"
+        )
+        .reindex(index=manifest.index.values)
+        .fillna(0)
+        .to_csv(f"readcounts.{i}.csv.gz")
     )

@@ -1,0 +1,87 @@
+#!/usr/bin/env Rscript
+
+# Get the arguments passed in by the user
+
+library(tidyverse)
+library(rigr)
+library(parallel)
+
+main <- function(){
+
+    ## By default, use 10% of the available memory to read in data
+    connectionSize = 100000 * ${task.memory.toMega()}
+    print("Using VROOM_CONNECTION_SIZE =")
+    print(connectionSize)
+    Sys.setenv("VROOM_CONNECTION_SIZE" = format(connectionSize, scientific=F))
+
+    numCores = ${task.cpus}
+
+    ##  READCOUNTS CSV should have sample IDs in the first col
+    ##  METADATA CSV should have a column `specimen` (which matches up with the first column from
+    ##         the recounts file), and additional columns with covariates matching `formula`
+
+    ##  corncob analysis (coefficients and p-values) are written to OUTPUT CSV on completion
+
+    print("Reading in ${metadata_csv}")
+    metadata <- read_delim("${metadata_csv}", delim=",")
+    metadata <- tibble::column_to_rownames(metadata, names(metadata)[1])
+    metadata <- metadata %>% rownames_to_column(var = "specimen")
+    print(head(metadata))
+    print(dim(metadata))
+
+    print("Reading in ${readcounts_csv_gz}")
+    counts <- read_delim("${readcounts_csv_gz}", delim=",")
+    print(dim(counts))
+
+    # If there aren't enough samples passing the threshold, stop gracefully
+    if(dim(counts)[1] <= 2){
+        print("Not enough samples to run rigr:regress -- stopping")
+        return()
+    }
+
+    # Drop any rows from the metadata which lack a value in the formula string
+    print("Dropping rows from metadata which lack a value in the formula string: ${params.formula}")
+    for(cname in strsplit("${params.formula}", " ")[[1]]){
+        if(cname %in% colnames(metadata)){
+            metadata <- metadata[!is.na(metadata[[cname]]),]
+        }
+    }
+    print(dim(counts))
+    print(dim(metadata))
+
+    # Get the specimens which are present in both tables
+    specimens <- intersect(counts\$specimen, metadata\$specimen)
+    print(paste(c("Specimens shared in both tables:", length(specimens)), collapse=" "))
+
+    # Subset the counts to only have the rows which were retained in the metadata
+    print("Aligning sample order between metadata and counts")
+    counts <- counts %>% filter(specimen %in% specimens) %>% arrange(specimen) %>% tibble::column_to_rownames("specimen")
+    metadata <- metadata %>% filter(specimen %in% specimens) %>% arrange(specimen) %>% tibble::column_to_rownames("specimen")
+
+    print("Running rigr:regress with proportion ~ ${params.formula}")
+    run_regress <- function(i){
+        colname <- colnames(counts)[i]
+        data <- metadata %>% add_column(proportion=counts[, i])
+        res <- regress(
+            fnctl = "mean",
+            formula = proportion ~ ${params.formula},
+            data = data
+        )
+        return(
+            as.data.frame(coef(res))
+                %>% add_column(feature = colname)
+                %>% rownames_to_column(var = "parameter")
+                %>% filter(parameter != "(Intercept)")
+                %>% rename(pvalue="Pr(>|t|)")
+        )
+    }
+
+    # Run rigr:regress on each column
+    output <- do.call(rbind, mclapply(c(1:dim(counts)[2]), run_regress))
+
+    print(sprintf("Writing out %s rows to regress.results.csv", nrow(output)))
+    write_csv(output, "regress.results.csv")
+    print("Done")
+}
+
+main()

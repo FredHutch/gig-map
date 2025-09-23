@@ -44,5 +44,6 @@ print(f"Rows with valid data for {', '.join(formula_cols)}: {manifest.shape[0]:,
 
 # Write out the manifest
 manifest.to_csv(
-    "parsed.manifest.csv"
+    "parsed.manifest.csv",
+    index=None
 )

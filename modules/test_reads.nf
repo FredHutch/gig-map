@@ -39,19 +39,19 @@ process shard_genes {
 }
 
 // Test for differences between samples
-process corncob {
-    container "${params.container__corncob}"
-    label "io_limited"
+process regress {
+    container "${params.container__regress}"
+    label "cpu_high"
     
     input:
     file metadata_csv
     file readcounts_csv_gz
 
     output:
-    path "corncob.results.csv", optional: true
+    path "regress.results.csv", optional: true
 
     script:
-    template "corncob.Rscript"
+    template "regress.Rscript"
 
 }
 
@@ -62,7 +62,7 @@ process join {
     label "io_limited"
     
     input:
-    file "corncob.results.*.csv"
+    file "regress.results.*.csv"
 
     output:
     file "*.csv.gz"

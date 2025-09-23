@@ -67,10 +67,10 @@ class Metagenome:
         )
         self.adata.var = self.adata.var.assign(**{
             kw: self.adata.var[kw].fillna(val)
-            for kw, val in [("estimate", 0), ("std_error", 0), ("p_value", 0.99)]
+            for kw, val in [("Estimate", 0), ("Robust SE", 0), ("pvalue", 0.99)]
         })
-        self.adata.var["qvalue"] = multipletests(self.adata.var["p_value"].fillna(1), 0.1, "fdr_bh")[1]
-        self.adata.var["neg_log10_pvalue"] = -np.log10(self.adata.var["p_value"])
+        self.adata.var["qvalue"] = multipletests(self.adata.var["pvalue"].fillna(1), 0.1, "fdr_bh")[1]
+        self.adata.var["neg_log10_pvalue"] = -np.log10(self.adata.var["pvalue"])
         self.adata.var["neg_log10_qvalue"] = -np.log10(self.adata.var["qvalue"])
         for line in str(self.adata).split("\n"):
             logger.info(line)
@@ -280,7 +280,7 @@ class Metagenome:
                 .adata
                 .var
                 .reindex(
-                    columns=[kw, "p_value", "estimate"]
+                    columns=[kw, "pvalue", "Estimate"]
                 )
                 .rename(
                     columns={kw: label}

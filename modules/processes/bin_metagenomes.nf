@@ -54,29 +54,25 @@ collect_metagenomes.py \
     """
 }
 
-// Split up the corncob results as inputs for plotting
+// Split up the regress results as inputs for plotting
 process split {
     container "${params.container__pandas}"
     label 'io_limited'
 
     input:
-    path "corncob.results.csv"
+    path "regress.results.csv"
 
     output:
     path "*.results.csv"
 
     """#!/usr/bin/env python3
 import pandas as pd
-df = pd.read_csv("corncob.results.csv")
+df = pd.read_csv("regress.results.csv")
 
 if "${params.incl_unaligned}" != "false":
     df = df.query("feature != 'unaligned_reads'")
 
 for param, param_df in df.groupby("parameter"):
-    if not param.startswith("mu.") or param.endswith("(Intercept)"):
-        continue
-    
-    param = param[3:]
     (
         param_df
         .set_index("feature")

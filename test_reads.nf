@@ -11,7 +11,7 @@ def helpers = shell.parse(new File("${workflow.projectDir}/helpers.gvy"))
 include { 
     parse_manifest;
     shard_genes;
-    corncob;
+    regress;
     join
 } from './modules/test_reads'
 
@@ -23,7 +23,7 @@ workflow {
         """
         Test for differences in the relative abundance of genes between groups of specimens
         
-        Uses the corncob algorithm to test for significant differences in the proportional
+        Uses the rigr:regress algorithm to test for significant differences in the proportional
         abundance of genes between different groups of samples.
 
         Parameters:
@@ -72,7 +72,7 @@ workflow {
     )
 
     // Test each gene
-    corncob(
+    regress(
         parse_manifest.out,
         shard_genes
             .out
@@ -81,7 +81,7 @@ workflow {
 
     // Join the results
     join(
-        corncob.out.toSortedList()
+        regress.out.toSortedList()
     )
 
 }
