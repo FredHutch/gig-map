@@ -20,7 +20,7 @@ main <- function(){
     ##  METADATA CSV should have a column `specimen` (which matches up with the first column from
     ##         the recounts file), and additional columns with covariates matching `formula`
 
-    ##  corncob analysis (coefficients and p-values) are written to OUTPUT CSV on completion
+    ##  rigr:regress analysis (coefficients and p-values) are written to OUTPUT CSV on completion
 
     print("Reading in ${metadata_csv}")
     metadata <- read_delim("${metadata_csv}", delim=",")
