@@ -31,6 +31,7 @@ workflow {
         --gene_bins         Grouping of genes into bins from bin_genes.nf (e.g. gene_bins.csv)
         --group_profile     Gene content of genome groups from bin_genes.nf (e.g. group_profile.csv)
         --genome_groups     Grouping of genomes into groups (e.g. genome_groups.csv)
+        --centroids_length  Length of each centroids sequence (e.g. centroids_length.csv.gz)
         --output            Folder where output files will be written
 
         --metadata          Optional: Metadata table used to compare samples (CSV)
@@ -48,6 +49,7 @@ workflow {
     helpers.require_param(params.read_alignments, "read_alignments")
     helpers.require_param(params.gene_bins, "gene_bins")
     helpers.require_param(params.group_profile, "group_profile")
+    helpers.require_param(params.centroids_length, "centroids_length")
     helpers.require_param(params.output, "output")
 
     // Get the read alignments
@@ -59,6 +61,9 @@ workflow {
     // Get the genome groups
     genome_groups = file(params.genome_groups, checkIfExists: true)
 
+    // Get the centroid length CSV
+    centroids_length = file(params.centroids_length, checkIfExists: true)
+
     // Get the genome groups
     group_profile = file(params.group_profile, checkIfExists: true)
 
@@ -68,6 +73,7 @@ workflow {
     // Bin the metagenomes
     bin_metagenomes(
         read_alignments,
+        centroids_length,
         gene_bins,
         genome_groups,
         group_profile,

@@ -11,9 +11,14 @@ process bin_summary {
     output:
     path "bin_summary.csv.gz", emit: bin_summary
 
-    script:
-    template "bin_summary.py"
+    """#!/bin/bash
+set -e
 
+bin_summary.py \
+    --read-alignments "${read_alignments}" \
+    --gene-bins "${gene_bins}" \
+    --centroids-length "${centroids_length}"
+    """
 }
 
 process collect {

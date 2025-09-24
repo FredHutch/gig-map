@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import logging
 import pandas as pd
+import click
 
 # Set the level of the logger to INFO
 logFormatter = logging.Formatter(
@@ -54,18 +55,21 @@ def main(read_alignments: pd.DataFrame, gene_bins: pd.DataFrame):
     bin_ngenes = gene_bins["bin"].value_counts().to_dict()
     bin_length_aa = gene_bins.groupby("bin")["length_aa"].sum().to_dict()
 
+    # Get the total number of reads aligned to this pangenome per specimen
+    tot_reads = read_alignments.groupby("specimen")["nreads"].sum()
+
     counter.set_total(read_alignments.reindex(["specimen", "bin"]).drop_duplicates().shape[0])
 
     logger.info("Summarizing read alignments by bin")
     (
         read_alignments.assign(bin=lambda d: d["id"].map(gene_bins["bin"].get))
         .groupby(["specimen", "bin"])
-        .apply(lambda d: summarize_bin(d, bin_ngenes, bin_length_aa))
+        .apply(lambda d: summarize_bin(d, bin_ngenes, bin_length_aa, tot_reads))
         .to_csv("bin_summary.csv.gz")
     )
 
 
-def summarize_bin(df: pd.DataFrame, bin_ngenes: dict, bin_length_aa: dict) -> pd.Series:
+def summarize_bin(df: pd.DataFrame, bin_ngenes: dict, bin_length_aa: dict, tot_reads_by_specimen: pd.Series) -> pd.Series:
     """
     Summarize the read alignments for a single bin.
     """
@@ -81,10 +85,12 @@ def summarize_bin(df: pd.DataFrame, bin_ngenes: dict, bin_length_aa: dict) -> pd
     # Coverage of genes in this bin, weighted for gene length
     bin_coverage = prop_genes_detected * (df["coverage"] * df["length_aa"]).sum() / df["length_aa"].sum()
 
+    # Get the number of reads sequenced for this specimen
+    tot_reads = tot_reads_by_specimen.loc[df["specimen"].values[0]]
+
     # Number and proportion of reads aligned
     n_reads_aligned = df["nreads"].sum()
-    tot_reads = df["tot_reads"].iloc[0]
-    prop_reads_aligned = n_reads_aligned / tot_reads if tot_reads > 0 else 0
+    prop_reads_aligned = n_reads_aligned / tot_reads
 
     # Compute the RPKM (Reads Per Kilobase of transcript per Million mapped reads)
     rpkm = (
@@ -106,29 +112,32 @@ def summarize_bin(df: pd.DataFrame, bin_ngenes: dict, bin_length_aa: dict) -> pd
     })
 
 
-if __name__ == "__main__":
-    logger.info("Reading in ${read_alignments}")
-    read_alignments = pd.read_csv("${read_alignments}")
+@click.command()
+@click.option('--read-alignments', required=True, type=click.Path(exists=True), help='Path to read_alignments CSV file')
+@click.option('--gene-bins', required=True, type=click.Path(exists=True), help='Path to gene_bins CSV file')
+@click.option('--centroids-length', required=True, type=click.Path(exists=True), help='Path to centroids_length CSV file')
+def cli(read_alignments, gene_bins, centroids_length):
+    logger.info(f"Reading in {read_alignments}")
+    read_alignments_df = pd.read_csv(read_alignments)
 
-    logger.info("Reading in ${gene_bins}")
-    gene_bins = pd.read_csv("${gene_bins}")
-    gene_bins.set_index("gene_id", inplace=True)
+    logger.info(f"Reading in {gene_bins}")
+    gene_bins_df = pd.read_csv(gene_bins)
+    gene_bins_df.set_index("gene_id", inplace=True)
 
-    # Get the length of each gene in the database
-    # This is used to compute the RPKM (Reads Per Kilobase of transcript per Million mapped reads)
-    # The length of each gene is stored in the gene_bins DataFrame
-    centroids_length = pd.read_csv("${centroids_length}", index_col="header")["length"]
+    centroids_length_df = pd.read_csv(centroids_length, index_col="header")["length"]
 
-    # Add the gene length to the gene_bins DataFrame
-    gene_bins = gene_bins.assign(
-        length_aa=lambda d: d.index.map(centroids_length.get)
+    gene_bins_df = gene_bins_df.assign(
+        length_aa=lambda d: d.index.map(centroids_length_df.get)
     )
 
-    # Add gene length to read alignments
-    read_alignments = read_alignments.assign(
-        length_aa=lambda d: d["id"].map(centroids_length.get)
+    read_alignments_df = read_alignments_df.assign(
+        length_aa=lambda d: d["id"].map(centroids_length_df.get)
     )
 
-    main(read_alignments, gene_bins)
+    main(read_alignments_df, gene_bins_df)
     logger.info("Writing output to bin_summary.csv.gz")
     logger.info("Done.")
+
+
+if __name__ == "__main__":
+    cli()
