@@ -21,6 +21,26 @@ bin_summary.py \
     """
 }
 
+process wide_bin_abundance {
+    container "${params.container__pandas}"
+    label 'io_limited'
+    publishDir "${params.output}/bin_abundance", mode: 'copy', overwrite: true
+
+    input:
+    path "bin_summary.csv.gz"
+
+    output:
+    path "rpkm.csv.gz", emit: rpkm
+    path "n_reads_aligned.csv.gz", emit: n_reads_aligned
+    path "prop_reads_aligned.csv.gz", emit: prop_reads_aligned
+
+    """#!/bin/bash
+set -e
+
+wide_bin_abundance.py
+    """
+}
+
 process collect {
     container "${params.container__pandas}"
     label 'io_limited'

@@ -2,7 +2,8 @@ include {
     bin_summary;
     collect;
     split;
-    plot
+    plot;
+    wide_bin_abundance
 } from "./processes/bin_metagenomes"
 
 include { regress } from "./test_reads"
@@ -25,6 +26,8 @@ workflow bin_metagenomes {
         )
         if (params.wide_metagenome_output){
 
+            wide_bin_abundance(bin_summary.out.bin_summary)
+
             collect(
                 read_alignments,
                 gene_bins,
@@ -37,7 +40,7 @@ workflow bin_metagenomes {
 
                 regress(
                     collect.out.metadata,
-                    collect.out.bin_counts
+                    wide_bin_abundance.out.rpkm
                 )
 
                 split(
