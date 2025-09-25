@@ -6,6 +6,8 @@ include {
 
 include { regress } from "./test_reads"
 
+include { assign_metadata } from "./processes/assign_metadata"
+
 workflow contrast_metagenomes {
     take:
         read_alignments
@@ -23,8 +25,10 @@ workflow contrast_metagenomes {
 
         wide_bin_abundance(bin_summary.out.bin_summary)
 
+        assign_metadata(metadata)
+
         regress(
-            metadata,
+            assign_metadata.out,
             wide_bin_abundance.out.rpkm
         )
 

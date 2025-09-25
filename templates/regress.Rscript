@@ -14,13 +14,6 @@ main <- function(){
 
     ##  rigr:regress analysis (coefficients and p-values) are written to OUTPUT CSV on completion
 
-    print("Reading in ${input_metadata_csv}")
-    metadata <- read_delim("${input_metadata_csv}", delim=",")
-    metadata <- tibble::column_to_rownames(metadata, names(metadata)[1])
-    metadata <- metadata %>% rownames_to_column(var = "specimen")
-    print(head(metadata))
-    print(dim(metadata))
-
     print("Reading in input.abund.csv")
     counts <- read_delim("input.abund.csv", delim=",")
     print(dim(counts))
@@ -31,6 +24,13 @@ main <- function(){
         return()
     }
 
+    print("Reading in input.metadata.csv")
+    metadata <- read_delim("input.metadata.csv", delim=",", na=c("", "NA"))
+    metadata <- tibble::column_to_rownames(metadata, names(metadata)[1])
+    metadata <- metadata %>% rownames_to_column(var = "specimen")
+    print(head(metadata))
+    print(dim(metadata))
+
     # Drop any rows from the metadata which lack a value in the formula string
     print("Dropping rows from metadata which lack a value in the formula string: ${params.formula}")
     for(cname in strsplit("${params.formula}", " ")[[1]]){
@@ -38,7 +38,7 @@ main <- function(){
             metadata <- metadata[!is.na(metadata[[cname]]),]
         }
     }
-    print(dim(counts))
+    print(head(metadata))
     print(dim(metadata))
 
     # Get the specimens which are present in both tables

@@ -9,6 +9,8 @@ include {
 
 include { regress } from "./test_reads"
 
+include { assign_metadata } from "./processes/assign_metadata"
+
 workflow bin_metagenomes {
     take:
         read_alignments
@@ -39,8 +41,10 @@ workflow bin_metagenomes {
 
             if ("${params.formula}" != "false"){
 
+                assign_metadata(collect.out.metadata)
+
                 regress(
-                    collect.out.metadata,
+                    assign_metadata.out,
                     wide_bin_abundance.out.rpkm
                 )
 

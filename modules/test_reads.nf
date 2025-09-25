@@ -45,7 +45,7 @@ process regress {
     label "cpu_high"
     
     input:
-    file input_metadata_csv
+    file "input.metadata.csv"
     file "input.abund.csv"
 
     output:
