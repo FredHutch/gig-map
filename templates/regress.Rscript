@@ -25,7 +25,7 @@ main <- function(){
     }
 
     print("Reading in input.metadata.csv")
-    metadata <- read_delim("input.metadata.csv", delim=",", na=c("", "NA"))
+    metadata <- read_delim("input.metadata.csv", delim=",", na=c("", "NA", "None"))
     metadata <- tibble::column_to_rownames(metadata, names(metadata)[1])
     metadata <- metadata %>% rownames_to_column(var = "specimen")
     print(head(metadata))
