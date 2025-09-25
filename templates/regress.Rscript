@@ -8,14 +8,6 @@ library(parallel)
 
 main <- function(){
 
-    ## By default, use 10% of the available memory to read in data
-    connectionSize = 100000 * ${task.memory.toMega()}
-    print("Using VROOM_CONNECTION_SIZE =")
-    print(connectionSize)
-    Sys.setenv("VROOM_CONNECTION_SIZE" = format(connectionSize, scientific=F))
-
-    numCores = ${task.cpus}
-
     ##  READCOUNTS CSV should have sample IDs in the first col
     ##  METADATA CSV should have a column `specimen` (which matches up with the first column from
     ##         the recounts file), and additional columns with covariates matching `formula`
@@ -80,7 +72,7 @@ main <- function(){
     }
 
     # Run rigr:regress on each column
-    output <- do.call(rbind, mclapply(c(1:dim(counts)[2]), run_regress))
+    output <- do.call(rbind, mclapply(c(1:dim(counts)[2]), run_regress, mc.cores = ${task.cpus}))
 
     print(sprintf("Writing out %s rows to regress.results.csv", nrow(output)))
     write_csv(output, "regress.results.csv")
