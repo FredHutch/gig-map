@@ -46,8 +46,8 @@ workflow {
     helpers.require_param(params.read_alignments, "read_alignments")
     helpers.require_param(params.gene_bins, "gene_bins")
     helpers.require_param(params.centroids_length, "centroids_length")
-    helpers.require_param(params.group_profile, "metadata")
-    helpers.require_param(params.group_profile, "formula")
+    helpers.require_param(params.metadata, "metadata")
+    helpers.require_param(params.formula, "formula")
     helpers.require_param(params.output, "output")
 
     // Get the read alignments
