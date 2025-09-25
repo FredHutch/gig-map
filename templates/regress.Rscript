@@ -22,8 +22,8 @@ main <- function(){
 
     ##  rigr:regress analysis (coefficients and p-values) are written to OUTPUT CSV on completion
 
-    print("Reading in input.metadata.csv")
-    metadata <- read_delim("input.metadata.csv", delim=",")
+    print("Reading in ${input_metadata_csv}")
+    metadata <- read_delim("${input_metadata_csv}", delim=",")
     metadata <- tibble::column_to_rownames(metadata, names(metadata)[1])
     metadata <- metadata %>% rownames_to_column(var = "specimen")
     print(head(metadata))
