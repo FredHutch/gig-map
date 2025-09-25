@@ -58,21 +58,30 @@ main <- function(){
     run_regress <- function(i){
         colname <- colnames(counts)[i]
         data <- metadata %>% add_column(proportion=counts[, i])
-        res <- regress(
-            fnctl = "mean",
-            formula = proportion ~ ${params.formula},
-            data = data
+        res <- tryCatch(
+            regress(
+                fnctl = "mean",
+                formula = proportion ~ ${params.formula},
+                data = data
+            ),
+            error = function(cond){return(NULL)}
         )
-        return(
-            as.data.frame(coef(res))
-                %>% add_column(feature = colname)
-                %>% rownames_to_column(var = "parameter")
-                %>% rename(pvalue="Pr(>|t|)")
-        )
+        if(all(is.na(res))){return(NULL)}else{
+            return(
+                as.data.frame(coef(res))
+                    %>% add_column(feature = colname)
+                    %>% rownames_to_column(var = "parameter")
+                    %>% rename(pvalue="Pr(>|t|)")
+            )
+        }
     }
 
     # Run rigr:regress on each column
-    output <- do.call(rbind, mclapply(c(1:dim(counts)[2]), run_regress, mc.cores = ${task.cpus}))
+    results <- mclapply(c(1:dim(counts)[2]), run_regress, mc.cores = ${task.cpus})
+
+    # Filter out any rows which did not converge
+    results <- results[sapply(results, is.data.frame)]
+    output <- do.call(rbind, results)
 
     print(sprintf("Writing out %s rows to regress.results.csv", nrow(output)))
     write_csv(output, "regress.results.csv")
