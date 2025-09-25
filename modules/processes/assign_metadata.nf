@@ -11,6 +11,7 @@ process assign_metadata {
     """#!/usr/bin/env python3
 
 import pandas as pd
+import numpy as np
 
 print("Reading in ${input_metadata_csv}")
 df = pd.read_csv("${input_metadata_csv}")
