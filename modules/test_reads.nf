@@ -41,14 +41,17 @@ process shard_genes {
 // Test for differences between samples
 process regress {
     container "${params.container__regress}"
+    publishDir "${params.output}/association/", mode: 'copy', overwrite: true
     label "cpu_high"
     
     input:
-    file metadata_csv
-    file readcounts_csv_gz
+    file "input.metadata.csv"
+    file "input.abund.csv"
 
     output:
-    path "regress.results.csv", optional: true
+    path "regress.results.csv", emit: results
+    path "metadata.csv", emit: metadata
+    path "abund.csv", emit: abund
 
     script:
     template "regress.Rscript"

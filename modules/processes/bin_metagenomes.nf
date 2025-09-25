@@ -98,16 +98,35 @@ if "${params.incl_unaligned}" != "false":
     df = df.query("feature != 'unaligned_reads'")
 
 for param, param_df in df.groupby("parameter"):
-    (
-        param_df
-        .set_index("feature")
-        .drop(columns=["parameter"])
-        .to_csv(f"{param}.results.csv")
-    )
+    if param != "(Intercept)":
+        (
+            param_df
+            .set_index("feature")
+            .drop(columns=["parameter"])
+            .to_csv(f"{param}.results.csv")
+        )
     """
 }
 
-process plot {
+process plot_regress {
+    container "${params.container__pandas}"
+    label 'io_limited'
+    publishDir "${params.output}/association/", mode: 'copy', overwrite: true
+
+    input:
+    path "regress.results.csv"
+
+    output:
+    path "*"
+
+    """#!/bin/bash
+set -e
+    
+plot_regress.py
+"""
+}
+
+process plot_metagenomes {
     container "${params.container__pandas}"
     label 'io_limited'
     publishDir "${params.output}/association/${param}/", mode: 'copy', overwrite: true

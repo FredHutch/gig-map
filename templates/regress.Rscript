@@ -22,15 +22,15 @@ main <- function(){
 
     ##  rigr:regress analysis (coefficients and p-values) are written to OUTPUT CSV on completion
 
-    print("Reading in ${metadata_csv}")
-    metadata <- read_delim("${metadata_csv}", delim=",")
+    print("Reading in input.metadata.csv")
+    metadata <- read_delim("input.metadata.csv", delim=",")
     metadata <- tibble::column_to_rownames(metadata, names(metadata)[1])
     metadata <- metadata %>% rownames_to_column(var = "specimen")
     print(head(metadata))
     print(dim(metadata))
 
-    print("Reading in ${readcounts_csv_gz}")
-    counts <- read_delim("${readcounts_csv_gz}", delim=",")
+    print("Reading in input.abund.csv")
+    counts <- read_delim("input.abund.csv", delim=",")
     print(dim(counts))
 
     # If there aren't enough samples passing the threshold, stop gracefully
@@ -58,6 +58,10 @@ main <- function(){
     counts <- counts %>% filter(specimen %in% specimens) %>% arrange(specimen) %>% tibble::column_to_rownames("specimen")
     metadata <- metadata %>% filter(specimen %in% specimens) %>% arrange(specimen) %>% tibble::column_to_rownames("specimen")
 
+    # Save the metadata and abundance tables which are used for the analysis
+    write.csv(counts, "abund.csv")
+    write.csv(metadata, "metadata.csv")
+
     print("Running rigr:regress with proportion ~ ${params.formula}")
     run_regress <- function(i){
         colname <- colnames(counts)[i]
@@ -71,7 +75,6 @@ main <- function(){
             as.data.frame(coef(res))
                 %>% add_column(feature = colname)
                 %>% rownames_to_column(var = "parameter")
-                %>% filter(parameter != "(Intercept)")
                 %>% rename(pvalue="Pr(>|t|)")
         )
     }

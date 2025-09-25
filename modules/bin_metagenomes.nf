@@ -2,7 +2,8 @@ include {
     bin_summary;
     collect;
     split;
-    plot;
+    plot_metagenomes;
+    plot_regress;
     wide_bin_abundance
 } from "./processes/bin_metagenomes"
 
@@ -43,11 +44,13 @@ workflow bin_metagenomes {
                     wide_bin_abundance.out.rpkm
                 )
 
+                plot_regress(regress.out.results)
+
                 split(
-                    regress.out
+                    regress.out.results
                 )
 
-                plot(
+                plot_metagenomes(
                     split
                         .out
                         .flatten()
