@@ -37,7 +37,9 @@ process wide_bin_abundance {
     """#!/bin/bash
 set -e
 
-wide_bin_abundance.py
+wide_bin_abundance.py \
+    --min-n-reads ${params.min_n_reads} \
+    --min-n-genes ${params.min_n_genes}
     """
 }
 
