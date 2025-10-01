@@ -9,6 +9,7 @@ def helpers = shell.parse(new File("${workflow.projectDir}/helpers.gvy"))
 
 // Import sub-workflows
 include { contrast_metagenomes } from './modules/contrast_metagenomes'
+include { centroids_length } from './modules/processes/align_reads'
 
 // Standalone entrypoint
 workflow {
@@ -45,7 +46,6 @@ workflow {
     // Make sure that the required parameters were provided
     helpers.require_param(params.read_alignments, "read_alignments")
     helpers.require_param(params.gene_bins, "gene_bins")
-    helpers.require_param(params.centroids_length, "centroids_length")
     helpers.require_param(params.metadata, "metadata")
     helpers.require_param(params.formula, "formula")
     helpers.require_param(params.output, "output")
@@ -57,7 +57,14 @@ workflow {
     gene_bins = file(params.gene_bins, checkIfExists: true)
 
     // Get the centroids lengths
-    centroids_length = file(params.centroids_length, checkIfExists: true)
+    centroids_length_file = file(params.centroids_length)
+
+    // If the centroids lengths do not exist, build that file
+    if(centroids_length_file.exists() == false){
+        centroids_faa = file(params.centroids_faa, checkIfExists: true)
+        centroids_length(centroids_faa)
+        centroids_length_file = centroids_length.out
+    }
 
     // Get the metadata table
     metadata = file(params.metadata, checkIfExists: true)
@@ -65,7 +72,7 @@ workflow {
     // Bin the metagenomes
     contrast_metagenomes(
         read_alignments,
-        centroids_length,
+        centroids_length_file,
         gene_bins,
         metadata
     )
