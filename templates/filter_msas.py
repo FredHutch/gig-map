@@ -33,7 +33,7 @@ def read_gzipped_fasta(fasta_path: str) -> dict:
     return sequences
 
 
-def filter_msa(msa_fp: Path, min_prop_sites: float, min_prop_genomes: float) -> pd.DataFrame:
+def filter_msa(msa_fp: Path, min_prop_sites: float, min_prop_genomes: float, max_raxml_sites: int) -> pd.DataFrame:
     """
     Filter the MSA to only include sites which meet the minimum proportion of sites,
     and only include genomes which have at least this proportion of the sites present.
@@ -62,6 +62,12 @@ def filter_msa(msa_fp: Path, min_prop_sites: float, min_prop_genomes: float) -> 
         filtered_sites = site_prop_non_missing[site_prop_non_missing >= min_prop_sites].index
         msa_filtered = msa_filtered[filtered_sites]
         logger.info(f"Filtered MSA to {msa_filtered.shape[1]} sites after applying min_prop_sites")
+
+    # If there are more than max_raxml_sites sites
+    if msa_filtered.shape[1] > max_raxml_sites:
+        logger.info(f"Truncating down to {max_raxml_sites:,} sites")
+        msa_filtered = msa_filtered.iloc[:, :max_raxml_sites]
+
     return msa_filtered
 
 
@@ -71,6 +77,7 @@ def main():
     min_prop_sites = ${params.raxml_min_prop_sites}
     min_prop_genomes = ${params.raxml_min_prop_genomes}
     min_raxml_genomes = ${params.min_raxml_genomes}
+    max_raxml_sites = ${params.max_raxml_sites}
     
     # Input MSA file
     input_msa_fp = Path("input").rglob("*.msa.gz").__next__()
@@ -79,7 +86,7 @@ def main():
     output_msa_fp = input_msa_fp.name
     
     # Filter the MSA
-    filtered_msa = filter_msa(input_msa_fp, min_prop_sites, min_prop_genomes)
+    filtered_msa = filter_msa(input_msa_fp, min_prop_sites, min_prop_genomes, max_raxml_sites)
 
     if filtered_msa.shape[0] == 0 or filtered_msa.shape[1] == 0:
         logger.info("No genomes or sites remain after filtering. Exiting.")
