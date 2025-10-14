@@ -166,7 +166,7 @@ process gather {
     path "read_counts/*"
     
     output:
-    path "read_alignments.csv.gz"
+    path "read_alignments.csv.gz", optional: true
 
     script:
     """
