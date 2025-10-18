@@ -100,7 +100,7 @@ class GeneData(ad.AnnData):
                 index="genome",
                 columns="sseqid",
                 values=values,
-                aggfunc=max
+                aggfunc="max"
             ).fillna(fillna)
             for values, fillna in [
                 ("coverage", 0),
