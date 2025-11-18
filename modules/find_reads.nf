@@ -4,6 +4,8 @@ workflow find_reads {
     main:
     // If a samplesheet was provided
     if ( "${params.samplesheet}" != "false" ){
+
+        // Parse the CSV
         Channel
             .from(
                 file(
@@ -15,19 +17,35 @@ workflow find_reads {
                 header: true,
                 strip: true
             )
+            .set { csv_ch }
+
+        // Get the R1 and R2 mappings and merge them
+        csv_ch
             .map {
                 it -> [
                     it.get('sample', it['"sample"']).replaceAll(/^\"|\"$/, ""),
-                    [
-                        file(it.get('R1', it.get('fastq_1', it.get('"fastq_1"', 'none')).replaceAll(/^\"|\"$/, "")), checkIfExists: true),
-                        file(it.get('R2', it.get('fastq_2', it.get('"fastq_2"', 'none')).replaceAll(/^\"|\"$/, "")), checkIfExists: true)
-                    ]
+                    file(it.get('R1', it.get('fastq_1', it.get('"fastq_1"', 'none')).replaceAll(/^\"|\"$/, "")) ?: "none")
                 ]
             }
+            .mix(
+                csv_ch
+                .map {
+                    it -> [
+                        it.get('sample', it['"sample"']).replaceAll(/^\"|\"$/, ""),
+                        file(it.get('R2', it.get('fastq_2', it.get('"fastq_2"', 'none')).replaceAll(/^\"|\"$/, "")) ?: "none")
+                    ]
+                }
+            )
+            // Filter to only the the files which exist
+            .filter {
+                it -> it[1].exists()
+            }
+            // Group by sample name
+            .groupTuple()
             .set { fastq_ch }
 
-            join_read_pairs(fastq_ch)
-            reads_ch = join_read_pairs.out
+        join_read_pairs(fastq_ch)
+        reads_ch = join_read_pairs.out
 
     } else {
 
