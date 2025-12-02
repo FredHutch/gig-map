@@ -21,8 +21,8 @@ workflow {
 
         Parameters:
 
-        --genes             Folder containing the set of gene amino acid FASTAs to deduplicate.
-                            Every file must end with ".fasta.gz"
+        --genes             Folder containing the set of gene nucleotide FASTAs to build trees from. 
+                            This should be the align/genes/ folder output by build_pangenome.nf
         --gene_bins         Grouping of genes into bins (e.g. gene_bins.csv)
         --output            Folder where output files will be written
 
