@@ -1,10 +1,6 @@
 # GiG-map (Genes in Genomes - Map)
 Build a map of genes present across a set of microbial genomes
 
-[![Test gig-map](https://github.com/FredHutch/gig-map/actions/workflows/test.yaml/badge.svg?branch=main&event=push)](https://github.com/FredHutch/gig-map/actions/workflows/test.yaml)
-
-[![Docker Repository on Quay](https://quay.io/repository/hdc-workflows/gig-map/status "Docker Repository on Quay")](https://quay.io/repository/hdc-workflows/gig-map)
-
 [**Documentation Wiki**](https://github.com/FredHutch/gig-map/wiki)
 
 > Note: The documentation below refers to `gig-map` versions starting with `0.2.0`.
