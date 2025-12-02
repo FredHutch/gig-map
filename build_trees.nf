@@ -24,6 +24,13 @@ workflow {
         --genes             Folder containing the set of gene nucleotide FASTAs to build trees from. 
                             This should be the align/genes/ folder output by build_pangenome.nf
         --gene_bins         Grouping of genes into bins (e.g. gene_bins.csv)
+        --raxml_min_prop_sites
+                            Filter out any positions which have gaps for this proportion of genomes
+        --raxml_min_prop_genomes
+                            Filter out any genomes which have gaps for this proportion of sites
+        --min_raxml_genomes Only build alignments for genes with at least this number of filtered genomes
+        --max_raxml_sites   Truncate the filtered MSA to contain no more than this number of sites
+
         --output            Folder where output files will be written
 
         Notes:
