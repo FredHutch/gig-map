@@ -49,7 +49,7 @@ process regress {
     file "input.abund.csv"
 
     output:
-    path "regress.results.csv", emit: results
+    path "regress.results.csv", emit: results, optional: true
     path "metadata.csv", emit: metadata
     path "abund.csv", emit: abund
 
