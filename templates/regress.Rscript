@@ -60,7 +60,7 @@ main <- function(){
         data <- metadata %>% add_column(proportion=counts[, i])
         res <- tryCatch(
             regress(
-                fnctl = "mean",
+                fnctl = "${params.regress_fnctl}",
                 formula = proportion ~ ${params.formula},
                 data = data
             ),
@@ -82,10 +82,13 @@ main <- function(){
     # Filter out any rows which did not converge
     results <- results[sapply(results, is.data.frame)]
     output <- do.call(rbind, results)
-
-    print(sprintf("Writing out %s rows to regress.results.csv", nrow(output)))
-    write_csv(output, "regress.results.csv")
-    print("Done")
+    if(is.null(output)){
+        print("No results could be computed")
+    }else{
+        print(sprintf("Writing out %s rows to regress.results.csv", nrow(output)))
+        write_csv(output, "regress.results.csv")
+        print("Done")
+    }
 }
 
 main()
