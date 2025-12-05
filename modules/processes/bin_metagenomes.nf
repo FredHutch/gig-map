@@ -33,6 +33,7 @@ process wide_bin_abundance {
     path "rpkm.csv.gz", emit: rpkm
     path "n_reads_aligned.csv.gz", emit: n_reads_aligned
     path "prop_reads_aligned.csv.gz", emit: prop_reads_aligned
+    path "fragments_per_million.csv.gz", emit: fragments_per_million
 
     """#!/bin/bash
 set -e

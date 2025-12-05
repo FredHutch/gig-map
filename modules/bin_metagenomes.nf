@@ -45,7 +45,7 @@ workflow bin_metagenomes {
 
                 regress(
                     assign_metadata.out,
-                    wide_bin_abundance.out.rpkm
+                    wide_bin_abundance.out.fragments_per_million
                 )
 
                 plot_regress(regress.out.results)

@@ -40,6 +40,11 @@ def main(min_n_reads, min_n_genes):
         print(f"Writing out table for {kw}")
         wide.to_csv(f"{kw}.csv.gz")
 
+        # Use this to output the "fragments-per-million" table
+        if kw == "prop_reads_aligned":
+            print("Writing out the table for fragments_per_million")
+            (wide * 1e9).to_csv("fragments_per_million.csv.gz")
+
     print("Done")
 
 if __name__ == "__main__":
