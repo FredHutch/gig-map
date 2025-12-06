@@ -1,10 +1,11 @@
 include {
     bin_summary;
     plot_regress;
+    plot_radEmu;
     wide_bin_abundance
 } from "./processes/bin_metagenomes"
 
-include { regress } from "./test_reads"
+include { regress; radEmu } from "./test_reads"
 
 include { assign_metadata } from "./processes/assign_metadata"
 
@@ -27,11 +28,25 @@ workflow contrast_metagenomes {
 
         assign_metadata(metadata)
 
-        regress(
-            assign_metadata.out,
-            wide_bin_abundance.out.fragments_per_million
-        )
+        // Multiple methods supported for contrasting abundances
+        if(params.contrast_method == "radEmu"){
+            radEmu(
+                assign_metadata.out,
+                wide_bin_abundance.out.n_reads_aligned
+            )
+            plot_radEmu(radEmu.out.results)
+        }else{
+            if(params.contrast_method == "regress"){
+                regress(
+                    assign_metadata.out,
+                    wide_bin_abundance.out.fragments_per_million
+                )
+                plot_regress(radEmu.out.results)
+            }else{
+                error("Did not recognize contrast_method (${params.contrast_method})")
+            }
+        }
 
-        plot_regress(regress.out.results)
+        
 
 }

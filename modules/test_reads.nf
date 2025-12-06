@@ -58,6 +58,26 @@ process regress {
 
 }
 
+// Test for differences between samples
+process radEmu {
+    container "${params.container__rademu}"
+    publishDir "${params.output}/association/", mode: 'copy', overwrite: true
+    label "cpu_high"
+    
+    input:
+    file "input.metadata.csv"
+    file "input.abund.csv"
+
+    output:
+    path "radEmu.results.csv", emit: results, optional: true
+    path "metadata.csv", emit: metadata
+    path "abund.csv", emit: abund
+
+    script:
+    template "radEmu.Rscript"
+
+}
+
 // Join the results
 process join {
     container "${params.container__pandas}"

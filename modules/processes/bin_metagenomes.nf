@@ -129,6 +129,24 @@ plot_regress.py
 """
 }
 
+process plot_radEmu {
+    container "${params.container__pandas}"
+    label 'io_limited'
+    publishDir "${params.output}/association/", mode: 'copy', overwrite: true
+
+    input:
+    path "radEmu.results.csv"
+
+    output:
+    path "*"
+
+    """#!/bin/bash
+set -e
+    
+plot_radEmu.py
+"""
+}
+
 process plot_metagenomes {
     container "${params.container__pandas}"
     label 'io_limited'
