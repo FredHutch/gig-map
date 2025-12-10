@@ -50,6 +50,11 @@ main <- function(){
     counts <- counts %>% filter(specimen %in% specimens) %>% arrange(specimen) %>% tibble::column_to_rownames("specimen")
     metadata <- metadata %>% filter(specimen %in% specimens) %>% arrange(specimen) %>% tibble::column_to_rownames("specimen")
 
+    # Drop any columns from the counts which are all zero
+    print("Dropping columns from counts which are all zero")
+    counts <- counts[,apply(counts, 2, function(x) sum(x!=0) > 0)]
+    print(dim(counts))
+
     # Save the metadata and abundance tables which are used for the analysis
     write.csv(counts, "abund.csv")
     write.csv(metadata, "metadata.csv")
