@@ -41,7 +41,7 @@ workflow contrast_metagenomes {
                     assign_metadata.out,
                     wide_bin_abundance.out.fragments_per_million
                 )
-                plot_regress(radEmu.out.results)
+                plot_regress(regress.out.results)
             }else{
                 error("Did not recognize contrast_method (${params.contrast_method})")
             }
