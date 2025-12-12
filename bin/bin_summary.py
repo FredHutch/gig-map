@@ -59,11 +59,11 @@ def main(read_alignments: pd.DataFrame, gene_bins: pd.DataFrame):
     # Get the total number of reads aligned to this pangenome per specimen
     tot_reads = read_alignments.groupby("specimen")["nreads"].sum()
 
-    counter.set_total(read_alignments.reindex(["specimen", "bin"]).drop_duplicates().shape[0])
+    counter.set_total(read_alignments.reindex(columns=["specimen", "bin"]).drop_duplicates().shape[0])
 
     logger.info("Summarizing read alignments by bin")
     (
-        read_alignments.assign(bin=lambda d: d["id"].map(gene_bins["bin"].get))
+        read_alignments
         .groupby(["specimen", "bin"])
         .apply(lambda d: summarize_bin(d, bin_ngenes, bin_length_aa, tot_reads))
         .to_csv("bin_summary.csv.gz")
@@ -129,7 +129,7 @@ def cli(gene_bins, centroids_length):
     read_alignments_df = pd.concat([
         read_csv(f)
         for f in Path("read_alignments").glob("*.csv.gz")
-    ])
+    ]).reset_index(drop=True)
 
     logger.info(f"Reading in {gene_bins}")
     gene_bins_df = pd.read_csv(gene_bins)
@@ -142,7 +142,8 @@ def cli(gene_bins, centroids_length):
     )
 
     read_alignments_df = read_alignments_df.assign(
-        length_aa=lambda d: d["id"].map(centroids_length_df.get)
+        length_aa=lambda d: d["id"].map(centroids_length_df.get),
+        bin=lambda d: d["id"].map(gene_bins_df["bin"].get)
     )
 
     main(read_alignments_df, gene_bins_df)
