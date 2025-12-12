@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import logging
+from pathlib import Path
 import pandas as pd
 import click
 
@@ -112,13 +113,23 @@ def summarize_bin(df: pd.DataFrame, bin_ngenes: dict, bin_length_aa: dict, tot_r
     })
 
 
+def read_csv(file_path: Path) -> pd.DataFrame:
+    """
+    Read a CSV file into a DataFrame.
+    """
+    logger.info(f"Reading in {file_path}")
+    return pd.read_csv(file_path)
+
+
 @click.command()
-@click.option('--read-alignments', required=True, type=click.Path(exists=True), help='Path to read_alignments CSV file')
 @click.option('--gene-bins', required=True, type=click.Path(exists=True), help='Path to gene_bins CSV file')
 @click.option('--centroids-length', required=True, type=click.Path(exists=True), help='Path to centroids_length CSV file')
-def cli(read_alignments, gene_bins, centroids_length):
-    logger.info(f"Reading in {read_alignments}")
-    read_alignments_df = pd.read_csv(read_alignments)
+def cli(gene_bins, centroids_length):
+    logger.info("Reading in all files within read_alignments/")
+    read_alignments_df = pd.concat([
+        read_csv(f)
+        for f in Path("read_alignments").glob("*.csv.gz")
+    ])
 
     logger.info(f"Reading in {gene_bins}")
     gene_bins_df = pd.read_csv(gene_bins)

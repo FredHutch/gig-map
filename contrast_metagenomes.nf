@@ -50,8 +50,11 @@ workflow {
     helpers.require_param(params.formula, "formula")
     helpers.require_param(params.output, "output")
 
-    // Get the read alignments
-    read_alignments = file(params.read_alignments, checkIfExists: true)
+    // Get the read alignments file(s)
+    Channel
+        .fromPath( params.read_alignments.split(',').toList() )
+        .toSortedList()
+        .set { read_alignments }
 
     // Get the gene bins
     gene_bins = file(params.gene_bins, checkIfExists: true)

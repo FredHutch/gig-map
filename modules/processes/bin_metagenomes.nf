@@ -4,7 +4,7 @@ process bin_summary {
     publishDir "${params.output}", mode: 'copy', overwrite: true
 
     input:
-    path read_alignments
+    path "read_alignments/*.csv.gz"
     path gene_bins
     path centroids_length
 
@@ -15,7 +15,6 @@ process bin_summary {
 set -e
 
 bin_summary.py \
-    --read-alignments "${read_alignments}" \
     --gene-bins "${gene_bins}" \
     --centroids-length "${centroids_length}"
     """
