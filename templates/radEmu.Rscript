@@ -63,7 +63,8 @@ main <- function(){
     all_fit <- emuFit(formula = ~ ${params.formula},
                       data = metadata, 
                       Y = counts,
-                      test_kj = data.frame(k = 2, j = 1:ncol(counts)))
+                      test_kj = data.frame(k = 2, j = 1:ncol(counts)),
+                      verbose=TRUE)
 
     print("Done running radEmu")
     output <- all_fit\$coef
