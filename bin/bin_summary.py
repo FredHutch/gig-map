@@ -62,12 +62,16 @@ def main(read_alignments: pd.DataFrame, gene_bins: pd.DataFrame):
     counter.set_total(read_alignments.reindex(columns=["specimen", "bin"]).drop_duplicates().shape[0])
 
     logger.info("Summarizing read alignments by bin")
-    (
+    bin_summary = (
         read_alignments
         .groupby(["specimen", "bin"])
         .apply(lambda d: summarize_bin(d, bin_ngenes, bin_length_aa, tot_reads))
-        .to_csv("bin_summary.csv.gz")
     )
+
+    # Make sure that the prop_reads_aligned metric sums to 1 for every specimen
+    assert bin_summary.groupby("specimen")["prop_reads_aligned"].sum().min() >= (1.0 - 1e9)
+    assert bin_summary.groupby("specimen")["prop_reads_aligned"].sum().max() <= (1.0 + 1e9)
+    bin_summary.to_csv("bin_summary.csv.gz")
 
 
 def summarize_bin(df: pd.DataFrame, bin_ngenes: dict, bin_length_aa: dict, tot_reads_by_specimen: pd.Series) -> pd.Series:
@@ -144,7 +148,7 @@ def cli(gene_bins, centroids_length):
     read_alignments_df = read_alignments_df.assign(
         length_aa=lambda d: d["id"].map(centroids_length_df.get),
         bin=lambda d: d["id"].map(gene_bins_df["bin"].get)
-    )
+    ).dropna(subset=["bin"])
 
     main(read_alignments_df, gene_bins_df)
     logger.info("Writing output to bin_summary.csv.gz")
