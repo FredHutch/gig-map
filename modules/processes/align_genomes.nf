@@ -82,7 +82,7 @@ process filter_alignments {
         tuple val(query_name), path("unfiltered.alignments.gz")
 
     output:
-        tuple val("${query_name}"), path("alignments.gz") optional true
+        tuple val("${query_name}"), path("alignments.gz"), optional: true
 
 """#!/bin/bash
 
@@ -295,7 +295,7 @@ process extract_genes {
         tuple val(genome_name), path(alignments), path(genome)
 
     output:
-        path "*.fasta.gz" optional true
+        path "*.fasta.gz", optional: true
 
 """#!/bin/bash
 
