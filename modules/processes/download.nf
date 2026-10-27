@@ -10,7 +10,7 @@ process fetchFTP {
         val ftp_url
     
     output:
-        path "*" optional params.skip_missing_ftp == "true"
+        path "*", optional: params.skip_missing_ftp == "true"
 
     script:
     template "fetchFTP.py"
